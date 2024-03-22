@@ -19,4 +19,4 @@ jobs:
       - uses: https://code.forgejo.org/actions/checkout@v3
         with:
           persist-credentials: false
-      - uses: https://github.com/codespell-project/actions-codespell
+      - uses: https://github.com/codespell-project/actions-codespell@master

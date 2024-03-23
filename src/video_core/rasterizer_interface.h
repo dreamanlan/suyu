@@ -7,6 +7,7 @@
 #include <optional>
 #include <span>
 #include <utility>
+#include <unordered_set>
 #include "common/common_types.h"
 #include "common/polyfill_thread.h"
 #include "video_core/cache_types.h"
@@ -37,6 +38,10 @@ using DiskResourceLoadCallback = std::function<void(LoadCallbackStage, std::size
 class RasterizerInterface {
 public:
     virtual ~RasterizerInterface() = default;
+
+    virtual void DumpShaderInfo(std::ostream& os)const = 0;
+    virtual void ReplaceSourceShader(uint64_t hash, int stage, const std::string& code) = 0;
+    virtual void ReplaceSpirvShader(uint64_t hash, int stage, const std::vector<uint32_t>& code) = 0;
 
     /// Dispatches a draw invocation
     virtual void Draw(bool is_indexed, u32 instance_count) = 0;
@@ -173,4 +178,15 @@ public:
         return false;
     }
 };
+extern bool g_IsPolygonModeLine;
+extern uint32_t g_LineModeMinVertexNum;
+extern uint32_t g_LineModeMaxVertexNum;
+extern uint32_t g_LineModeMinDrawCount;
+extern uint32_t g_LineModeMaxDrawCount;
+extern bool g_LineModeLogRequest;
+extern int g_LineModeLogFrameCount;
+
+extern int g_LineModeLogFrameIndex;
+extern std::unordered_set<uint64_t> g_LineModeVsHashes;
+extern std::unordered_set<uint64_t> g_LineModePsHashes;
 } // namespace VideoCore

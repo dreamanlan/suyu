@@ -580,7 +580,6 @@ using DebugUtilsMessenger = Handle<VkDebugUtilsMessengerEXT, VkInstance, Instanc
 using DebugReportCallback = Handle<VkDebugReportCallbackEXT, VkInstance, InstanceDispatch>;
 using DescriptorSetLayout = Handle<VkDescriptorSetLayout, VkDevice, DeviceDispatch>;
 using DescriptorUpdateTemplate = Handle<VkDescriptorUpdateTemplate, VkDevice, DeviceDispatch>;
-using Pipeline = Handle<VkPipeline, VkDevice, DeviceDispatch>;
 using PipelineLayout = Handle<VkPipelineLayout, VkDevice, DeviceDispatch>;
 using QueryPool = Handle<VkQueryPool, VkDevice, DeviceDispatch>;
 using RenderPass = Handle<VkRenderPass, VkDevice, DeviceDispatch>;
@@ -886,6 +885,14 @@ public:
 
 class ShaderModule : public Handle<VkShaderModule, VkDevice, DeviceDispatch> {
     using Handle<VkShaderModule, VkDevice, DeviceDispatch>::Handle;
+
+public:
+    /// Set object name.
+    void SetObjectNameEXT(const char* name) const;
+};
+
+class Pipeline : public Handle<VkPipeline, VkDevice, DeviceDispatch> {
+    using Handle<VkPipeline, VkDevice, DeviceDispatch>::Handle;
 
 public:
     /// Set object name.

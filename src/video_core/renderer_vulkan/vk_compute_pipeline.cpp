@@ -14,6 +14,7 @@
 #include "video_core/renderer_vulkan/vk_pipeline_cache.h"
 #include "video_core/renderer_vulkan/vk_scheduler.h"
 #include "video_core/renderer_vulkan/vk_update_descriptor.h"
+#include "video_core/renderer_vulkan/vk_shader_util.h"
 #include "video_core/shader_notify.h"
 #include "video_core/vulkan_common/vulkan_device.h"
 #include "video_core/vulkan_common/vulkan_wrapper.h"
@@ -29,7 +30,7 @@ ComputePipeline::ComputePipeline(const Device& device_, vk::PipelineCache& pipel
                                  GuestDescriptorQueue& guest_descriptor_queue_,
                                  Common::ThreadWorker* thread_worker,
                                  PipelineStatistics* pipeline_statistics,
-                                 VideoCore::ShaderNotify* shader_notify, const Shader::Info& info_,
+                                 VideoCore::ShaderNotify* shader_notify, const ComputePipelineCacheKey& key, const Shader::Info& info_,
                                  vk::ShaderModule spv_module_)
     : device{device_},
       pipeline_cache(pipeline_cache_), guest_descriptor_queue{guest_descriptor_queue_}, info{info_},
@@ -40,7 +41,7 @@ ComputePipeline::ComputePipeline(const Device& device_, vk::PipelineCache& pipel
     std::copy_n(info.constant_buffer_used_sizes.begin(), uniform_buffer_sizes.size(),
                 uniform_buffer_sizes.begin());
 
-    auto func{[this, &descriptor_pool, shader_notify, pipeline_statistics] {
+    auto func{[this, &descriptor_pool, shader_notify, key, pipeline_statistics] {
         DescriptorLayoutBuilder builder{device};
         builder.Add(info, VK_SHADER_STAGE_COMPUTE_BIT);
 
@@ -78,6 +79,10 @@ ComputePipeline::ComputePipeline(const Device& device_, vk::PipelineCache& pipel
                 .basePipelineIndex = 0,
             },
             *pipeline_cache);
+        if (device.HasDebuggingToolAttached()) {
+            std::string label = fmt::format("Pipeline {:016x}", key.unique_hash);
+            pipeline.SetObjectNameEXT(label.c_str());
+        }
 
         if (pipeline_statistics) {
             pipeline_statistics->Collect(*pipeline);
@@ -94,6 +99,22 @@ ComputePipeline::ComputePipeline(const Device& device_, vk::PipelineCache& pipel
     } else {
         func();
     }
+}
+
+void ComputePipeline::DumpInfo(std::ostream& os, const ComputePipelineCacheKey& key)const {
+    os << "vk_compute";
+    os << " ";
+    os << reinterpret_cast<u64>(*pipeline);
+    os << " ";
+    os << fmt::format("{:016x}", key.unique_hash);
+    os << " ";
+    os << reinterpret_cast<u64>(*spv_module);
+    os << "|";
+}
+
+void ComputePipeline::ReplaceShader(const std::vector<uint32_t>& code) {
+    auto&& cprog = Vulkan::BuildShader(device, code);
+    spv_module = std::move(cprog);
 }
 
 void ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,

@@ -37,6 +37,7 @@
 #include "video_core/texture_cache/texture_cache_base.h"
 #include "video_core/vulkan_common/vulkan_device.h"
 #include "video_core/vulkan_common/vulkan_wrapper.h"
+#include "core/core.h"
 
 namespace Vulkan {
 
@@ -204,8 +205,35 @@ RasterizerVulkan::RasterizerVulkan(Core::Frontend::EmuWindow& emu_window_, Tegra
 
 RasterizerVulkan::~RasterizerVulkan() = default;
 
+void RasterizerVulkan::DumpShaderInfo(std::ostream& os)const {
+    pipeline_cache.DumpInfo(os);
+
+    std::stringstream ss;
+    ss << "vulkan shader dump finish.";
+    auto&& msg = ss.str();
+    Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
+}
+
+void RasterizerVulkan::ReplaceSourceShader(uint64_t hash, int stage, const std::string& code) {
+    std::stringstream ss;
+    ss << "vulkan doesnt support source shader!";
+    auto&& msg = ss.str();
+    Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
+}
+
+void RasterizerVulkan::ReplaceSpirvShader(uint64_t hash, int stage, const std::vector<uint32_t>& code) {
+    Shader::Stage shader_stage = static_cast<Shader::Stage>(stage);
+    if (shader_stage == Shader::Stage::VertexA)
+        shader_stage = Shader::Stage::VertexB;
+    int ct = pipeline_cache.ReplaceShader(hash, shader_stage, code);
+    std::stringstream ss;
+    ss << "vulkan replace spirv shader finish, replace " << std::dec << ct << " pipelines, hash:" << std::hex << hash << " stage:" << stage;
+    auto&& msg = ss.str();
+    Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
+}
+
 template <typename Func>
-void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
+void RasterizerVulkan::PrepareDraw(bool indirect_draw, bool is_indexed, Func&& draw_func) {
     MICROPROFILE_SCOPE(Vulkan_Drawing);
 
     SCOPE_EXIT {
@@ -220,10 +248,50 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
     if (!pipeline) {
         return;
     }
+    auto gkey = pipeline_cache.CurrentGraphicsKey();
+
+    bool line_mode = false;
+    if (indirect_draw) {
+        const auto& params = maxwell3d->draw_manager->GetIndirectParams();
+        line_mode = VideoCore::g_IsPolygonModeLine && params.max_draw_counts > VideoCore::g_LineModeMinDrawCount && params.max_draw_counts < VideoCore::g_LineModeMaxDrawCount;
+    }
+    else {
+        const auto& draw_state0 = maxwell3d->draw_manager->GetDrawState();
+        line_mode = VideoCore::g_IsPolygonModeLine && ((is_indexed && draw_state0.index_buffer.count > VideoCore::g_LineModeMinVertexNum && draw_state0.index_buffer.count < VideoCore::g_LineModeMaxVertexNum) || (!is_indexed && draw_state0.vertex_buffer.count > VideoCore::g_LineModeMinVertexNum && draw_state0.vertex_buffer.count < VideoCore::g_LineModeMaxVertexNum));
+    }
+    if (line_mode && VideoCore::g_LineModeVsHashes.size() > 0) {
+        uint64_t hash = gkey.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1];
+        line_mode = VideoCore::g_LineModeVsHashes.contains(hash);
+    }
+    if (line_mode && VideoCore::g_LineModePsHashes.size() > 0) {
+        uint64_t hash = gkey.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1];
+        line_mode = VideoCore::g_LineModePsHashes.contains(hash);
+    }
+
+    if (line_mode && VideoCore::g_LineModeLogFrameIndex >= 0 && VideoCore::g_LineModeLogFrameIndex < VideoCore::g_LineModeLogFrameCount) {
+        std::stringstream ss;
+        ss << "[line mode]: ";
+        if (indirect_draw) {
+            const auto& params = maxwell3d->draw_manager->GetIndirectParams();
+            ss << "indirect draw, max draw counts: " << std::dec << params.max_draw_counts;
+        }
+        else {
+            const auto& draw_state0 = maxwell3d->draw_manager->GetDrawState();
+            if (is_indexed)
+                ss << "draw indexed, vertex num: " << std::dec << draw_state0.index_buffer.count;
+            else
+                ss << "draw direct, vertex num: " << std::dec << draw_state0.vertex_buffer.count;
+        }
+        ss << " pipeline: ";
+        pipeline->DumpInfo(ss, gkey);
+        auto&& msg = ss.str();
+        Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
+    }
+
     std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};
     // update engine as channel may be different.
     pipeline->SetEngine(maxwell3d, gpu_memory);
-    pipeline->Configure(is_indexed);
+    pipeline->Configure(is_indexed, line_mode);
 
     UpdateDynamicStates();
 
@@ -234,7 +302,7 @@ void RasterizerVulkan::PrepareDraw(bool is_indexed, Func&& draw_func) {
 }
 
 void RasterizerVulkan::Draw(bool is_indexed, u32 instance_count) {
-    PrepareDraw(is_indexed, [this, is_indexed, instance_count] {
+    PrepareDraw(false, is_indexed, [this, is_indexed, instance_count] {
         const auto& draw_state = maxwell3d->draw_manager->GetDrawState();
         const u32 num_instances{instance_count};
         const DrawParams draw_params{MakeDrawParams(draw_state, num_instances, is_indexed)};
@@ -254,7 +322,7 @@ void RasterizerVulkan::Draw(bool is_indexed, u32 instance_count) {
 void RasterizerVulkan::DrawIndirect() {
     const auto& params = maxwell3d->draw_manager->GetIndirectParams();
     buffer_cache.SetDrawIndirect(&params);
-    PrepareDraw(params.is_indexed, [this, &params] {
+    PrepareDraw(true, params.is_indexed, [this, &params] {
         const auto indirect_buffer = buffer_cache.GetDrawIndirectBuffer();
         const auto& buffer = indirect_buffer.first;
         const auto& offset = indirect_buffer.second;

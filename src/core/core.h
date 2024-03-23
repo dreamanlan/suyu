@@ -31,6 +31,7 @@ class GlobalSchedulerContext;
 class KernelCore;
 class PhysicalCore;
 class KProcess;
+class KThread;
 class KScheduler;
 } // namespace Kernel
 
@@ -42,6 +43,7 @@ enum class ResultStatus : u16;
 namespace Core::Memory {
 struct CheatEntry;
 class Memory;
+class MemorySniffer;
 } // namespace Core::Memory
 
 namespace Service {
@@ -112,6 +114,8 @@ namespace Tools {
 class RenderdocAPI;
 }
 
+class DataAnalystWidget;
+
 namespace Core {
 
 class CpuManager;
@@ -124,6 +128,27 @@ class Reporter;
 class SpeedLimiter;
 
 struct PerfStatsResults;
+
+//implemented in main project / data_analyst.cpp
+class MainThreadCaller final {
+public:
+    MainThreadCaller();
+    void Init(DataAnalystWidget& widget);
+public:
+    void TickWork();
+public://only call in main thread
+    void SyncLogToView(const std::string& info)const;
+public:
+    void RequestLogToView(std::string&& msg);
+    void RequestSyncCallback(const Kernel::KThread* pThread);
+    void RequestSyncCallback(int watchType, uint64_t addr, const Kernel::KThread* pThread);
+    void RequestSyncCallback(int watchType, uint64_t addr, std::size_t size, const Kernel::KThread* pThread);
+private:
+    struct Impl;
+    mutable std::unique_ptr<Impl> impl;
+};
+
+extern MainThreadCaller g_MainThreadCaller;
 
 FileSys::VirtualFile GetGameFileFromPath(const FileSys::VirtualFilesystem& vfs,
                                          const std::string& path);
@@ -277,6 +302,12 @@ public:
     /// Gets the global scheduler
     [[nodiscard]] const Kernel::GlobalSchedulerContext& GlobalSchedulerContext() const;
 
+    /// Gets the memory sniffer
+    [[nodiscard]] Core::Memory::MemorySniffer& MemorySniffer();
+
+    /// Gets the memory sniffer
+    [[nodiscard]] const Core::Memory::MemorySniffer& MemorySniffer() const;
+
     /// Gets the manager for the guest device memory
     [[nodiscard]] Core::DeviceMemory& DeviceMemory();
 
@@ -338,6 +369,7 @@ public:
 
     [[nodiscard]] FileSys::VirtualFilesystem GetFilesystem() const;
 
+    void AddMemorySnifferModuleMemory(Kernel::KProcess& process, std::string&& file_name, std::string&& build_id, u64 base, u64 region_begin, u64 region_size);
     void RegisterCheatList(const std::vector<Memory::CheatEntry>& list,
                            const std::array<u8, 0x20>& build_id, u64 main_region_begin,
                            u64 main_region_size);

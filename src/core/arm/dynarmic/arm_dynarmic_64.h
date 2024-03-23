@@ -33,6 +33,7 @@ public:
         return Architecture::AArch64;
     }
 
+    void Initialize(u64 traceScopeBegin, u64 traceScopeEnd) override;
     HaltReason RunThread(Kernel::KThread* thread) override;
     HaltReason StepThread(Kernel::KThread* thread) override;
 

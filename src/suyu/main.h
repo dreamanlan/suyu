@@ -48,6 +48,7 @@ class QProgressDialog;
 class QSlider;
 class QHBoxLayout;
 class WaitTreeWidget;
+class DataAnalystWidget;
 enum class GameListOpenTarget;
 enum class GameListRemoveTarget;
 enum class GameListShortcutTarget;
@@ -164,6 +165,10 @@ class GMainWindow : public QMainWindow {
         CREATE_SHORTCUT_MSGBOX_ERROR,
         CREATE_SHORTCUT_MSGBOX_APPVOLATILE_WARNING,
     };
+public:
+    DataAnalystWidget* GetDataAnalystWidget()const {
+        return dataAnalystWidget;
+    }
 
 public:
     void filterBarSetChecked(bool state);
@@ -536,6 +541,7 @@ private:
     MicroProfileDialog* microProfileDialog;
     WaitTreeWidget* waitTreeWidget;
     ControllerDialog* controller_dialog;
+    DataAnalystWidget* dataAnalystWidget;
 
     QAction* actions_recent_files[max_recent_files_item];
 

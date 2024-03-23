@@ -566,6 +566,42 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
     }
 }
 
+void PipelineCache::DumpInfo(std::ostream& os)const {
+    for (auto&& pair : graphics_cache) {
+        pair.second->DumpInfo(os, pair.first);
+        os << std::endl;
+    }
+    for (auto&& pair : compute_cache) {
+        pair.second->DumpInfo(os, pair.first);
+        os << std::endl;
+    }
+}
+
+int PipelineCache::ReplaceShader(uint64_t hash, Shader::Stage stage, const std::vector<uint32_t>& code) {
+    int ct = 0;
+    if (stage == Shader::Stage::Compute) {
+        for (auto&& pair : compute_cache) {
+            auto&& key = pair.first;
+            auto&& pipeline = pair.second;
+            if (key.unique_hash == hash) {
+                pipeline->ReplaceShader(code);
+                ++ct;
+            }
+        }
+    }
+    else {
+        for (auto&& pair : graphics_cache) {
+            auto&& key = pair.first;
+            auto&& pipeline = pair.second;
+            if (key.unique_hashes[static_cast<int>(stage) + 1] == hash) {
+                pipeline->ReplaceShader(stage, code);
+                ++ct;
+            }
+        }
+    }
+    return ct;
+}
+
 GraphicsPipeline* PipelineCache::CurrentGraphicsPipelineSlowPath() {
     const auto [pair, is_new]{graphics_cache.try_emplace(graphics_key)};
     auto& pipeline{pair->second};
@@ -675,6 +711,7 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
         ConvertLegacyToGeneric(program, runtime_info);
         const std::vector<u32> code{EmitSPIRV(profile, runtime_info, program, binding)};
         device.SaveShader(code);
+        VideoCommon::DumpSpirvShader(hash, key.unique_hashes[index], Shader::StageFromIndex(stage_index), code);
         modules[stage_index] = BuildShader(device, code);
         if (device.HasDebuggingToolAttached()) {
             const std::string name{fmt::format("Shader {:016x}", key.unique_hashes[index])};
@@ -769,6 +806,7 @@ std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
     auto program{TranslateProgram(pools.inst, pools.block, env, cfg, host_info)};
     const std::vector<u32> code{EmitSPIRV(profile, program)};
     device.SaveShader(code);
+    VideoCommon::DumpSpirvShader(hash, key.unique_hash, Shader::Stage::Compute, code);
     vk::ShaderModule spv_module{BuildShader(device, code)};
     if (device.HasDebuggingToolAttached()) {
         const auto name{fmt::format("Shader {:016x}", key.unique_hash)};
@@ -777,7 +815,7 @@ std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
     Common::ThreadWorker* const thread_worker{build_in_parallel ? &workers : nullptr};
     return std::make_unique<ComputePipeline>(device, vulkan_pipeline_cache, descriptor_pool,
                                              guest_descriptor_queue, thread_worker, statistics,
-                                             &shader_notify, program.info, std::move(spv_module));
+                                             &shader_notify, key, program.info, std::move(spv_module));
 
 } catch (const Shader::Exception& exception) {
     LOG_ERROR(Render_Vulkan, "{}", exception.what());

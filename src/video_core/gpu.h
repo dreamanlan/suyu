@@ -4,6 +4,8 @@
 #pragma once
 
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "common/bit_field.h"
 #include "common/common_types.h"
@@ -164,6 +166,16 @@ public:
     [[nodiscard]] u64 CurrentSyncRequestFence() const;
 
     void WaitForSyncOperation(u64 fence);
+
+    void RequestAddVsHash(uint64_t hash);
+    void RequestRemoveVsHash(uint64_t hash);
+    void RequestClearVsHashes();
+    void RequestAddPsHash(uint64_t hash);
+    void RequestRemovePsHash(uint64_t hash);
+    void RequestClearPsHashes();
+    void RequestDumpShaderInfo(std::string&& file_path);
+    void RequestReplaceSourceShader(uint64_t hash, int stage, std::string&& code);
+    void RequestReplaceSpirvShader(uint64_t hash, int stage, std::vector<uint32_t>&& code);
 
     /// Tick pending requests within the GPU.
     void TickWork();

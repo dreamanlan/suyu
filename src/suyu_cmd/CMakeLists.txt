@@ -22,11 +22,20 @@ add_executable(suyu-cmd
     emu_window/emu_window_sdl2_vk.cpp
     emu_window/emu_window_sdl2_vk.h
     precompiled_headers.h
+    data_analyst_null.cpp
     sdl_config.cpp
     sdl_config.h
     suyu.cpp
     suyu.rc
 )
+
+if (WIN32)
+    if (MSVC)
+        set_target_properties(suyu-cmd PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:WINDOWS /NODEFAULTLIB:libboost_context-vc141-mt-gd-x64-1_83.lib")
+        set_target_properties(suyu-cmd PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:WINDOWS /NODEFAULTLIB:libboost_context-vc141-mt-x64-1_83.lib")
+    endif()
+    target_link_libraries(suyu-cmd PRIVATE libboostcontext)
+endif()
 
 target_link_libraries(suyu-cmd PRIVATE common core input_common frontend_common)
 target_link_libraries(suyu-cmd PRIVATE glad)
@@ -47,8 +56,10 @@ endif()
 if(WIN32)
     # compile as a win32 gui application instead of a console application
     if(MSVC)
+        set_target_properties(suyu-cmd PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")
         set_target_properties(suyu-cmd PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")
     elseif(MINGW)
+        set_target_properties(suyu-cmd PROPERTIES LINK_FLAGS_DEBUG "-Wl,--subsystem,windows")
         set_target_properties(suyu-cmd PROPERTIES LINK_FLAGS_RELEASE "-Wl,--subsystem,windows")
     endif()
 endif()

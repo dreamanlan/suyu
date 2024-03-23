@@ -25,6 +25,7 @@ namespace Vulkan {
 class Device;
 class PipelineStatistics;
 class Scheduler;
+struct ComputePipelineCacheKey;
 
 class ComputePipeline {
 public:
@@ -33,7 +34,7 @@ public:
                              GuestDescriptorQueue& guest_descriptor_queue,
                              Common::ThreadWorker* thread_worker,
                              PipelineStatistics* pipeline_statistics,
-                             VideoCore::ShaderNotify* shader_notify, const Shader::Info& info,
+                             VideoCore::ShaderNotify* shader_notify, const ComputePipelineCacheKey& key, const Shader::Info& info,
                              vk::ShaderModule spv_module);
 
     ComputePipeline& operator=(ComputePipeline&&) noexcept = delete;
@@ -41,6 +42,10 @@ public:
 
     ComputePipeline& operator=(const ComputePipeline&) = delete;
     ComputePipeline(const ComputePipeline&) = delete;
+
+    void DumpInfo(std::ostream& os, const ComputePipelineCacheKey& key)const;
+
+    void ReplaceShader(const std::vector<uint32_t>& code);
 
     void Configure(Tegra::Engines::KeplerCompute& kepler_compute, Tegra::MemoryManager& gpu_memory,
                    Scheduler& scheduler, BufferCache& buffer_cache, TextureCache& texture_cache);

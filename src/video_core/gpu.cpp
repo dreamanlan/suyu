@@ -7,6 +7,7 @@
 #include <condition_variable>
 #include <list>
 #include <memory>
+#include <fstream>
 
 #include "common/assert.h"
 #include "common/microprofile.h"
@@ -33,6 +34,21 @@
 #include "video_core/memory_manager.h"
 #include "video_core/renderer_base.h"
 #include "video_core/shader_notify.h"
+
+namespace VideoCore {
+
+    bool g_IsPolygonModeLine = false;
+    uint32_t g_LineModeMinVertexNum = 6;
+    uint32_t g_LineModeMaxVertexNum = 64;
+    uint32_t g_LineModeMinDrawCount = 2;
+    uint32_t g_LineModeMaxDrawCount = 12;
+    bool g_LineModeLogRequest = false;
+    int g_LineModeLogFrameCount = 2;
+
+    int g_LineModeLogFrameIndex = -1;
+    std::unordered_set<uint64_t> g_LineModeVsHashes;
+    std::unordered_set<uint64_t> g_LineModePsHashes;
+} // namespace VideoCore
 
 namespace Tegra {
 
@@ -126,6 +142,12 @@ struct GPU::Impl {
         sync_request_cv.wait(lck, [this, fence] { return CurrentSyncRequestFence() >= fence; });
     }
 
+    template <typename Func>
+    inline void RequestAsyncOperation(Func&& action) {
+        std::scoped_lock lock{async_request_mutex};
+        async_requests.emplace_back(action);
+    }
+
     /// Tick pending requests within the GPU.
     void TickWork() {
         std::unique_lock lck{sync_request_mutex};
@@ -137,6 +159,14 @@ struct GPU::Impl {
             current_sync_fence.fetch_add(1, std::memory_order_release);
             sync_request_mutex.lock();
             sync_request_cv.notify_all();
+        }
+        {
+            std::scoped_lock lock(async_request_mutex);
+            while (!async_requests.empty()) {
+                auto request = std::move(async_requests.front());
+                async_requests.pop_front();
+                request();
+            }
         }
     }
 
@@ -376,6 +406,9 @@ struct GPU::Impl {
     std::deque<size_t> free_swap_counters;
     std::deque<size_t> request_swap_counters;
     std::mutex request_swap_mutex;
+
+    std::list<std::function<void()>> async_requests;
+    std::mutex async_request_mutex;
 };
 
 GPU::GPU(Core::System& system, bool is_async, bool use_nvdec)
@@ -430,6 +463,59 @@ u64 GPU::CurrentSyncRequestFence() const {
 
 void GPU::WaitForSyncOperation(u64 fence) {
     return impl->WaitForSyncOperation(fence);
+}
+
+void GPU::RequestAddVsHash(uint64_t hash) {
+    impl->RequestAsyncOperation([hash]() {
+        auto&& it = VideoCore::g_LineModeVsHashes.find(hash);
+        if (it == VideoCore::g_LineModeVsHashes.end())
+            VideoCore::g_LineModeVsHashes.insert(hash);
+    });
+}
+void GPU::RequestRemoveVsHash(uint64_t hash) {
+    impl->RequestAsyncOperation([hash]() {
+        VideoCore::g_LineModeVsHashes.erase(hash);
+    });
+}
+void GPU::RequestClearVsHashes() {
+    impl->RequestAsyncOperation([]() {
+        VideoCore::g_LineModeVsHashes.clear();
+    });
+}
+void GPU::RequestAddPsHash(uint64_t hash) {
+    impl->RequestAsyncOperation([hash]() {
+        auto&& it = VideoCore::g_LineModePsHashes.find(hash);
+        if (it == VideoCore::g_LineModePsHashes.end())
+            VideoCore::g_LineModePsHashes.insert(hash);
+    });
+}
+void GPU::RequestRemovePsHash(uint64_t hash) {
+    impl->RequestAsyncOperation([hash]() {
+        VideoCore::g_LineModePsHashes.erase(hash);
+    });
+}
+void GPU::RequestClearPsHashes() {
+    impl->RequestAsyncOperation([]() {
+        VideoCore::g_LineModePsHashes.clear();
+    });
+}
+void GPU::RequestDumpShaderInfo(std::string&& file_path) {
+    impl->RequestAsyncOperation([this, file_path = std::move(file_path)]() {
+        std::ofstream of(file_path, std::ios::out);
+        if (of.fail())
+            return;
+        impl->rasterizer->DumpShaderInfo(of);
+    });
+}
+void GPU::RequestReplaceSourceShader(uint64_t hash, int stage, std::string&& code) {
+    impl->RequestAsyncOperation([this, hash, stage, code = std::move(code)]() {
+        impl->rasterizer->ReplaceSourceShader(hash, stage, code);
+    });
+}
+void GPU::RequestReplaceSpirvShader(uint64_t hash, int stage, std::vector<uint32_t>&& code){
+    impl->RequestAsyncOperation([this, hash, stage, code = std::move(code)]() {
+        impl->rasterizer->ReplaceSpirvShader(hash, stage, code);
+    });
 }
 
 void GPU::TickWork() {

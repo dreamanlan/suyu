@@ -57,6 +57,7 @@
 #include "suyu/bootmanager.h"
 #include "suyu/main.h"
 #include "suyu/qt_common.h"
+#include "suyu/debugger/data_analyst.h"
 #include "video_core/gpu.h"
 #include "video_core/rasterizer_interface.h"
 #include "video_core/renderer_base.h"
@@ -286,6 +287,7 @@ GRenderWindow::GRenderWindow(GMainWindow* parent, EmuThread* emu_thread_,
                              Core::System& system_)
     : QWidget(parent),
       emu_thread(emu_thread_), input_subsystem{std::move(input_subsystem_)}, system{system_} {
+    dataAnalystWidget = parent->GetDataAnalystWidget();
     setWindowTitle(QStringLiteral("suyu %1 | %2-%3")
                        .arg(QString::fromUtf8(Common::g_build_name),
                             QString::fromUtf8(Common::g_scm_branch),
@@ -320,6 +322,11 @@ void GRenderWindow::Exit() {
 
 GRenderWindow::~GRenderWindow() {
     input_subsystem->Shutdown();
+}
+
+void GRenderWindow::InitDataAnalystWidget(DataAnalystWidget* pWidget)
+{
+    dataAnalystWidget = pWidget;
 }
 
 void GRenderWindow::OnFrameDisplayed() {
@@ -601,6 +608,8 @@ void GRenderWindow::keyPressEvent(QKeyEvent* event) {
         input_subsystem->GetKeyboard()->PressKeyboardKey(key);
         // This is used for gamepads that can have any key mapped
         input_subsystem->GetKeyboard()->PressKey(event->key());
+
+        dataAnalystWidget->OnKeyPress(event->modifiers(), event->key());
     }
 }
 
@@ -620,6 +629,8 @@ void GRenderWindow::keyReleaseEvent(QKeyEvent* event) {
         input_subsystem->GetKeyboard()->ReleaseKeyboardKey(key);
         // This is used for gamepads that can have any key mapped
         input_subsystem->GetKeyboard()->ReleaseKey(event->key());
+
+        dataAnalystWidget->OnKeyRelease(event->modifiers(), event->key());
     }
 }
 
@@ -658,6 +669,8 @@ void GRenderWindow::mousePressEvent(QMouseEvent* event) {
     input_subsystem->GetMouse()->PressButton(pos.x(), pos.y(), button);
     input_subsystem->GetMouse()->PressTouchButton(touch_x, touch_y, button);
 
+    dataAnalystWidget->OnMousePress(pos.x(), pos.y(), event->button());
+
     emit MouseActivity();
 }
 
@@ -677,6 +690,8 @@ void GRenderWindow::mouseMoveEvent(QMouseEvent* event) {
     input_subsystem->GetMouse()->MouseMove(touch_x, touch_y);
     input_subsystem->GetMouse()->TouchMove(touch_x, touch_y);
     input_subsystem->GetMouse()->Move(pos.x(), pos.y(), center_x, center_y);
+
+    dataAnalystWidget->OnMouseMove(pos.x(), pos.y());
 
     // Center mouse for mouse panning
     if (Settings::values.mouse_panning && !Settings::values.mouse_enabled) {
@@ -702,6 +717,8 @@ void GRenderWindow::mouseReleaseEvent(QMouseEvent* event) {
 
     const auto button = QtButtonToMouseButton(event->button());
     input_subsystem->GetMouse()->ReleaseButton(button);
+
+    dataAnalystWidget->OnMouseRelease(event->button());
 }
 
 void GRenderWindow::ConstrainMouse() {
@@ -733,6 +750,8 @@ void GRenderWindow::wheelEvent(QWheelEvent* event) {
     const int x = event->angleDelta().x();
     const int y = event->angleDelta().y();
     input_subsystem->GetMouse()->MouseWheelChange(x, y);
+
+    dataAnalystWidget->OnMouseWheel(x, y);
 }
 
 void GRenderWindow::TouchBeginEvent(const QTouchEvent* event) {
@@ -741,22 +760,33 @@ void GRenderWindow::TouchBeginEvent(const QTouchEvent* event) {
         const auto [x, y] = ScaleTouch(touch_point.pos());
         const auto [touch_x, touch_y] = MapToTouchScreen(x, y);
         input_subsystem->GetTouchScreen()->TouchPressed(touch_x, touch_y, touch_point.id());
+
+        dataAnalystWidget->OnTouchPress(touch_x, touch_y, touch_point.id());
     }
 }
 
 void GRenderWindow::TouchUpdateEvent(const QTouchEvent* event) {
     QList<QTouchEvent::TouchPoint> touch_points = event->touchPoints();
     input_subsystem->GetTouchScreen()->ClearActiveFlag();
+
+    dataAnalystWidget->OnTouchUpdateBegin();
+
     for (const auto& touch_point : touch_points) {
         const auto [x, y] = ScaleTouch(touch_point.pos());
         const auto [touch_x, touch_y] = MapToTouchScreen(x, y);
         input_subsystem->GetTouchScreen()->TouchMoved(touch_x, touch_y, touch_point.id());
+
+        dataAnalystWidget->OnTouchMove(touch_x, touch_y, touch_point.id());
     }
     input_subsystem->GetTouchScreen()->ReleaseInactiveTouch();
+
+    dataAnalystWidget->OnTouchUpdateEnd();
 }
 
 void GRenderWindow::TouchEndEvent() {
     input_subsystem->GetTouchScreen()->ReleaseAllTouch();
+
+    dataAnalystWidget->OnTouchEnd();
 }
 
 void GRenderWindow::InitializeCamera() {

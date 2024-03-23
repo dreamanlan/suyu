@@ -26,6 +26,9 @@ class Memorymanager;
 
 namespace VideoCommon {
 
+void DumpTextShader(u64 pipeline_hash, u64 shader_hash, Shader::Stage stage, const std::string& code);
+void DumpSpirvShader(u64 pipeline_hash, u64 shader_hash, Shader::Stage stage, const std::vector<u32>& code);
+
 class GenericEnvironment : public Shader::Environment {
 public:
     explicit GenericEnvironment() = default;

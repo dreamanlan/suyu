@@ -10,21 +10,38 @@
 #include "core/hle/kernel/kernel.h"
 #include "core/hle/kernel/physical_core.h"
 #include "core/hle/kernel/svc.h"
+#include "core/loader/loader.h"
+#include "core/memory.h"
+#include "core/memory/memory_sniffer.h"
 
 namespace Kernel {
 
 PhysicalCore::PhysicalCore(KernelCore& kernel, std::size_t core_index)
-    : m_kernel{kernel}, m_core_index{core_index} {
+    : m_kernel{ kernel }, m_core_index{ core_index }, m_pccount{false}, m_tracing{false}, m_addrForEnableBreakPoint{0} {
     m_is_single_core = !kernel.IsMulticore();
 }
 PhysicalCore::~PhysicalCore() = default;
+
+void PhysicalCore::StartPcCount() {
+    m_pccount = true;
+}
+
+void PhysicalCore::StopPcCount() {
+    m_pccount = true;
+}
+
+void PhysicalCore::StartTrace() {
+    m_tracing = true;
+}
+
+void PhysicalCore::StopTrace() {
+    m_tracing = false;
+}
 
 void PhysicalCore::RunThread(Kernel::KThread* thread) {
     auto* process = thread->GetOwnerProcess();
     auto& system = m_kernel.System();
     auto* interface = process->GetArmInterface(m_core_index);
-
-    interface->Initialize();
 
     const auto EnterContext = [&]() {
         system.EnterCPUProfile();
@@ -62,18 +79,22 @@ void PhysicalCore::RunThread(Kernel::KThread* thread) {
         system.ExitCPUProfile();
     };
 
+    auto&& ctx = thread->GetContext();
+    uint64_t stepCount = 0;
     while (true) {
         // If the thread is scheduled for termination, exit.
         if (thread->HasDpc() && thread->IsTerminationRequested()) {
             thread->Exit();
         }
 
-        // Notify the debugger and go to sleep if a step was performed
-        // and this thread has been scheduled again.
-        if (thread->GetStepState() == StepState::StepPerformed) {
-            system.GetDebugger().NotifyThreadStopped(thread);
-            thread->RequestSuspend(SuspendType::Debug);
-            return;
+        if (system.DebuggerEnabled()) {
+            // Notify the debugger and go to sleep if a step was performed
+            // and this thread has been scheduled again.
+            if (thread->GetStepState() == StepState::StepPerformed) {
+                system.GetDebugger().NotifyThreadStopped(thread);
+                thread->RequestSuspend(SuspendType::Debug);
+                return;
+            }
         }
 
         // Otherwise, run the thread.
@@ -84,14 +105,47 @@ void PhysicalCore::RunThread(Kernel::KThread* thread) {
                 return;
             }
 
-            if (thread->GetStepState() == StepState::StepPending) {
+            bool isInScope = false;
+            if (m_tracing) {
+                u64 pc = ctx.pc;
+                if (system.MemorySniffer().GetStopTraceAddr() == pc) {
+                    system.MemorySniffer().TryLogCallStack(*thread);
+                    m_tracing = false;
+                    system.MemorySniffer().RemoveBreakPoint(pc);
+                }
+                else if (system.MemorySniffer().IsInTraceScope(pc)) {
+                    system.MemorySniffer().TryLogCallStack(*thread);
+                    isInScope = true;
+                }
+            }
+
+            if ((m_tracing || m_addrForEnableBreakPoint != 0) && isInScope && stepCount < system.MemorySniffer().GetMaxStepCount() || thread->GetStepState() == StepState::StepPending) {
                 hr = interface->StepThread(thread);
+                interface->GetContext(ctx);
+                ++stepCount;
 
                 if (True(hr & Core::HaltReason::StepThread)) {
-                    thread->SetStepState(StepState::StepPerformed);
+                    if (m_tracing || m_addrForEnableBreakPoint != 0)
+                        thread->SetStepState(StepState::NotStepping);
+                    else
+                        thread->SetStepState(StepState::StepPerformed);
+                }
+
+                u64 pc = ctx.pc;
+                if (m_addrForEnableBreakPoint != 0 && m_addrForEnableBreakPoint != pc) {
+                    system.MemorySniffer().EnableBreakPoint(m_addrForEnableBreakPoint);
+                    m_addrForEnableBreakPoint = 0;
                 }
             } else {
+                if (m_pccount) {
+                    u64 pc = ctx.pc;
+                    u32 inst = system.ApplicationMemory().Read32(pc);
+                    if (system.MemorySniffer().IsInTraceScope(pc) && system.MemorySniffer().IsStepInstruction(inst)) {
+                        system.MemorySniffer().LogContext(*thread);
+                    }
+                }
                 hr = interface->RunThread(thread);
+                interface->GetContext(ctx);
             }
 
             ExitContext();
@@ -113,12 +167,32 @@ void PhysicalCore::RunThread(Kernel::KThread* thread) {
             if (breakpoint) {
                 interface->RewindBreakpointInstruction();
             }
-            if (system.DebuggerEnabled()) {
-                system.GetDebugger().NotifyThreadStopped(thread);
-            } else {
-                interface->LogBacktrace(process);
+            u64 pc = ctx.pc;
+            if (system.MemorySniffer().IsBreakPoint(pc)) {
+                system.MemorySniffer().TryLogCallStack(*thread);
+                if (system.MemorySniffer().GetStartTraceAddr() == pc) {
+                    m_tracing = true;
+                    system.MemorySniffer().RemoveBreakPoint(pc);
+                }
+                else if (system.MemorySniffer().GetStopTraceAddr() == pc) {
+                    m_tracing = false;
+                    system.MemorySniffer().RemoveBreakPoint(pc);
+                }
+                else {
+                    m_addrForEnableBreakPoint = pc;
+                    system.MemorySniffer().DisableBreakPoint(pc);
+                }
+                thread->Resume(SuspendType::Backtrace);
             }
-            thread->RequestSuspend(SuspendType::Debug);
+            else {
+                if (system.DebuggerEnabled()) {
+                    system.GetDebugger().NotifyThreadStopped(thread);
+                }
+                else {
+                    interface->LogBacktrace(process);
+                }
+                thread->RequestSuspend(SuspendType::Debug);
+            }
             return;
         }
 
@@ -238,6 +312,13 @@ void PhysicalCore::Interrupt() {
 void PhysicalCore::ClearInterrupt() {
     std::scoped_lock lk{m_guard};
     m_is_interrupted = false;
+}
+
+bool PhysicalCore::IsAArch64() const {
+    return m_arm_interface->GetArchitecture() == Core::Architecture::AArch64;
+}
+bool PhysicalCore::IsAArch32() const {
+    return m_arm_interface->GetArchitecture() == Core::Architecture::AArch32;
 }
 
 } // namespace Kernel

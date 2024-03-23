@@ -80,6 +80,12 @@ public:
                               const std::array<const Shader::Info*, 5>& infos,
                               const GraphicsPipelineKey& key_, bool force_context_flush = false);
 
+    void DumpInfo(std::ostream& os, const GraphicsPipelineKey& gkey)const;
+
+    void ReplaceShader(Shader::Stage stage, const std::string& code);
+
+    void ReplaceShader(Shader::Stage stage, const std::vector<uint32_t>& code);
+
     void Configure(bool is_indexed) {
         configure_func(this, is_indexed);
     }

@@ -30,6 +30,7 @@
 #include "core/frontend/emu_window.h"
 
 class GMainWindow;
+class DataAnalystWidget;
 class QCamera;
 class QCameraImageCapture;
 class QCloseEvent;
@@ -151,6 +152,7 @@ public:
                            Core::System& system_);
     ~GRenderWindow() override;
 
+    void InitDataAnalystWidget(DataAnalystWidget* pWidget);
     // EmuWindow implementation.
     void OnFrameDisplayed() override;
     bool IsShown() const override;
@@ -212,6 +214,12 @@ public:
     /// Instructs the window to exit the application.
     void Exit();
 
+
+    std::pair<f32, f32> MapToTouchScreen(u32 framebuffer_x, u32 framebuffer_y) const
+    {
+        return EmuWindow::MapToTouchScreen(framebuffer_x, framebuffer_y);
+    }
+
 public slots:
     void OnEmulationStarting(EmuThread* emu_thread_);
     void OnEmulationStopping();
@@ -243,6 +251,7 @@ private:
     bool LoadOpenGL();
     QStringList GetUnsupportedGLExtensions() const;
 
+    DataAnalystWidget* dataAnalystWidget;
     EmuThread* emu_thread;
     std::shared_ptr<InputCommon::InputSubsystem> input_subsystem;
 

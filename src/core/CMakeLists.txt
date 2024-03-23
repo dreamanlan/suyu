@@ -1131,6 +1131,14 @@ add_library(core STATIC
     memory/dmnt_cheat_types.h
     memory/dmnt_cheat_vm.cpp
     memory/dmnt_cheat_vm.h
+    memory/memory_sniffer.cpp
+    memory/memory_sniffer.h
+    memory/brace_script/brace_object.h
+    memory/brace_script/brace_object.inl
+    memory/brace_script/pinv.h
+    memory/brace_script/math_api.h
+    memory/brace_script/brace_script_interpreter.h
+    memory/brace_script/brace_script_interpreter.cpp
     perf_stats.cpp
     perf_stats.h
     precompiled_headers.h
@@ -1162,7 +1170,8 @@ else()
 endif()
 
 target_link_libraries(core PUBLIC common PRIVATE audio_core hid_core network video_core nx_tzdb tz)
-target_link_libraries(core PUBLIC Boost::headers PRIVATE fmt::fmt nlohmann_json::nlohmann_json mbedtls RenderDoc::API)
+target_link_libraries(core PUBLIC Boost::headers Boost::filesystem Boost::system PRIVATE fmt::fmt nlohmann_json::nlohmann_json mbedtls RenderDoc::API)
+
 if (MINGW)
     target_link_libraries(core PRIVATE ${MSWSOCK_LIBRARY})
 endif()
@@ -1221,11 +1230,11 @@ if(ENABLE_OPENSSL)
 elseif (APPLE)
     target_sources(core PRIVATE
         hle/service/ssl/ssl_backend_securetransport.cpp)
-    target_link_libraries(core PRIVATE "-framework Security")
+    target_link_libraries(core PRIVATE "-framework Security" libbrace_macos)
 elseif (WIN32)
     target_sources(core PRIVATE
         hle/service/ssl/ssl_backend_schannel.cpp)
-    target_link_libraries(core PRIVATE crypt32 secur32)
+    target_link_libraries(core PRIVATE crypt32 secur32 libbrace)
 else()
     target_sources(core PRIVATE
         hle/service/ssl/ssl_backend_none.cpp)

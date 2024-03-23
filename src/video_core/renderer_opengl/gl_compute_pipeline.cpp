@@ -28,21 +28,27 @@ bool ComputePipelineKey::operator==(const ComputePipelineKey& rhs) const noexcep
 }
 
 ComputePipeline::ComputePipeline(const Device& device, TextureCache& texture_cache_,
-                                 BufferCache& buffer_cache_, ProgramManager& program_manager_,
+                                 BufferCache& buffer_cache_, ProgramManager& program_manager_, const ComputePipelineKey& key,
                                  const Shader::Info& info_, std::string code,
                                  std::vector<u32> code_v, bool force_context_flush)
     : texture_cache{texture_cache_}, buffer_cache{buffer_cache_},
       program_manager{program_manager_}, info{info_} {
     switch (device.GetShaderBackend()) {
-    case Settings::ShaderBackend::Glsl:
+    case Settings::ShaderBackend::Glsl: {
         source_program = CreateProgram(code, GL_COMPUTE_SHADER);
-        break;
-    case Settings::ShaderBackend::Glasm:
+        auto&& label = fmt::format("Program {:016x}", key.unique_hash);
+        glObjectLabel(GL_PROGRAM, source_program.handle, static_cast<GLsizei>(label.length()), label.c_str());
+    }break;
+    case Settings::ShaderBackend::Glasm: {
         assembly_program = CompileProgram(code, GL_COMPUTE_PROGRAM_NV);
-        break;
-    case Settings::ShaderBackend::SpirV:
+        auto&& label = fmt::format("Program {:016x}", key.unique_hash);
+        glObjectLabel(GL_PROGRAM, assembly_program.handle, static_cast<GLsizei>(label.length()), label.c_str());
+    }break;
+    case Settings::ShaderBackend::SpirV: {
         source_program = CreateProgram(code_v, GL_COMPUTE_SHADER);
-        break;
+        auto&& label = fmt::format("Program {:016x}", key.unique_hash);
+        glObjectLabel(GL_PROGRAM, source_program.handle, static_cast<GLsizei>(label.length()), label.c_str());
+    }break;
     }
     std::copy_n(info.constant_buffer_used_sizes.begin(), uniform_buffer_sizes.size(),
                 uniform_buffer_sizes.begin());
@@ -73,6 +79,29 @@ ComputePipeline::ComputePipeline(const Device& device, TextureCache& texture_cac
     } else {
         is_built = true;
     }
+}
+
+void ComputePipeline::DumpInfo(std::ostream& os, const ComputePipelineKey& key)const {
+    os << "gl_compute";
+    os << " ";
+    os << program_manager.GetPipeline().handle;
+    os << " ";
+    os << fmt::format("{:016x}", key.unique_hash);
+    os << " ";
+    os << source_program.handle;
+    os << " ";
+    os << assembly_program.handle;
+    os << "|";
+}
+
+void ComputePipeline::ReplaceShader(const std::string& code) {
+    auto&& cprog = OpenGL::CreateProgram(std::string_view(code.c_str()), GL_COMPUTE_SHADER);
+    source_program = std::move(cprog);
+}
+
+void ComputePipeline::ReplaceShader(const std::vector<uint32_t>& code) {
+    auto&& cprog = OpenGL::CreateProgram(code, GL_COMPUTE_SHADER);
+    source_program = std::move(cprog);
 }
 
 void ComputePipeline::Configure() {

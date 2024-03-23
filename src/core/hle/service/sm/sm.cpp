@@ -15,6 +15,7 @@
 #include "core/hle/service/server_manager.h"
 #include "core/hle/service/sm/sm.h"
 #include "core/hle/service/sm/sm_controller.h"
+#include "core/memory/memory_sniffer.h"
 
 namespace Service::SM {
 
@@ -195,6 +196,10 @@ Result SM::GetServiceImpl(Kernel::KClientSession** out_client_session, HLEReques
         LOG_ERROR(Service_SM, "called service={} -> error 0x{:08X}", name, result.raw);
         return result;
     }
+
+    u64 id = reinterpret_cast<u64>(session);
+    system.MemorySniffer().AddSessionInfo(id, name, 0);
+    LOG_DEBUG(Service_SM, "called service={} -> session={}", name, id);
 
     *out_client_session = session;
     return ResultSuccess;

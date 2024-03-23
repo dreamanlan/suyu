@@ -22,7 +22,9 @@
 #include "core/hle/kernel/kernel.h"
 #include "core/hle/service/hle_ipc.h"
 #include "core/hle/service/ipc_helpers.h"
+#include "core/core.h"
 #include "core/memory.h"
+#include "core/memory/memory_sniffer.h"
 
 namespace Service {
 
@@ -270,7 +272,7 @@ Result HLERequestContext::PopulateFromIncomingCommandBuffer(u32_le* src_cmdbuf) 
     return ResultSuccess;
 }
 
-Result HLERequestContext::WriteToOutgoingCommandBuffer() {
+Result HLERequestContext::WriteToOutgoingCommandBuffer(Core::System& system) {
     auto current_offset = handles_offset;
     auto& owner_process = *thread->GetOwnerProcess();
     auto& handle_table = owner_process.GetHandleTable();
@@ -279,6 +281,8 @@ Result HLERequestContext::WriteToOutgoingCommandBuffer() {
         Handle handle{};
         if (object) {
             R_TRY(handle_table.Add(&handle, object));
+            u64 id = reinterpret_cast<u64>(object);
+            system.MemorySniffer().TryUpdateSession(id, handle);
         }
         cmd_buf[current_offset++] = handle;
     }
@@ -286,6 +290,8 @@ Result HLERequestContext::WriteToOutgoingCommandBuffer() {
         Handle handle{};
         if (object) {
             R_TRY(handle_table.Add(&handle, object));
+            u64 id = reinterpret_cast<u64>(object);
+            system.MemorySniffer().TryUpdateSession(id, handle);
 
             // Close our reference to the object, as it is being moved to the caller.
             object->Close();

@@ -12,6 +12,7 @@
 #include <thread>
 #include "core/hle/service/am/applet_manager.h"
 #include "core/loader/nca.h"
+#include "core/loader/nro.h"
 #include "core/tools/renderdoc.h"
 
 #ifdef __APPLE__
@@ -48,6 +49,7 @@
 #include "core/hle/service/acc/profile_manager.h"
 #include "core/hle/service/am/frontend/applets.h"
 #include "core/hle/service/set/system_settings_server.h"
+#include "core/memory/memory_sniffer.h"
 #include "frontend_common/content_manager.h"
 #include "hid_core/frontend/emulated_controller.h"
 #include "hid_core/hid_core.h"
@@ -133,6 +135,7 @@
 #include "suyu/debugger/controller.h"
 #include "suyu/debugger/profiler.h"
 #include "suyu/debugger/wait_tree.h"
+#include "suyu/debugger/data_analyst.h"
 #include "suyu/discord.h"
 #include "suyu/game_list.h"
 #include "suyu/game_list_p.h"
@@ -1257,6 +1260,13 @@ void GMainWindow::InitializeDebugWidgets() {
     controller_dialog->hide();
     debug_menu->addAction(controller_dialog->toggleViewAction());
 
+    dataAnalystWidget = new DataAnalystWidget(*system, input_subsystem, render_window, this);
+    addDockWidget(Qt::LeftDockWidgetArea, dataAnalystWidget);
+    dataAnalystWidget->hide();
+    debug_menu->addAction(dataAnalystWidget->toggleViewAction());
+
+    render_window->InitDataAnalystWidget(dataAnalystWidget);
+
     connect(this, &GMainWindow::EmulationStarting, waitTreeWidget,
             &WaitTreeWidget::OnEmulationStarting);
     connect(this, &GMainWindow::EmulationStopping, waitTreeWidget,
@@ -1747,7 +1757,7 @@ void GMainWindow::AllowOSSleep() {
 }
 
 bool GMainWindow::LoadROM(const QString& filename, Service::AM::FrontendAppletParameters params) {
-    if (Loader::IdentifyType(Core::GetGameFileFromPath(vfs, filename.toStdString())) !=
+    if (Loader::AppLoader_NRO::IdentifyType(Core::GetGameFileFromPath(vfs, filename.toStdString())) !=
         Loader::FileType::NRO) {
         if (!CheckFirmwarePresence()) {
             QMessageBox::critical(this, tr("Component Missing"), tr("Missing Firmware."));
@@ -3246,6 +3256,8 @@ void GMainWindow::OnRestartGame() {
     }
 
     if (ConfirmShutdownGame()) {
+        system->MemorySniffer().ClearModuleMemoryParameters();
+        system->MemorySniffer().ClearSessionInfos();
         // Make a copy since ShutdownGame edits game_path
         const auto current_game = QString(current_game_path);
         ShutdownGame();
@@ -3276,6 +3288,8 @@ void GMainWindow::OnPauseContinueGame() {
 
 void GMainWindow::OnStopGame() {
     if (ConfirmShutdownGame()) {
+        system->MemorySniffer().ClearModuleMemoryParameters();
+        system->MemorySniffer().ClearSessionInfos();
         play_time_manager->Stop();
         // Update game list to show new play time
         game_list->PopulateAsync(UISettings::values.game_dirs);

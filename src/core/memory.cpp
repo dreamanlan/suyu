@@ -23,6 +23,7 @@
 #include "core/hle/kernel/k_page_table.h"
 #include "core/hle/kernel/k_process.h"
 #include "core/memory.h"
+#include "core/memory/memory_sniffer.h"
 #include "video_core/gpu.h"
 #include "video_core/host1x/gpu_device_memory_manager.h"
 #include "video_core/host1x/host1x.h"
@@ -948,107 +949,189 @@ bool Memory::IsValidVirtualAddressRange(Common::ProcessAddress base, u64 size) c
 }
 
 u8* Memory::GetPointer(Common::ProcessAddress vaddr) {
-    return impl->GetPointer(vaddr);
+    u8* p = impl->GetPointer(vaddr);
+    if (p && system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::GetPointer, vaddr);
+    }
+    return p;
 }
 
 u8* Memory::GetPointerSilent(Common::ProcessAddress vaddr) {
-    return impl->GetPointerSilent(vaddr);
+    u8* p = impl->GetPointerSilent(vaddr);
+    if (p && system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::GetPointer, vaddr);
+    }
+    return p;
 }
 
 const u8* Memory::GetPointer(Common::ProcessAddress vaddr) const {
-    return impl->GetPointer(vaddr);
+    const u8* p = impl->GetPointer(vaddr);
+    return p;
 }
 
 u8 Memory::Read8(const Common::ProcessAddress addr) {
+    if (system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::Read, addr);
+    }
     return impl->Read8(addr);
 }
 
 u16 Memory::Read16(const Common::ProcessAddress addr) {
+    if (system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::Read, addr);
+    }
     return impl->Read16(addr);
 }
 
 u32 Memory::Read32(const Common::ProcessAddress addr) {
+    if (system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::Read, addr);
+    }
     return impl->Read32(addr);
 }
 
 u64 Memory::Read64(const Common::ProcessAddress addr) {
+    if (system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::Read, addr);
+    }
     return impl->Read64(addr);
 }
 
 void Memory::Write8(Common::ProcessAddress addr, u8 data) {
+    if (system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::Write, addr);
+    }
     impl->Write8(addr, data);
 }
 
 void Memory::Write16(Common::ProcessAddress addr, u16 data) {
+    if (system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::Write, addr);
+    }
     impl->Write16(addr, data);
 }
 
 void Memory::Write32(Common::ProcessAddress addr, u32 data) {
+    if (system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::Write, addr);
+    }
     impl->Write32(addr, data);
 }
 
 void Memory::Write64(Common::ProcessAddress addr, u64 data) {
+    if (system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::Write, addr);
+    }
     impl->Write64(addr, data);
 }
 
 bool Memory::WriteExclusive8(Common::ProcessAddress addr, u8 data, u8 expected) {
-    return impl->WriteExclusive8(addr, data, expected);
+    bool ret = impl->WriteExclusive8(addr, data, expected);
+    if (ret && system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::Write, addr);
+    }
+    return ret;
 }
 
 bool Memory::WriteExclusive16(Common::ProcessAddress addr, u16 data, u16 expected) {
-    return impl->WriteExclusive16(addr, data, expected);
+    bool ret = impl->WriteExclusive16(addr, data, expected);
+    if (ret && system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::Write, addr);
+    }
+    return ret;
 }
 
 bool Memory::WriteExclusive32(Common::ProcessAddress addr, u32 data, u32 expected) {
-    return impl->WriteExclusive32(addr, data, expected);
+    bool ret = impl->WriteExclusive32(addr, data, expected);
+    if (ret && system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::Write, addr);
+    }
+    return ret;
 }
 
 bool Memory::WriteExclusive64(Common::ProcessAddress addr, u64 data, u64 expected) {
-    return impl->WriteExclusive64(addr, data, expected);
+    bool ret = impl->WriteExclusive64(addr, data, expected);
+    if (ret && system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::Write, addr);
+    }
+    return ret;
 }
 
 bool Memory::WriteExclusive128(Common::ProcessAddress addr, u128 data, u128 expected) {
-    return impl->WriteExclusive128(addr, data, expected);
+    bool ret = impl->WriteExclusive128(addr, data, expected);
+    if (ret && system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::Write, addr, sizeof(u64) * 2);
+    }
+    return ret;
 }
 
 std::string Memory::ReadCString(Common::ProcessAddress vaddr, std::size_t max_length) {
+    if (system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::ReadCString, vaddr, max_length);
+    }
     return impl->ReadCString(vaddr, max_length);
 }
 
 bool Memory::ReadBlock(const Common::ProcessAddress src_addr, void* dest_buffer,
-                       const std::size_t size) {
+    const std::size_t size) {
+    if (system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::Read, src_addr, size);
+    }
     return impl->ReadBlock(src_addr, dest_buffer, size);
 }
 
 bool Memory::ReadBlockUnsafe(const Common::ProcessAddress src_addr, void* dest_buffer,
-                             const std::size_t size) {
+    const std::size_t size) {
+    if (system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::Read, src_addr, size);
+    }
     return impl->ReadBlockUnsafe(src_addr, dest_buffer, size);
 }
 
 const u8* Memory::GetSpan(const VAddr src_addr, const std::size_t size) const {
-    return impl->GetSpan(src_addr, size);
+    auto* p = impl->GetSpan(src_addr, size);
+    if (p && system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::GetPointer, src_addr, size);
+    }
+    return p;
 }
 
 u8* Memory::GetSpan(const VAddr src_addr, const std::size_t size) {
-    return impl->GetSpan(src_addr, size);
+    auto* p = impl->GetSpan(src_addr, size);
+    if (p && system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::GetPointer, src_addr, size);
+    }
+    return p;
 }
 
 bool Memory::WriteBlock(const Common::ProcessAddress dest_addr, const void* src_buffer,
                         const std::size_t size) {
+    if (system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::Write, dest_addr, size);
+    }
     return impl->WriteBlock(dest_addr, src_buffer, size);
 }
 
 bool Memory::WriteBlockUnsafe(const Common::ProcessAddress dest_addr, const void* src_buffer,
                               const std::size_t size) {
+    if (system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::Write, dest_addr, size);
+    }
     return impl->WriteBlockUnsafe(dest_addr, src_buffer, size);
 }
 
 bool Memory::CopyBlock(Common::ProcessAddress dest_addr, Common::ProcessAddress src_addr,
                        const std::size_t size) {
+    if (system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::Write, dest_addr, size);
+    }
     return impl->CopyBlock(dest_addr, src_addr, size);
 }
 
 bool Memory::ZeroBlock(Common::ProcessAddress dest_addr, const std::size_t size) {
+    if (system.MemorySniffer().IsEnabled()) {
+        system.MemorySniffer().TryLogCallStack(MemorySniffer::WatchPointType::Write, dest_addr, size);
+    }
     return impl->ZeroBlock(dest_addr, size);
 }
 

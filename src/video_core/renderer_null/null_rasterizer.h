@@ -37,6 +37,9 @@ public:
     explicit RasterizerNull(Tegra::GPU& gpu);
     ~RasterizerNull() override;
 
+    void DumpShaderInfo(std::ostream& os)const override;
+    void ReplaceSourceShader(uint64_t hash, int stage, const std::string& code) override;
+    void ReplaceSpirvShader(uint64_t hash, int stage, const std::vector<uint32_t>& code) override;
     void Draw(bool is_indexed, u32 instance_count) override;
     void DrawTexture() override;
     void Clear(u32 layer_count) override;

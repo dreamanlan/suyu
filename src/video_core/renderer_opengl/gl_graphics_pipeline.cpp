@@ -231,7 +231,7 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, TextureCache& texture_c
         GenerateTransformFeedbackState();
     }
     const bool in_parallel = thread_worker != nullptr;
-    auto func{[this, sources_ = std::move(sources), sources_spirv_ = std::move(sources_spirv),
+    auto func{[this, key_, sources_ = std::move(sources), sources_spirv_ = std::move(sources_spirv),
                shader_notify, backend, in_parallel,
                force_context_flush](ShaderContext::Context*) mutable {
         for (size_t stage = 0; stage < 5; ++stage) {
@@ -239,17 +239,23 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, TextureCache& texture_c
             case Settings::ShaderBackend::Glsl:
                 if (!sources_[stage].empty()) {
                     source_programs[stage] = CreateProgram(sources_[stage], Stage(stage));
+                    auto&& label = fmt::format("Program {:016x}", key_.unique_hashes[stage + 1]);
+                    glObjectLabel(GL_PROGRAM, source_programs[stage].handle, static_cast<GLsizei>(label.length()), label.c_str());
                 }
                 break;
             case Settings::ShaderBackend::Glasm:
                 if (!sources_[stage].empty()) {
                     assembly_programs[stage] =
                         CompileProgram(sources_[stage], AssemblyStage(stage));
+                    auto&& label = fmt::format("{:016x}", key_.unique_hashes[stage + 1]);
+                    glObjectLabel(GL_PROGRAM, assembly_programs[stage].handle, static_cast<GLsizei>(label.length()), label.c_str());
                 }
                 break;
             case Settings::ShaderBackend::SpirV:
                 if (!sources_spirv_[stage].empty()) {
                     source_programs[stage] = CreateProgram(sources_spirv_[stage], Stage(stage));
+                    auto&& label = fmt::format("{:016x}", key_.unique_hashes[stage + 1]);
+                    glObjectLabel(GL_PROGRAM, source_programs[stage].handle, static_cast<GLsizei>(label.length()), label.c_str());
                 }
                 break;
             }
@@ -271,6 +277,51 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, TextureCache& texture_c
         thread_worker->QueueWork(std::move(func));
     } else {
         func(nullptr);
+    }
+}
+
+void GraphicsPipeline::DumpInfo(std::ostream& os, const GraphicsPipelineKey& gkey)const {
+    os << "gl_graphic";
+    os << " ";
+    os << program_manager.GetPipeline().handle;
+    os << " ";
+    for (int ix = 0; ix < ProgramManager::NUM_STAGES; ++ix) {
+        os << fmt::format("{:016x}", gkey.unique_hashes[ix + 1]);
+        os << " ";
+        os << source_programs[ix].handle;
+        os << " ";
+        os << assembly_programs[ix].handle;
+        os << "|";
+    }
+}
+
+void GraphicsPipeline::ReplaceShader(Shader::Stage stage, const std::string& code) {
+    switch (stage) {
+    case Shader::Stage::VertexB: {
+        auto&& vprog = OpenGL::CreateProgram(std::string_view(code.c_str()), GL_VERTEX_SHADER);
+        source_programs[static_cast<int>(stage)] = std::move(vprog);
+    }break;
+    case Shader::Stage::Fragment: {
+        auto&& fprog = OpenGL::CreateProgram(std::string_view(code.c_str()), GL_FRAGMENT_SHADER);
+        source_programs[static_cast<int>(stage)] = std::move(fprog);
+    }break;
+    default:
+        break;
+    }
+}
+
+void GraphicsPipeline::ReplaceShader(Shader::Stage stage, const std::vector<uint32_t>& code) {
+    switch (stage) {
+    case Shader::Stage::VertexB: {
+        auto&& vprog = OpenGL::CreateProgram(code, GL_VERTEX_SHADER);
+        source_programs[static_cast<int>(stage)] = std::move(vprog);
+    }break;
+    case Shader::Stage::Fragment: {
+        auto&& fprog = OpenGL::CreateProgram(code, GL_FRAGMENT_SHADER);
+        source_programs[static_cast<int>(stage)] = std::move(fprog);
+    }break;
+    default:
+        break;
     }
 }
 

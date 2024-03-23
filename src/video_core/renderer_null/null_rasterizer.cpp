@@ -21,6 +21,9 @@ bool AccelerateDMA::BufferClear(GPUVAddr src_address, u64 amount, u32 value) {
 RasterizerNull::RasterizerNull(Tegra::GPU& gpu) : m_gpu{gpu} {}
 RasterizerNull::~RasterizerNull() = default;
 
+void RasterizerNull::DumpShaderInfo(std::ostream& os)const {}
+void RasterizerNull::ReplaceSourceShader(uint64_t hash, int stage, const std::string& code) {}
+void RasterizerNull::ReplaceSpirvShader(uint64_t hash, int stage, const std::vector<uint32_t>& code) {}
 void RasterizerNull::Draw(bool is_indexed, u32 instance_count) {}
 void RasterizerNull::DrawTexture() {}
 void RasterizerNull::Clear(u32 layer_count) {}

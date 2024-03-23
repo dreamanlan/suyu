@@ -49,9 +49,15 @@ static_assert(std::is_trivially_constructible_v<ComputePipelineKey>);
 class ComputePipeline {
 public:
     explicit ComputePipeline(const Device& device, TextureCache& texture_cache_,
-                             BufferCache& buffer_cache_, ProgramManager& program_manager_,
+                             BufferCache& buffer_cache_, ProgramManager& program_manager_, const ComputePipelineKey& key,
                              const Shader::Info& info_, std::string code, std::vector<u32> code_v,
                              bool force_context_flush = false);
+
+    void DumpInfo(std::ostream& os, const ComputePipelineKey& key)const;
+
+    void ReplaceShader(const std::string& code);
+
+    void ReplaceShader(const std::vector<uint32_t>& code);
 
     void Configure();
 

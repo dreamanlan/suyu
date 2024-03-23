@@ -81,6 +81,9 @@ public:
                               StateTracker& state_tracker_);
     ~RasterizerOpenGL() override;
 
+    void DumpShaderInfo(std::ostream& os)const override;
+    void ReplaceSourceShader(uint64_t hash, int stage, const std::string& code) override;
+    void ReplaceSpirvShader(uint64_t hash, int stage, const std::vector<uint32_t>& code) override;
     void Draw(bool is_indexed, u32 instance_count) override;
     void DrawIndirect() override;
     void DrawTexture() override;
@@ -153,10 +156,10 @@ private:
     static constexpr size_t MAX_IMAGE_VIEWS = MAX_TEXTURES + MAX_IMAGES;
 
     template <typename Func>
-    void PrepareDraw(bool is_indexed, Func&&);
+    void PrepareDraw(bool indirect_draw, bool is_indexed, Func&&);
 
     /// Syncs state to match guest's
-    void SyncState();
+    void SyncState(bool line_mode);
 
     /// Syncs the viewport and depth range to match the guest state
     void SyncViewport();
@@ -207,7 +210,7 @@ private:
     void SyncRasterizeEnable();
 
     /// Syncs polygon modes to match the guest state
-    void SyncPolygonModes();
+    void SyncPolygonModes(bool lineMode);
 
     /// Syncs Color Mask
     void SyncColorMask();

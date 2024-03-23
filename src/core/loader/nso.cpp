@@ -190,6 +190,17 @@ std::optional<VAddr> AppLoader_NSO::LoadModule(Kernel::KProcess& process, Core::
         return load_base + image_size;
     }
 
+    const auto build_id_raw = Common::HexToString(nso_header.build_id, true);
+    auto build_id = build_id_raw.substr(0, sizeof(u64) * 2);
+    std::string file_name = nso_file.GetName();
+    system.AddMemorySnifferModuleMemory(process, file_name + "_text", build_id + "_text", load_base, load_base + codeset.CodeSegment().addr.GetValue(), codeset.CodeSegment().size);
+    system.AddMemorySnifferModuleMemory(process, file_name + "_rodata", build_id + "_rodata", load_base, load_base + codeset.RODataSegment().addr.GetValue(), codeset.RODataSegment().size);
+    system.AddMemorySnifferModuleMemory(process, file_name + "_data", build_id + "_data", load_base, load_base + codeset.DataSegment().addr.GetValue(), codeset.DataSegment().size);
+#if HAS_NCE
+    system.AddMemorySnifferModuleMemory(process, file_name + "_patch", build_id + "_patch", load_base, load_base + codeset.PatchSegment().addr.GetValue(), codeset.PatchSegment().size);
+#endif
+    system.AddMemorySnifferModuleMemory(process, std::move(file_name), std::move(build_id), load_base, load_base, image_size);
+
     // Apply cheats if they exist and the program has a valid title ID
     if (pm) {
         system.SetApplicationProcessBuildID(nso_header.build_id);

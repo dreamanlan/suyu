@@ -124,6 +124,17 @@ void RendererVulkan::Composite(std::span<const Tegra::FramebufferConfig> framebu
 
     gpu.RendererFrameEndNotify();
     rasterizer.TickFrame();
+
+    if (VideoCore::g_LineModeLogFrameIndex >= VideoCore::g_LineModeLogFrameCount) {
+        VideoCore::g_LineModeLogFrameIndex = -1;
+    }
+    else if (VideoCore::g_LineModeLogFrameIndex >= 0) {
+        ++VideoCore::g_LineModeLogFrameIndex;
+    }
+    if (VideoCore::g_LineModeLogRequest) {
+        VideoCore::g_LineModeLogFrameIndex = 0;
+        VideoCore::g_LineModeLogRequest = false;
+    }
 }
 
 vk::Buffer RendererVulkan::RenderToBuffer(std::span<const Tegra::FramebufferConfig> framebuffers,

@@ -10,6 +10,7 @@
 #include "core/hle/kernel/k_port.h"
 #include "core/hle/kernel/k_process.h"
 #include "core/hle/kernel/svc.h"
+#include "core/memory/memory_sniffer.h"
 
 namespace Kernel::Svc {
 
@@ -46,6 +47,8 @@ Result ConnectToNamedPort(Core::System& system, Handle* out, u64 user_name) {
     handle_table.Register(*out, session);
     session->Close();
 
+    u64 id = reinterpret_cast<u64>(session);
+    system.MemorySniffer().AddSessionInfo(id, string_name, *out);
     // We succeeded.
     R_SUCCEED();
 }

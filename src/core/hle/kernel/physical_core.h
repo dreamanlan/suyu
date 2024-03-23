@@ -29,6 +29,10 @@ public:
     SUYU_NON_COPYABLE(PhysicalCore);
     SUYU_NON_MOVEABLE(PhysicalCore);
 
+    void StartPcCount();
+    void StopPcCount();
+    void StartTrace();
+    void StopTrace();
     // Execute guest code running on the given thread.
     void RunThread(KThread* thread);
 
@@ -62,6 +66,13 @@ public:
         return m_core_index;
     }
 
+    KThread* CurrentThread() const {
+        return m_current_thread;
+    }
+
+    bool IsAArch64() const;
+    bool IsAArch32() const;
+
 private:
     KernelCore& m_kernel;
     const std::size_t m_core_index;
@@ -72,6 +83,10 @@ private:
     KThread* m_current_thread{};
     bool m_is_interrupted{};
     bool m_is_single_core{};
+
+    bool m_pccount{};
+    bool m_tracing{};
+    uint64_t m_addrForEnableBreakPoint{};
 };
 
 } // namespace Kernel

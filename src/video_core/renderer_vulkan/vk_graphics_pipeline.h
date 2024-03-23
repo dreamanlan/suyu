@@ -86,8 +86,12 @@ public:
 
     void AddTransition(GraphicsPipeline* transition);
 
-    void Configure(bool is_indexed) {
-        configure_func(this, is_indexed);
+    void DumpInfo(std::ostream& os, const GraphicsPipelineCacheKey& gkey)const;
+
+    void ReplaceShader(Shader::Stage stage, const std::vector<uint32_t>& code);
+
+    void Configure(bool is_indexed, bool line_mode) {
+        configure_func(this, is_indexed, line_mode);
     }
 
     [[nodiscard]] GraphicsPipeline* Next(const GraphicsPipelineCacheKey& current_key) noexcept {
@@ -105,7 +109,7 @@ public:
 
     template <typename Spec>
     static auto MakeConfigureSpecFunc() {
-        return [](GraphicsPipeline* pl, bool is_indexed) { pl->ConfigureImpl<Spec>(is_indexed); };
+        return [](GraphicsPipeline* pl, bool is_indexed, bool line_mode) { pl->ConfigureImpl<Spec>(is_indexed, line_mode); };
     }
 
     void SetEngine(Tegra::Engines::Maxwell3D* maxwell3d_, Tegra::MemoryManager* gpu_memory_) {
@@ -115,10 +119,12 @@ public:
 
 private:
     template <typename Spec>
-    void ConfigureImpl(bool is_indexed);
+    void ConfigureImpl(bool is_indexed,
+        bool line_mode);
 
     void ConfigureDraw(const RescalingPushConstant& rescaling,
-                       const RenderAreaPushConstant& render_are);
+        const RenderAreaPushConstant& render_are,
+        bool line_mode);
 
     void MakePipeline(VkRenderPass render_pass);
 
@@ -134,7 +140,7 @@ private:
     Scheduler& scheduler;
     GuestDescriptorQueue& guest_descriptor_queue;
 
-    void (*configure_func)(GraphicsPipeline*, bool){};
+    void (*configure_func)(GraphicsPipeline*, bool, bool){};
 
     std::vector<GraphicsPipelineCacheKey> transition_keys;
     std::vector<GraphicsPipeline*> transitions;
@@ -151,6 +157,7 @@ private:
     vk::PipelineLayout pipeline_layout;
     vk::DescriptorUpdateTemplate descriptor_update_template;
     vk::Pipeline pipeline;
+    vk::Pipeline line_mode_pipeline;
 
     std::condition_variable build_condvar;
     std::mutex build_mutex;

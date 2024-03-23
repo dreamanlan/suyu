@@ -23,6 +23,10 @@ create_target_directory_groups(tests)
 
 target_link_libraries(tests PRIVATE common core input_common)
 target_link_libraries(tests PRIVATE ${PLATFORM_LIBRARIES} Catch2::Catch2WithMain Threads::Threads)
+if (WIN32 AND MSVC)
+    set_target_properties(tests PROPERTIES LINK_FLAGS_DEBUG "/NODEFAULTLIB:libboost_context-vc141-mt-gd-x64-1_83.lib")
+    set_target_properties(tests PROPERTIES LINK_FLAGS_RELEASE "/NODEFAULTLIB:libboost_context-vc141-mt-x64-1_83.lib")
+endif()
 
 add_test(NAME tests COMMAND tests)
 

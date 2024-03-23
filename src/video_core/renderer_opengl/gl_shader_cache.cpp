@@ -346,6 +346,67 @@ void ShaderCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading,
     }
 }
 
+void ShaderCache::DumpInfo(std::ostream& os)const {
+    for (auto&& pair : graphics_cache) {
+        pair.second->DumpInfo(os, pair.first);
+        os << std::endl;
+    }
+    for (auto&& pair : compute_cache) {
+        pair.second->DumpInfo(os, pair.first);
+        os << std::endl;
+    }
+}
+
+int ShaderCache::ReplaceShader(uint64_t hash, Shader::Stage stage, const std::string& code) {
+    int ct = 0;
+    if (stage == Shader::Stage::Compute) {
+        for (auto&& pair : compute_cache) {
+            auto&& key = pair.first;
+            auto&& pipeline = pair.second;
+            if (key.unique_hash == hash) {
+                pipeline->ReplaceShader(code);
+                ++ct;
+            }
+        }
+    }
+    else {
+        for (auto&& pair : graphics_cache) {
+            auto&& key = pair.first;
+            auto&& pipeline = pair.second;
+            if (key.unique_hashes[static_cast<int>(stage) + 1] == hash) {
+                pipeline->ReplaceShader(stage, code);
+                ++ct;
+            }
+        }
+    }
+    return ct;
+}
+
+int ShaderCache::ReplaceShader(uint64_t hash, Shader::Stage stage, const std::vector<uint32_t>& code) {
+    int ct = 0;
+    if (stage == Shader::Stage::Compute) {
+        for (auto&& pair : compute_cache) {
+            auto&& key = pair.first;
+            auto&& pipeline = pair.second;
+            if (key.unique_hash == hash) {
+                pipeline->ReplaceShader(code);
+                ++ct;
+            }
+        }
+    }
+    else {
+        for (auto&& pair : graphics_cache) {
+            auto&& key = pair.first;
+            auto&& pipeline = pair.second;
+            if (key.unique_hashes[static_cast<int>(stage) + 1] == hash) {
+                pipeline->ReplaceShader(stage, code);
+                ++ct;
+            }
+        }
+    }
+    return ct;
+}
+
 GraphicsPipeline* ShaderCache::CurrentGraphicsPipeline() {
     if (!RefreshStages(graphics_key.unique_hashes)) {
         current_pipeline = nullptr;
@@ -531,16 +592,20 @@ std::unique_ptr<GraphicsPipeline> ShaderCache::CreateGraphicsPipeline(
         case Settings::ShaderBackend::Glsl:
             ConvertLegacyToGeneric(program, runtime_info);
             sources[stage_index] = EmitGLSL(profile, runtime_info, program, binding);
+            VideoCommon::DumpTextShader(hash, key.unique_hashes[index], Shader::StageFromIndex(stage_index), sources[stage_index]);
             break;
         case Settings::ShaderBackend::Glasm:
             sources[stage_index] = EmitGLASM(profile, runtime_info, program, binding);
+            VideoCommon::DumpTextShader(hash, key.unique_hashes[index], Shader::StageFromIndex(stage_index), sources[stage_index]);
             break;
         case Settings::ShaderBackend::SpirV:
             ConvertLegacyToGeneric(program, runtime_info);
             sources_spirv[stage_index] = EmitSPIRV(profile, runtime_info, program, binding);
+            VideoCommon::DumpSpirvShader(hash, key.unique_hashes[index], Shader::StageFromIndex(stage_index), sources_spirv[stage_index]);
             break;
         }
         previous_program = &program;
+
     }
     auto* const thread_worker{use_shader_workers ? workers.get() : nullptr};
     return std::make_unique<GraphicsPipeline>(device, texture_cache, buffer_cache, program_manager,
@@ -591,16 +656,19 @@ std::unique_ptr<ComputePipeline> ShaderCache::CreateComputePipeline(
     switch (device.GetShaderBackend()) {
     case Settings::ShaderBackend::Glsl:
         code = EmitGLSL(profile, program);
+        VideoCommon::DumpTextShader(hash, key.unique_hash, Shader::Stage::Compute, code);
         break;
     case Settings::ShaderBackend::Glasm:
         code = EmitGLASM(profile, info, program);
+        VideoCommon::DumpTextShader(hash, key.unique_hash, Shader::Stage::Compute, code);
         break;
     case Settings::ShaderBackend::SpirV:
         code_spirv = EmitSPIRV(profile, program);
+        VideoCommon::DumpSpirvShader(hash, key.unique_hash, Shader::Stage::Compute, code_spirv);
         break;
     }
 
-    return std::make_unique<ComputePipeline>(device, texture_cache, buffer_cache, program_manager,
+    return std::make_unique<ComputePipeline>(device, texture_cache, buffer_cache, program_manager, key,
                                              program.info, code, code_spirv, force_context_flush);
 } catch (Shader::Exception& exception) {
     LOG_ERROR(Render_OpenGL, "{}", exception.what());

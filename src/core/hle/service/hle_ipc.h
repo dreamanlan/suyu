@@ -22,6 +22,10 @@
 
 union Result;
 
+namespace Core {
+class System;
+}
+
 namespace Core::Memory {
 class Memory;
 }
@@ -202,7 +206,7 @@ public:
     Result PopulateFromIncomingCommandBuffer(u32_le* src_cmdbuf);
 
     /// Writes data from this context back to the requesting process/thread.
-    Result WriteToOutgoingCommandBuffer();
+    Result WriteToOutgoingCommandBuffer(Core::System& system);
 
     [[nodiscard]] u32_le GetHipcCommand() const {
         return command;

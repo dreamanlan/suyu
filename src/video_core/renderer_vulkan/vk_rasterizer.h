@@ -82,6 +82,9 @@ public:
                               StateTracker& state_tracker_, Scheduler& scheduler_);
     ~RasterizerVulkan() override;
 
+    void DumpShaderInfo(std::ostream& os)const override;
+    void ReplaceSourceShader(uint64_t hash, int stage, const std::string& code) override;
+    void ReplaceSpirvShader(uint64_t hash, int stage, const std::vector<uint32_t>& code) override;
     void Draw(bool is_indexed, u32 instance_count) override;
     void DrawIndirect() override;
     void DrawTexture() override;
@@ -146,7 +149,7 @@ private:
     static constexpr VkDeviceSize DEFAULT_BUFFER_SIZE = 4 * sizeof(float);
 
     template <typename Func>
-    void PrepareDraw(bool is_indexed, Func&&);
+    void PrepareDraw(bool indirect_draw, bool is_indexed, Func&&);
 
     void FlushWork();
 

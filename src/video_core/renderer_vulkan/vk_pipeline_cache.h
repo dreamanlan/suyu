@@ -106,12 +106,20 @@ public:
                            TextureCache& texture_cache, VideoCore::ShaderNotify& shader_notify_);
     ~PipelineCache();
 
+    [[nodiscard]] const GraphicsPipelineCacheKey& CurrentGraphicsKey()const {
+        return graphics_key;
+    }
+
     [[nodiscard]] GraphicsPipeline* CurrentGraphicsPipeline();
 
     [[nodiscard]] ComputePipeline* CurrentComputePipeline();
 
     void LoadDiskResources(u64 title_id, std::stop_token stop_loading,
                            const VideoCore::DiskResourceLoadCallback& callback);
+
+    void DumpInfo(std::ostream& os)const;
+
+    int ReplaceShader(uint64_t hash, Shader::Stage stage, const std::vector<uint32_t>& code);
 
 private:
     [[nodiscard]] GraphicsPipeline* CurrentGraphicsPipelineSlowPath();

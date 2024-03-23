@@ -161,6 +161,8 @@ add_executable(suyu
     debugger/profiler.h
     debugger/wait_tree.cpp
     debugger/wait_tree.h
+    debugger/data_analyst.cpp
+    debugger/data_analyst.h
     discord.h
     game_list.cpp
     game_list.h
@@ -354,6 +356,7 @@ if (APPLE)
     target_sources(suyu PRIVATE ${MACOSX_ICON})
     set_target_properties(suyu PROPERTIES MACOSX_BUNDLE TRUE)
     set_target_properties(suyu PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist)
+    target_link_libraries(suyu PRIVATE libbrace_macos)
 
     if (NOT USE_SYSTEM_MOLTENVK)
         set(MOLTENVK_PLATFORM "macOS")
@@ -375,10 +378,12 @@ elseif(WIN32)
     endif()
     if(MSVC)
         target_link_libraries(suyu PRIVATE version.lib)
-        set_target_properties(suyu PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:WINDOWS")
+        set_target_properties(suyu PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:WINDOWS /NODEFAULTLIB:libboost_context-vc141-mt-gd-x64-1_83.lib")
+        set_target_properties(suyu PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:WINDOWS /NODEFAULTLIB:libboost_context-vc141-mt-x64-1_83.lib")
     elseif(MINGW)
         set_target_properties(suyu PROPERTIES LINK_FLAGS_RELEASE "-Wl,--subsystem,windows")
     endif()
+    target_link_libraries(suyu PRIVATE libbrace)
 endif()
 
 target_link_libraries(suyu PRIVATE common core input_common frontend_common network video_core)

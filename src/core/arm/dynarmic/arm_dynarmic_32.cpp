@@ -8,6 +8,9 @@
 #include "core/arm/dynarmic/dynarmic_exclusive_monitor.h"
 #include "core/core_timing.h"
 #include "core/hle/kernel/k_process.h"
+#include "core/hle/kernel/svc.h"
+#include "core/memory/memory_sniffer.h"
+#include "core/memory.h"
 
 namespace Core {
 
@@ -16,7 +19,7 @@ using namespace Common::Literals;
 class DynarmicCallbacks32 : public Dynarmic::A32::UserCallbacks {
 public:
     explicit DynarmicCallbacks32(ArmDynarmic32& parent, Kernel::KProcess* process)
-        : m_parent{parent}, m_memory(process->GetMemory()),
+        : m_parent{parent}, m_sniffer(parent.m_system.MemorySniffer()), m_memory(process->GetMemory()),
           m_process(process), m_debugger_enabled{parent.m_system.DebuggerEnabled()},
           m_check_memory_access{m_debugger_enabled ||
                                 !Settings::values.cpuopt_ignore_memory_aborts.GetValue()} {}
@@ -96,7 +99,7 @@ public:
             ReturnException(pc, PrefetchAbort);
             return;
         default:
-            if (m_debugger_enabled) {
+            if (m_debugger_enabled || m_sniffer.IsBreakPoint(pc)) {
                 ReturnException(pc, InstructionBreakpoint);
                 return;
             }
@@ -109,6 +112,8 @@ public:
     }
 
     void CallSVC(u32 swi) override {
+        if (!m_sniffer.TraceSvcCall(swi, m_parent))
+            return;
         m_parent.m_svc_swi = swi;
         m_parent.m_jit->HaltExecution(SupervisorCall);
     }
@@ -168,6 +173,7 @@ public:
     }
 
     ArmDynarmic32& m_parent;
+    Core::Memory::MemorySniffer& m_sniffer;
     Core::Memory::Memory& m_memory;
     Kernel::KProcess* m_process{};
     const bool m_debugger_enabled{};
@@ -192,9 +198,9 @@ std::shared_ptr<Dynarmic::A32::Jit> ArmDynarmic32::MakeJit(Common::PageTable* pa
         config.detect_misaligned_access_via_page_table = 16 | 32 | 64 | 128;
         config.only_detect_misalignment_via_page_table_on_page_boundary = true;
 
-        config.fastmem_pointer = page_table->fastmem_arena;
+        config.fastmem_pointer = reinterpret_cast<uintptr_t>(page_table->fastmem_arena);
 
-        config.fastmem_exclusive_access = config.fastmem_pointer != nullptr;
+        config.fastmem_exclusive_access = config.fastmem_pointer.has_value();
         config.recompile_on_exclusive_fastmem_failure = true;
     }
 
@@ -251,7 +257,7 @@ std::shared_ptr<Dynarmic::A32::Jit> ArmDynarmic32::MakeJit(Common::PageTable* pa
             config.only_detect_misalignment_via_page_table_on_page_boundary = false;
         }
         if (!Settings::values.cpuopt_fastmem) {
-            config.fastmem_pointer = nullptr;
+            config.fastmem_pointer.reset();
             config.fastmem_exclusive_access = false;
         }
         if (!Settings::values.cpuopt_fastmem_exclusives) {
@@ -328,6 +334,14 @@ static u32 FpsrFpcrToFpscr(u64 fpsr, u64 fpcr) {
 
 bool ArmDynarmic32::IsInThumbMode() const {
     return (m_jit->Cpsr() & 0x20) != 0;
+}
+
+void ArmDynarmic32::Initialize(u64 traceScopeBegin, u64 traceScopeEnd) {
+    u32 halt_reason_on_run = 0;
+    if (!Settings::values.cpuopt_block_linking || !Settings::values.cpuopt_return_stack_buffer) {
+        halt_reason_on_run = static_cast<u32>(PcCount);
+    }
+    m_jit->Initialize(halt_reason_on_run, traceScopeBegin, traceScopeEnd);
 }
 
 HaltReason ArmDynarmic32::RunThread(Kernel::KThread* thread) {

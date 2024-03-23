@@ -38,6 +38,16 @@ public:
     void LoadDiskResources(u64 title_id, std::stop_token stop_loading,
                            const VideoCore::DiskResourceLoadCallback& callback);
 
+    void DumpInfo(std::ostream& os)const;
+
+    int ReplaceShader(uint64_t hash, Shader::Stage stage, const std::string& code);
+
+    int ReplaceShader(uint64_t hash, Shader::Stage stage, const std::vector<uint32_t>& code);
+
+    [[nodiscard]] const GraphicsPipelineKey& CurrentGraphicsKey()const {
+        return graphics_key;
+    }
+
     [[nodiscard]] GraphicsPipeline* CurrentGraphicsPipeline();
 
     [[nodiscard]] ComputePipeline* CurrentComputePipeline();

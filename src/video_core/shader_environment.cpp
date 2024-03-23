@@ -16,6 +16,7 @@
 #include "common/fs/path_util.h"
 #include "common/logging/log.h"
 #include "common/polyfill_ranges.h"
+#include "common/settings.h"
 #include "shader_recompiler/environment.h"
 #include "video_core/engines/kepler_compute.h"
 #include "video_core/memory_manager.h"
@@ -112,6 +113,38 @@ static void DumpImpl(u64 pipeline_hash, u64 shader_hash, std::span<const u64> co
     for (size_t i = 0; i < INST_SIZE + padding_needed; i++) {
         shader_file.put(0);
     }
+}
+
+void DumpTextShader(u64 pipeline_hash, u64 shader_hash, Shader::Stage stage, const std::string& code) {
+    if (!Settings::values.dump_shaders)
+        return;
+    const auto shader_dir{ Common::FS::GetSuyuPath(Common::FS::SuyuPath::DumpDir) };
+    const auto base_dir{ shader_dir / "text_shaders" };
+    if (!Common::FS::CreateDir(shader_dir) || !Common::FS::CreateDir(base_dir)) {
+        LOG_ERROR(Common_Filesystem, "Failed to create text shader dump directories");
+        return;
+    }
+    const auto prefix = StageToPrefix(stage);
+    const auto name{ base_dir /
+                    fmt::format("{:016x}_{}_{:016x}.txt", pipeline_hash, prefix, shader_hash) };
+    std::fstream shader_file(name, std::ios::out | std::ios::binary);
+    shader_file.write(code.data(), code.length());
+}
+
+void DumpSpirvShader(u64 pipeline_hash, u64 shader_hash, Shader::Stage stage, const std::vector<u32>& code) {
+    if (!Settings::values.dump_shaders)
+        return;
+    const auto shader_dir{ Common::FS::GetSuyuPath(Common::FS::SuyuPath::DumpDir) };
+    const auto base_dir{ shader_dir / "spirv_shaders" };
+    if (!Common::FS::CreateDir(shader_dir) || !Common::FS::CreateDir(base_dir)) {
+        LOG_ERROR(Common_Filesystem, "Failed to create spirv shader dump directories");
+        return;
+    }
+    const auto prefix = StageToPrefix(stage);
+    const auto name{ base_dir /
+                    fmt::format("{:016x}_{}_{:016x}.spirv", pipeline_hash, prefix, shader_hash) };
+    std::fstream shader_file(name, std::ios::out | std::ios::binary);
+    shader_file.write(reinterpret_cast<const char*>(code.data()), code.size() * sizeof(u32));
 }
 
 GenericEnvironment::GenericEnvironment(Tegra::MemoryManager& gpu_memory_, GPUVAddr program_base_,

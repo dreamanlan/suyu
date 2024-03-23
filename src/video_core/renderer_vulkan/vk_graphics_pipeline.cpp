@@ -18,6 +18,7 @@
 #include "video_core/renderer_vulkan/vk_scheduler.h"
 #include "video_core/renderer_vulkan/vk_texture_cache.h"
 #include "video_core/renderer_vulkan/vk_update_descriptor.h"
+#include "video_core/renderer_vulkan/vk_shader_util.h"
 #include "video_core/shader_notify.h"
 #include "video_core/texture_cache/texture_cache.h"
 #include "video_core/vulkan_common/vulkan_device.h"
@@ -174,7 +175,7 @@ bool Passes(const std::array<vk::ShaderModule, NUM_STAGES>& modules,
     return true;
 }
 
-using ConfigureFuncPtr = void (*)(GraphicsPipeline*, bool);
+using ConfigureFuncPtr = void (*)(GraphicsPipeline*, bool, bool);
 
 template <typename Spec, typename... Specs>
 ConfigureFuncPtr FindSpec(const std::array<vk::ShaderModule, NUM_STAGES>& modules,
@@ -275,6 +276,9 @@ GraphicsPipeline::GraphicsPipeline(
         MakePipeline(render_pass);
         if (pipeline_statistics) {
             pipeline_statistics->Collect(*pipeline);
+            if (VideoCore::g_IsPolygonModeLine) {
+                pipeline_statistics->Collect(*line_mode_pipeline);
+            }
         }
 
         std::scoped_lock lock{build_mutex};
@@ -292,13 +296,42 @@ GraphicsPipeline::GraphicsPipeline(
     configure_func = ConfigureFunc(spv_modules, stage_infos);
 }
 
+void GraphicsPipeline::DumpInfo(std::ostream& os, const GraphicsPipelineCacheKey& gkey)const {
+    os << "vk_graphic";
+    os << " ";
+    os << reinterpret_cast<u64>(*pipeline);
+    os << " ";
+    for (int ix = 0; ix < NUM_STAGES; ++ix) {
+        os << fmt::format("{:016x}", gkey.unique_hashes[ix + 1]);
+        os << " ";
+        auto&& m = spv_modules[ix];
+        os << reinterpret_cast<u64>(*m);
+        os << "|";
+    }
+}
+
+void GraphicsPipeline::ReplaceShader(Shader::Stage stage, const std::vector<uint32_t>& code) {
+    switch (stage) {
+    case Shader::Stage::VertexB: {
+        auto&& vprog = Vulkan::BuildShader(device, code);
+        spv_modules[static_cast<int>(stage)] = std::move(vprog);
+    }break;
+    case Shader::Stage::Fragment: {
+        auto&& fprog = Vulkan::BuildShader(device, code);
+        spv_modules[static_cast<int>(stage)] = std::move(fprog);
+    }break;
+    default:
+        break;
+    }
+}
+
 void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {
     transition_keys.push_back(transition->key);
     transitions.push_back(transition);
 }
 
 template <typename Spec>
-void GraphicsPipeline::ConfigureImpl(bool is_indexed) {
+void GraphicsPipeline::ConfigureImpl(bool is_indexed, bool line_mode) {
     std::array<VideoCommon::ImageViewInOut, MAX_IMAGE_ELEMENTS> views;
     std::array<VideoCommon::SamplerId, MAX_IMAGE_ELEMENTS> samplers;
     size_t sampler_index{};
@@ -485,11 +518,12 @@ void GraphicsPipeline::ConfigureImpl(bool is_indexed) {
     }
     texture_cache.UpdateRenderTargets(false);
     texture_cache.CheckFeedbackLoop(views);
-    ConfigureDraw(rescaling, render_area);
+    ConfigureDraw(rescaling, render_area, line_mode);
 }
 
 void GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
-                                     const RenderAreaPushConstant& render_area) {
+                                    const RenderAreaPushConstant& render_area,
+                                    bool line_mode) {
     scheduler.RequestRenderpass(texture_cache.GetFramebuffer());
 
     if (!is_built.load(std::memory_order::relaxed)) {
@@ -503,11 +537,20 @@ void GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
     const bool update_rescaling{scheduler.UpdateRescaling(is_rescaling)};
     const bool bind_pipeline{scheduler.UpdateGraphicsPipeline(this)};
     const void* const descriptor_data{guest_descriptor_queue.UpdateData()};
-    scheduler.Record([this, descriptor_data, bind_pipeline, rescaling_data = rescaling.Data(),
+
+    scheduler.Record([this, descriptor_data, bind_pipeline, line_mode, rescaling_data = rescaling.Data(),
                       is_rescaling, update_rescaling,
                       uses_render_area = render_area.uses_render_area,
                       render_area_data = render_area.words](vk::CommandBuffer cmdbuf) {
-        if (bind_pipeline) {
+        if (VideoCore::g_IsPolygonModeLine) {
+            if (line_mode) {
+                cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, *line_mode_pipeline);
+            }
+            else {
+                cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline);
+            }
+        }
+        else if (bind_pipeline) {
             cmdbuf.BindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline);
         }
         cmdbuf.PushConstants(*pipeline_layout, VK_SHADER_STAGE_ALL_GRAPHICS,
@@ -680,6 +723,24 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
             static_cast<VkBool32>(dynamic.rasterize_enable == 0 ? VK_TRUE : VK_FALSE),
         .polygonMode =
             MaxwellToVK::PolygonMode(FixedPipelineState::UnpackPolygonMode(key.state.polygon_mode)),
+        .cullMode = static_cast<VkCullModeFlags>(
+            dynamic.cull_enable ? MaxwellToVK::CullFace(dynamic.CullFace()) : VK_CULL_MODE_NONE),
+        .frontFace = MaxwellToVK::FrontFace(dynamic.FrontFace()),
+        .depthBiasEnable = (dynamic.depth_bias_enable != 0 ? VK_TRUE : VK_FALSE),
+        .depthBiasConstantFactor = 0.0f,
+        .depthBiasClamp = 0.0f,
+        .depthBiasSlopeFactor = 0.0f,
+        .lineWidth = 1.0f,
+    };
+    VkPipelineRasterizationStateCreateInfo line_mode_rasterization_ci{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .depthClampEnable =
+            static_cast<VkBool32>(dynamic.depth_clamp_disabled == 0 ? VK_TRUE : VK_FALSE),
+        .rasterizerDiscardEnable =
+            static_cast<VkBool32>(dynamic.rasterize_enable == 0 ? VK_TRUE : VK_FALSE),
+        .polygonMode = VK_POLYGON_MODE_LINE,
         .cullMode = static_cast<VkCullModeFlags>(
             dynamic.cull_enable ? MaxwellToVK::CullFace(dynamic.CullFace()) : VK_CULL_MODE_NONE),
         .frontFace = MaxwellToVK::FrontFace(dynamic.FrontFace()),
@@ -901,6 +962,34 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
             .basePipelineIndex = 0,
         },
         *pipeline_cache);
+    line_mode_pipeline = device.GetLogical().CreateGraphicsPipeline(
+        {
+            .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = flags,
+            .stageCount = static_cast<u32>(shader_stages.size()),
+            .pStages = shader_stages.data(),
+            .pVertexInputState = &vertex_input_ci,
+            .pInputAssemblyState = &input_assembly_ci,
+            .pTessellationState = &tessellation_ci,
+            .pViewportState = &viewport_ci,
+            .pRasterizationState = &line_mode_rasterization_ci,
+            .pMultisampleState = &multisample_ci,
+            .pDepthStencilState = &depth_stencil_ci,
+            .pColorBlendState = &color_blend_ci,
+            .pDynamicState = &dynamic_state_ci,
+            .layout = *pipeline_layout,
+            .renderPass = render_pass,
+            .subpass = 0,
+            .basePipelineHandle = nullptr,
+            .basePipelineIndex = 0,
+        },
+        *pipeline_cache);
+    if (device.HasDebuggingToolAttached()) {
+        std::string label = fmt::format("Pipeline vs:{:016x} ps:{:016x}", key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1], key.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1]);
+        pipeline.SetObjectNameEXT(label.c_str());
+        line_mode_pipeline.SetObjectNameEXT(label.c_str());
+    }
 }
 
 void GraphicsPipeline::Validate() {

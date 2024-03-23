@@ -12,6 +12,7 @@
 namespace OpenGL {
 
 class ProgramManager {
+public:
     static constexpr size_t NUM_STAGES = 5;
 
 public:
@@ -31,6 +32,9 @@ public:
     void RestoreGuestCompute();
 
     void LocalMemoryWarmup();
+
+    const OGLPipeline& GetPipeline() const { return pipeline; }
+    OGLPipeline& GetPipeline() { return pipeline; }
 
 private:
     void BindPipeline();

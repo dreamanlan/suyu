@@ -30,6 +30,7 @@
 #include "video_core/renderer_opengl/renderer_opengl.h"
 #include "video_core/shader_cache.h"
 #include "video_core/texture_cache/texture_cache_base.h"
+#include "core/core.h"
 
 namespace OpenGL {
 
@@ -155,6 +156,37 @@ void RasterizerOpenGL::LoadDiskResources(u64 title_id, std::stop_token stop_load
     shader_cache.LoadDiskResources(title_id, stop_loading, callback);
 }
 
+void RasterizerOpenGL::DumpShaderInfo(std::ostream& os)const {
+    shader_cache.DumpInfo(os);
+
+    std::stringstream ss;
+    ss << "opengl shader dump finish.";
+    auto&& msg = ss.str();
+    Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
+}
+
+void RasterizerOpenGL::ReplaceSourceShader(uint64_t hash, int stage, const std::string& code) {
+    Shader::Stage shader_stage = static_cast<Shader::Stage>(stage);
+    if (shader_stage == Shader::Stage::VertexA)
+        shader_stage = Shader::Stage::VertexB;
+    int ct = shader_cache.ReplaceShader(hash, shader_stage, code);
+    std::stringstream ss;
+    ss << "opengl replace source shader finish, replace " << std::dec << ct << " pipelines, hash:" << std::hex << hash << " stage:" << stage;
+    auto&& msg = ss.str();
+    Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
+}
+
+void RasterizerOpenGL::ReplaceSpirvShader(uint64_t hash, int stage, const std::vector<uint32_t>& code) {
+    Shader::Stage shader_stage = static_cast<Shader::Stage>(stage);
+    if (shader_stage == Shader::Stage::VertexA)
+        shader_stage = Shader::Stage::VertexB;
+    int ct = shader_cache.ReplaceShader(hash, shader_stage, code);
+    std::stringstream ss;
+    ss << "opengl replace spirv shader finish, replace " << std::dec << ct << " pipelines, hash:" << std::hex << hash << " stage:" << stage;
+    auto&& msg = ss.str();
+    Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
+}
+
 void RasterizerOpenGL::Clear(u32 layer_count) {
     MICROPROFILE_SCOPE(OpenGL_Clears);
 
@@ -227,7 +259,7 @@ void RasterizerOpenGL::Clear(u32 layer_count) {
 }
 
 template <typename Func>
-void RasterizerOpenGL::PrepareDraw(bool is_indexed, Func&& draw_func) {
+void RasterizerOpenGL::PrepareDraw(bool indirect_draw, bool is_indexed, Func&& draw_func) {
     MICROPROFILE_SCOPE(OpenGL_Drawing);
 
     SCOPE_EXIT {
@@ -239,8 +271,47 @@ void RasterizerOpenGL::PrepareDraw(bool is_indexed, Func&& draw_func) {
     if (!pipeline) {
         return;
     }
+    auto gkey = shader_cache.CurrentGraphicsKey();
 
     gpu.TickWork();
+
+    bool line_mode = false;
+    if (indirect_draw) {
+        const auto& params = maxwell3d->draw_manager->GetIndirectParams();
+        line_mode = VideoCore::g_IsPolygonModeLine && params.max_draw_counts > VideoCore::g_LineModeMinDrawCount && params.max_draw_counts < VideoCore::g_LineModeMaxDrawCount;
+    }
+    else {
+        const auto& draw_state0 = maxwell3d->draw_manager->GetDrawState();
+        line_mode = VideoCore::g_IsPolygonModeLine && ((is_indexed && draw_state0.index_buffer.count > VideoCore::g_LineModeMinVertexNum && draw_state0.index_buffer.count < VideoCore::g_LineModeMaxVertexNum) || (!is_indexed && draw_state0.vertex_buffer.count > VideoCore::g_LineModeMinVertexNum && draw_state0.vertex_buffer.count < VideoCore::g_LineModeMaxVertexNum));
+    }
+    if (line_mode && VideoCore::g_LineModeVsHashes.size() > 0) {
+        uint64_t hash = gkey.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1];
+        line_mode = VideoCore::g_LineModeVsHashes.contains(hash);
+    }
+    if (line_mode && VideoCore::g_LineModePsHashes.size() > 0) {
+        uint64_t hash = gkey.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1];
+        line_mode = VideoCore::g_LineModePsHashes.contains(hash);
+    }
+
+    if (line_mode && VideoCore::g_LineModeLogFrameIndex >= 0 && VideoCore::g_LineModeLogFrameIndex < VideoCore::g_LineModeLogFrameCount) {
+        std::stringstream ss;
+        ss << "[line mode]: ";
+        if (indirect_draw) {
+            const auto& params = maxwell3d->draw_manager->GetIndirectParams();
+            ss << "indirect draw, max draw counts: " << std::dec << params.max_draw_counts;
+        }
+        else {
+            const auto& draw_state0 = maxwell3d->draw_manager->GetDrawState();
+            if (is_indexed)
+                ss << "draw indexed, vertex num: " << std::dec << draw_state0.index_buffer.count;
+            else
+                ss << "draw direct, vertex num: " << std::dec << draw_state0.vertex_buffer.count;
+        }
+        ss << " pipeline: ";
+        pipeline->DumpInfo(ss, gkey);
+        auto&& msg = ss.str();
+        Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
+    }
 
     std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};
     if (pipeline->UsesLocalMemory()) {
@@ -249,7 +320,11 @@ void RasterizerOpenGL::PrepareDraw(bool is_indexed, Func&& draw_func) {
     pipeline->SetEngine(maxwell3d, gpu_memory);
     pipeline->Configure(is_indexed);
 
-    SyncState();
+    if (VideoCore::g_IsPolygonModeLine) {
+        auto& flags = maxwell3d->dirty.flags;
+        flags[Dirty::PolygonModes] = true;
+    }
+    SyncState(line_mode);
 
     const auto& draw_state = maxwell3d->draw_manager->GetDrawState();
 
@@ -265,7 +340,7 @@ void RasterizerOpenGL::PrepareDraw(bool is_indexed, Func&& draw_func) {
 }
 
 void RasterizerOpenGL::Draw(bool is_indexed, u32 instance_count) {
-    PrepareDraw(is_indexed, [this, is_indexed, instance_count](GLenum primitive_mode) {
+    PrepareDraw(false, is_indexed, [this, is_indexed, instance_count](GLenum primitive_mode) {
         const auto& draw_state = maxwell3d->draw_manager->GetDrawState();
         const GLuint base_instance = static_cast<GLuint>(draw_state.base_instance);
         const GLsizei num_instances = static_cast<GLsizei>(instance_count);
@@ -274,6 +349,7 @@ void RasterizerOpenGL::Draw(bool is_indexed, u32 instance_count) {
             const GLsizei num_vertices = static_cast<GLsizei>(draw_state.index_buffer.count);
             const GLvoid* const offset = buffer_cache_runtime.IndexOffset();
             const GLenum format = MaxwellToGL::IndexFormat(draw_state.index_buffer.format);
+
             if (num_instances == 1 && base_instance == 0 && base_vertex == 0) {
                 glDrawElements(primitive_mode, num_vertices, format, offset);
             } else if (num_instances == 1 && base_instance == 0) {
@@ -295,6 +371,7 @@ void RasterizerOpenGL::Draw(bool is_indexed, u32 instance_count) {
         } else {
             const GLint base_vertex = static_cast<GLint>(draw_state.vertex_buffer.first);
             const GLsizei num_vertices = static_cast<GLsizei>(draw_state.vertex_buffer.count);
+
             if (num_instances == 1 && base_instance == 0) {
                 glDrawArrays(primitive_mode, base_vertex, num_vertices);
             } else if (base_instance == 0) {
@@ -310,7 +387,7 @@ void RasterizerOpenGL::Draw(bool is_indexed, u32 instance_count) {
 void RasterizerOpenGL::DrawIndirect() {
     const auto& params = maxwell3d->draw_manager->GetIndirectParams();
     buffer_cache.SetDrawIndirect(&params);
-    PrepareDraw(params.is_indexed, [this, &params](GLenum primitive_mode) {
+    PrepareDraw(true, params.is_indexed, [this, &params](GLenum primitive_mode) {
         if (params.is_byte_count) {
             const GPUVAddr tfb_object_base_addr = params.indirect_start_address - 4U;
             const GLuint tfb_object =
@@ -321,6 +398,7 @@ void RasterizerOpenGL::DrawIndirect() {
         const auto [buffer, offset] = buffer_cache.GetDrawIndirectBuffer();
         const GLvoid* const gl_offset =
             reinterpret_cast<const GLvoid*>(static_cast<uintptr_t>(offset));
+
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, buffer->Handle());
         if (params.include_count) {
             const auto [draw_buffer, offset_base] = buffer_cache.GetDrawIndirectCount();
@@ -364,7 +442,11 @@ void RasterizerOpenGL::DrawTexture() {
     texture_cache.SynchronizeGraphicsDescriptors();
     texture_cache.UpdateRenderTargets(false);
 
-    SyncState();
+    if (VideoCore::g_IsPolygonModeLine) {
+        auto& flags = maxwell3d->dirty.flags;
+        flags[Dirty::PolygonModes] = true;
+    }
+    SyncState(false);
 
     const auto& draw_texture_state = maxwell3d->draw_manager->GetDrawTextureState();
     const auto& sampler = texture_cache.GetGraphicsSampler(draw_texture_state.src_sampler);
@@ -773,10 +855,10 @@ std::optional<FramebufferTextureInfo> RasterizerOpenGL::AccelerateDisplay(
     return info;
 }
 
-void RasterizerOpenGL::SyncState() {
+void RasterizerOpenGL::SyncState(bool line_mode) {
     SyncViewport();
     SyncRasterizeEnable();
-    SyncPolygonModes();
+    SyncPolygonModes(line_mode);
     SyncColorMask();
     SyncFragmentColorClampState();
     SyncMultiSampleState();
@@ -1044,7 +1126,7 @@ void RasterizerOpenGL::SyncRasterizeEnable() {
     oglEnable(GL_RASTERIZER_DISCARD, maxwell3d->regs.rasterize_enable == 0);
 }
 
-void RasterizerOpenGL::SyncPolygonModes() {
+void RasterizerOpenGL::SyncPolygonModes(bool lineMode) {
     auto& flags = maxwell3d->dirty.flags;
     if (!flags[Dirty::PolygonModes]) {
         return;
@@ -1055,31 +1137,46 @@ void RasterizerOpenGL::SyncPolygonModes() {
     if (regs.fill_via_triangle_mode != Maxwell::FillViaTriangleMode::Disabled) {
         if (!GLAD_GL_NV_fill_rectangle) {
             LOG_ERROR(Render_OpenGL, "GL_NV_fill_rectangle used and not supported");
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            if (lineMode)
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            else
+                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
             return;
         }
 
         flags[Dirty::PolygonModeFront] = true;
         flags[Dirty::PolygonModeBack] = true;
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL_RECTANGLE_NV);
+        if (lineMode)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        else
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL_RECTANGLE_NV);
         return;
     }
 
     if (regs.polygon_mode_front == regs.polygon_mode_back) {
         flags[Dirty::PolygonModeFront] = false;
         flags[Dirty::PolygonModeBack] = false;
-        glPolygonMode(GL_FRONT_AND_BACK, MaxwellToGL::PolygonMode(regs.polygon_mode_front));
+        if (lineMode)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        else
+            glPolygonMode(GL_FRONT_AND_BACK, MaxwellToGL::PolygonMode(regs.polygon_mode_front));
         return;
     }
 
     if (flags[Dirty::PolygonModeFront]) {
         flags[Dirty::PolygonModeFront] = false;
-        glPolygonMode(GL_FRONT, MaxwellToGL::PolygonMode(regs.polygon_mode_front));
+        if (lineMode)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        else
+            glPolygonMode(GL_FRONT, MaxwellToGL::PolygonMode(regs.polygon_mode_front));
     }
 
     if (flags[Dirty::PolygonModeBack]) {
         flags[Dirty::PolygonModeBack] = false;
-        glPolygonMode(GL_BACK, MaxwellToGL::PolygonMode(regs.polygon_mode_back));
+        if (lineMode)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        else
+            glPolygonMode(GL_BACK, MaxwellToGL::PolygonMode(regs.polygon_mode_back));
     }
 }
 

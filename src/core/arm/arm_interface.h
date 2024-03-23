@@ -32,6 +32,7 @@ using WatchpointArray = std::array<Kernel::DebugWatchpoint, Core::Hardware::NUM_
 enum class HaltReason : u64 {
     StepThread = 0x00000001,
     DataAbort = 0x00000004,
+    PcCount = 0x01000000,
     BreakLoop = 0x02000000,
     SupervisorCall = 0x04000000,
     InstructionBreakpoint = 0x08000000,
@@ -54,7 +55,7 @@ public:
     virtual ~ArmInterface() = default;
 
     // Perform any backend-specific initialization.
-    virtual void Initialize() {}
+    virtual void Initialize(u64 traceScopeBegin, u64 traceScopeEnd) {}
 
     // Runs the CPU until an event happens.
     virtual HaltReason RunThread(Kernel::KThread* thread) = 0;

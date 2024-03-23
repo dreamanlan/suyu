@@ -53,6 +53,7 @@
 #include "core/loader/loader.h"
 #include "core/memory.h"
 #include "core/memory/cheat_engine.h"
+#include "core/memory/memory_sniffer.h"
 #include "core/perf_stats.h"
 #include "core/reporter.h"
 #include "core/tools/freezer.h"
@@ -115,6 +116,7 @@ struct System::Impl {
           reporter{system}, applet_manager{system}, frontend_applets{system}, profile_manager{} {}
 
     void Initialize(System& system) {
+        memory_sniffer = std::make_unique<Core::Memory::MemorySniffer>(system);
         device_memory = std::make_unique<Core::DeviceMemory>();
 
         is_multicore = Settings::values.use_multi_core.GetValue();
@@ -351,6 +353,10 @@ struct System::Impl {
             return init_result;
         }
 
+        // Initialize memory sniffer
+        if (memory_sniffer) {
+            memory_sniffer->Initialize();
+        }
         // Initialize cheat engine
         if (cheat_engine) {
             cheat_engine->Initialize();
@@ -477,6 +483,7 @@ struct System::Impl {
     std::unique_ptr<Loader::AppLoader> app_loader;
     std::unique_ptr<Tegra::GPU> gpu_core;
     std::unique_ptr<Tegra::Host1x::Host1x> host1x_core;
+    std::unique_ptr<Core::Memory::MemorySniffer> memory_sniffer;
     std::unique_ptr<Core::DeviceMemory> device_memory;
     std::unique_ptr<AudioCore::AudioCore> audio_core;
     Core::HID::HIDCore hid_core;
@@ -661,6 +668,14 @@ Kernel::KProcess* System::ApplicationProcess() {
     return impl->kernel.ApplicationProcess();
 }
 
+Core::Memory::MemorySniffer& System::MemorySniffer() {
+    return *impl->memory_sniffer;
+}
+
+const Core::Memory::MemorySniffer& System::MemorySniffer() const {
+    return *impl->memory_sniffer;
+}
+
 Core::DeviceMemory& System::DeviceMemory() {
     return *impl->device_memory;
 }
@@ -783,6 +798,10 @@ void System::SetFilesystem(FileSys::VirtualFilesystem vfs) {
 
 FileSys::VirtualFilesystem System::GetFilesystem() const {
     return impl->virtual_filesystem;
+}
+
+void System::AddMemorySnifferModuleMemory(Kernel::KProcess& process, std::string&& file_name, std::string&& build_id, u64 base, u64 region_begin, u64 region_size) {
+    impl->memory_sniffer->AddModuleMemoryParameters(process, std::move(file_name), std::move(build_id), base, region_begin, region_size);
 }
 
 void System::RegisterCheatList(const std::vector<Memory::CheatEntry>& list,

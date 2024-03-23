@@ -152,6 +152,7 @@ public:
             std::make_unique<DynarmicCallbacks64>(memory, local_memory, mapped_ranges, *this);
         user_config.callbacks = callbacks.get();
         jit = std::make_unique<Dynarmic::A64::Jit>(user_config);
+        jit->Initialize(0, 0, 0);
     }
 
     bool LoadNRO(std::span<const u8> data) {

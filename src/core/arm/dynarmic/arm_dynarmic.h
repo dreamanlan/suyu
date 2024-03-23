@@ -9,6 +9,7 @@ namespace Core {
 
 constexpr Dynarmic::HaltReason StepThread = Dynarmic::HaltReason::Step;
 constexpr Dynarmic::HaltReason DataAbort = Dynarmic::HaltReason::MemoryAbort;
+constexpr Dynarmic::HaltReason PcCount = Dynarmic::HaltReason::UserDefined1;
 constexpr Dynarmic::HaltReason BreakLoop = Dynarmic::HaltReason::UserDefined2;
 constexpr Dynarmic::HaltReason SupervisorCall = Dynarmic::HaltReason::UserDefined3;
 constexpr Dynarmic::HaltReason InstructionBreakpoint = Dynarmic::HaltReason::UserDefined4;
@@ -17,6 +18,7 @@ constexpr Dynarmic::HaltReason PrefetchAbort = Dynarmic::HaltReason::UserDefined
 constexpr HaltReason TranslateHaltReason(Dynarmic::HaltReason hr) {
     static_assert(static_cast<u64>(HaltReason::StepThread) == static_cast<u64>(StepThread));
     static_assert(static_cast<u64>(HaltReason::DataAbort) == static_cast<u64>(DataAbort));
+    static_assert(static_cast<u64>(HaltReason::PcCount) == static_cast<u64>(PcCount));
     static_assert(static_cast<u64>(HaltReason::BreakLoop) == static_cast<u64>(BreakLoop));
     static_assert(static_cast<u64>(HaltReason::SupervisorCall) == static_cast<u64>(SupervisorCall));
     static_assert(static_cast<u64>(HaltReason::InstructionBreakpoint) ==

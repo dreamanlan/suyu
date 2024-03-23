@@ -67,3 +67,4 @@
 [submodule "externals/dynarmic"]
 	path = externals/dynarmic
 	url = https://github.com/dreamanlan/dynarmic.git
+	branch = dev

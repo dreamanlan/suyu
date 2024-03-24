@@ -85,7 +85,7 @@ namespace BraceScriptInterpreter
             }
             auto* typeOrExp = data.GetParam(0);
             auto typeInfo = ParseParamTypeInfo(*typeOrExp);
-            if (Brace::IsUnknownType(typeInfo.Type) || typeInfo.Type == Brace::BRACE_DATA_TYPE_OBJECT && typeInfo.ObjectTypeId <= 0) {
+            if (Brace::IsUnknownType(typeInfo.Type) || (typeInfo.Type == Brace::BRACE_DATA_TYPE_OBJECT && typeInfo.ObjectTypeId <= 0)) {
                 Brace::OperandLoadtimeInfo loadInfo;
                 LoadHelper(*typeOrExp, loadInfo);
                 typeInfo.Type = loadInfo.Type;
@@ -120,7 +120,7 @@ namespace BraceScriptInterpreter
             int type = Brace::BRACE_DATA_TYPE_UNKNOWN;
             auto* typeOrExp = data.GetParam(0);
             auto typeInfo = ParseParamTypeInfo(*typeOrExp);
-            if (Brace::IsUnknownType(typeInfo.Type) || typeInfo.Type == Brace::BRACE_DATA_TYPE_OBJECT && typeInfo.ObjectTypeId <= 0) {
+            if (Brace::IsUnknownType(typeInfo.Type) || (typeInfo.Type == Brace::BRACE_DATA_TYPE_OBJECT && typeInfo.ObjectTypeId <= 0)) {
                 Brace::OperandLoadtimeInfo loadInfo;
                 LoadHelper(*typeOrExp, loadInfo);
                 type = loadInfo.Type;
@@ -170,7 +170,7 @@ namespace BraceScriptInterpreter
             int type = Brace::PREDEFINED_BRACE_OBJECT_TYPE_UNKNOWN;
             auto* typeOrExp = data.GetParam(0);
             auto typeInfo = ParseParamTypeInfo(*typeOrExp);
-            if (Brace::IsUnknownType(typeInfo.Type) || typeInfo.Type == Brace::BRACE_DATA_TYPE_OBJECT && typeInfo.ObjectTypeId <= Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ) {
+            if (Brace::IsUnknownType(typeInfo.Type) || (typeInfo.Type == Brace::BRACE_DATA_TYPE_OBJECT && typeInfo.ObjectTypeId <= Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ)) {
                 Brace::OperandLoadtimeInfo loadInfo;
                 LoadHelper(*typeOrExp, loadInfo);
                 type = loadInfo.ObjectTypeId;

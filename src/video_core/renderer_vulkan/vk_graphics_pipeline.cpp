@@ -301,7 +301,7 @@ void GraphicsPipeline::DumpInfo(std::ostream& os, const GraphicsPipelineCacheKey
     os << " ";
     os << reinterpret_cast<u64>(*pipeline);
     os << " ";
-    for (int ix = 0; ix < NUM_STAGES; ++ix) {
+    for (int ix = 0; ix < static_cast<int>(NUM_STAGES); ++ix) {
         os << fmt::format("{:016x}", gkey.unique_hashes[ix + 1]);
         os << " ";
         auto&& m = spv_modules[ix];

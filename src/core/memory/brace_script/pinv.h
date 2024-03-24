@@ -7,6 +7,10 @@
 #include <cmath>
 #include <functional>
 
+#ifndef DBL_EPSILON
+#define DBL_EPSILON std::numeric_limits<double>::epsilon()
+#endif
+
 namespace matrix
 {
     class Matrix;
@@ -85,7 +89,7 @@ namespace matrix
             return m_N;
         }
 
-        inline const double operator()(std::size_t i, std::size_t j) const
+        inline double operator()(std::size_t i, std::size_t j) const
         {
             assert(i < m_M);
             assert(j < m_N);

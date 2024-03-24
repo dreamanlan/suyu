@@ -119,7 +119,7 @@ void PhysicalCore::RunThread(Kernel::KThread* thread) {
                 }
             }
 
-            if ((m_tracing || m_addrForEnableBreakPoint != 0) && isInScope && stepCount < system.MemorySniffer().GetMaxStepCount() || thread->GetStepState() == StepState::StepPending) {
+            if (((m_tracing || m_addrForEnableBreakPoint != 0) && isInScope && stepCount < system.MemorySniffer().GetMaxStepCount()) || thread->GetStepState() == StepState::StepPending) {
                 hr = interface->StepThread(thread);
                 interface->GetContext(ctx);
                 ++stepCount;

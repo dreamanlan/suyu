@@ -174,13 +174,13 @@ set_target_properties(libboostcontext PROPERTIES
 	IMPORTED_LOCATION_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/brace/lib/x86_64/libboost_context-vc141-mt-gd-x64-1_83.lib
 	IMPORTED_LOCATION_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/brace/lib/x86_64/libboost_context-vc141-mt-x64-1_83.lib)
 
-add_library(libbrace_macos STATIC IMPORTED GLOBAL)
-set_target_properties(libbrace_macos PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/brace/lib/CppDsl.bundle)
+add_library(libbrace_macos SHARED IMPORTED GLOBAL)
+set_target_properties(libbrace_macos PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/brace/lib/libCppDsl.dylib)
 
 add_library(libboostcontext_macos STATIC IMPORTED GLOBAL)
 set_target_properties(libboostcontext_macos PROPERTIES
 	IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/brace/lib/libboost_context.a)
-	
+
 target_include_directories(libbrace INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/brace/include)
 target_include_directories(libboostcontext INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/brace/include)
 target_include_directories(libbrace_macos INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/brace/include)

@@ -5183,7 +5183,7 @@ namespace BraceScriptInterpreter
             default: {
                 uint64_t left_val_size = val_size;
                 uint64_t lshift = 0;
-                uint64_t caddr = addr;
+                [[maybe_unused]]uint64_t caddr = addr;
                 val = 0;
                 if (left_val_size > s_u32) {
                     val += (sniffer.ReadMemory(addr, s_u32, succ) << lshift);
@@ -5556,7 +5556,7 @@ namespace BraceScriptInterpreter
         virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data, const std::vector<Brace::OperandLoadtimeInfo>& argInfos, Brace::OperandLoadtimeInfo& resultInfo) override
         {
             if ((argInfos.size() != 1 && argInfos.size() != 2) || argInfos[0].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[0].Type > Brace::BRACE_DATA_TYPE_UINT64
-                || argInfos.size() == 2 && (argInfos[1].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[1].Type > Brace::BRACE_DATA_TYPE_UINT64)) {
+                || (argInfos.size() == 2 && (argInfos[1].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[1].Type > Brace::BRACE_DATA_TYPE_UINT64))) {
                 //error
                 std::stringstream ss;
                 ss << "expected addtoresult(addr[, val_size]), all type is integer," << data.GetId() << " line " << data.GetLine();
@@ -5643,7 +5643,7 @@ namespace BraceScriptInterpreter
         virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data, const std::vector<Brace::OperandLoadtimeInfo>& argInfos, Brace::OperandLoadtimeInfo& resultInfo) override
         {
             if ((argInfos.size() != 1 && argInfos.size() != 2) || argInfos[0].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[0].Type > Brace::BRACE_DATA_TYPE_UINT64
-                || argInfos.size() == 2 && (argInfos[1].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[1].Type > Brace::BRACE_DATA_TYPE_UINT64)) {
+                || (argInfos.size() == 2 && (argInfos[1].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[1].Type > Brace::BRACE_DATA_TYPE_UINT64))) {
                 //error
                 std::stringstream ss;
                 ss << "expected addtolast(addr[, val_size]), all type is integer," << data.GetId() << " line " << data.GetLine();
@@ -6072,7 +6072,7 @@ namespace BraceScriptInterpreter
         {
             if ((argInfos.size() != 2 && argInfos.size() != 3) || argInfos[0].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[0].Type > Brace::BRACE_DATA_TYPE_UINT64
                 || argInfos[1].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[1].Type > Brace::BRACE_DATA_TYPE_UINT64
-                || argInfos.size() == 3 && (argInfos[2].Type < Brace::BRACE_DATA_TYPE_BOOL || argInfos[2].Type > Brace::BRACE_DATA_TYPE_UINT64)) {
+                || (argInfos.size() == 3 && (argInfos[2].Type < Brace::BRACE_DATA_TYPE_BOOL || argInfos[2].Type > Brace::BRACE_DATA_TYPE_UINT64))) {
                 //error
                 std::stringstream ss;
                 ss << "expected markmemdebug(uint64 addr, uint64 size[, bool debug])," << data.GetId() << " line " << data.GetLine();
@@ -6112,8 +6112,8 @@ namespace BraceScriptInterpreter
         {
             if ((argInfos.size() != 2 && argInfos.size() != 3 && argInfos.size() != 4) || argInfos[0].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[0].Type > Brace::BRACE_DATA_TYPE_UINT64
                 || argInfos[1].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[1].Type > Brace::BRACE_DATA_TYPE_UINT64
-                || argInfos.size() >= 3 && (argInfos[2].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[2].Type > Brace::BRACE_DATA_TYPE_UINT64)
-                || argInfos.size() == 4 && (argInfos[3].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[3].Type > Brace::BRACE_DATA_TYPE_UINT64)) {
+                || (argInfos.size() >= 3 && (argInfos[2].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[2].Type > Brace::BRACE_DATA_TYPE_UINT64))
+                || (argInfos.size() == 4 && (argInfos[3].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[3].Type > Brace::BRACE_DATA_TYPE_UINT64))) {
                 //error
                 std::stringstream ss;
                 ss << "expected addsniffing(uint64 addr, uint64 size[, uint64 step, uint64 val])," << data.GetId() << " line " << data.GetLine();
@@ -6267,7 +6267,7 @@ namespace BraceScriptInterpreter
         {
             if ((argInfos.size() != 2 && argInfos.size() != 3) || argInfos[0].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[0].Type > Brace::BRACE_DATA_TYPE_UINT64
                 || argInfos[1].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[1].Type > Brace::BRACE_DATA_TYPE_UINT64
-                || argInfos.size() == 3 && (argInfos[2].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[2].Type > Brace::BRACE_DATA_TYPE_UINT64)) {
+                || (argInfos.size() == 3 && (argInfos[2].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[2].Type > Brace::BRACE_DATA_TYPE_UINT64))) {
                 //error
                 std::stringstream ss;
                 ss << "expected showmem(uint64 addr, uint64 size[, uint64 step])," << data.GetId() << " line " << data.GetLine();
@@ -6551,7 +6551,7 @@ namespace BraceScriptInterpreter
                 || argInfos[2].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[2].Type > Brace::BRACE_DATA_TYPE_UINT64
                 || argInfos[3].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[3].Type > Brace::BRACE_DATA_TYPE_UINT64
                 || argInfos[4].Type != Brace::BRACE_DATA_TYPE_OBJECT || argInfos[4].ObjectTypeId != CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY
-                || argInfos.size() == 6 && (argInfos[5].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[5].Type > Brace::BRACE_DATA_TYPE_UINT64)) {
+                || (argInfos.size() == 6 && (argInfos[5].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[5].Type > Brace::BRACE_DATA_TYPE_UINT64))) {
                 //error
                 std::stringstream ss;
                 ss << "expected findmemory(start, size, step, range, find_vals[, val_size]), all type is integer," << data.GetId() << " line " << data.GetLine();
@@ -6662,8 +6662,8 @@ namespace BraceScriptInterpreter
                 || argInfos[2].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[2].Type > Brace::BRACE_DATA_TYPE_UINT64
                 || argInfos[3].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[3].Type > Brace::BRACE_DATA_TYPE_UINT64
                 || argInfos[4].Type != Brace::BRACE_DATA_TYPE_OBJECT || argInfos[4].ObjectTypeId != CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY
-                || argInfos.size() >= 6 && (argInfos[5].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[5].Type > Brace::BRACE_DATA_TYPE_UINT64)
-                || argInfos.size() == 7 && (argInfos[6].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[6].Type > Brace::BRACE_DATA_TYPE_UINT64)) {
+                || (argInfos.size() >= 6 && (argInfos[5].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[5].Type > Brace::BRACE_DATA_TYPE_UINT64))
+                || (argInfos.size() == 7 && (argInfos[6].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[6].Type > Brace::BRACE_DATA_TYPE_UINT64))) {
                 //error
                 std::stringstream ss;
                 ss << "expected searchmemory(start, size, step, range, find_vals[, val_size, max_count]), all type is integer," << data.GetId() << " line " << data.GetLine();
@@ -6787,7 +6787,7 @@ namespace BraceScriptInterpreter
         virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data, const std::vector<Brace::OperandLoadtimeInfo>& argInfos, Brace::OperandLoadtimeInfo& resultInfo) override
         {
             if ((argInfos.size() != 1 && argInfos.size() != 2) || argInfos[0].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[0].Type > Brace::BRACE_DATA_TYPE_UINT64
-                || argInfos.size() == 2 && (argInfos[1].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[1].Type > Brace::BRACE_DATA_TYPE_UINT64)) {
+                || (argInfos.size() == 2 && (argInfos[1].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[1].Type > Brace::BRACE_DATA_TYPE_UINT64))) {
                 //error
                 std::stringstream ss;
                 ss << "expected readmemory(addr[, val_size]), all type is integer," << data.GetId() << " line " << data.GetLine();
@@ -6834,7 +6834,7 @@ namespace BraceScriptInterpreter
         {
             if ((argInfos.size() != 2 && argInfos.size() != 3) || argInfos[0].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[0].Type > Brace::BRACE_DATA_TYPE_UINT64
                 || argInfos[1].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[1].Type > Brace::BRACE_DATA_TYPE_UINT64
-                || argInfos.size() == 3 && (argInfos[2].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[2].Type > Brace::BRACE_DATA_TYPE_UINT64)) {
+                || (argInfos.size() == 3 && (argInfos[2].Type < Brace::BRACE_DATA_TYPE_INT8 || argInfos[2].Type > Brace::BRACE_DATA_TYPE_UINT64))) {
                 //error
                 std::stringstream ss;
                 ss << "expected writememory(addr, val[, val_size]), all type is integer," << data.GetId() << " line " << data.GetLine();

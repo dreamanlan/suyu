@@ -230,7 +230,7 @@ void MemorySniffer::AddModuleMemoryParameters(Kernel::KProcess& process, std::st
             impl->traceScopeEnd = addr_end;
         }
 
-        for (int ix = 0; ix < Core::Hardware::NUM_CPU_CORES; ++ix) {
+        for (int ix = 0; ix < static_cast<int>(Core::Hardware::NUM_CPU_CORES); ++ix) {
             auto* armIntf = process.GetArmInterface(ix);
             armIntf->Initialize(addr_begin, addr_end);
         }
@@ -1197,14 +1197,14 @@ bool MemorySniffer::Exec(const std::string& cmd, const std::string& arg) {
     }
     else if (cmd == "starttrace") {
         if (arg.empty()) {
-            for (int ix = 0; ix < Core::Hardware::NUM_CPU_CORES; ++ix) {
+            for (int ix = 0; ix < static_cast<int>(Core::Hardware::NUM_CPU_CORES); ++ix) {
                 auto&& phyCore = system.Kernel().PhysicalCore(ix);
                 phyCore.StartTrace();
             }
         }
         else {
             int ix = std::stoi(arg, nullptr, 0);
-            if (ix >= 0 && ix < Core::Hardware::NUM_CPU_CORES) {
+            if (ix >= 0 && ix < static_cast<int>(Core::Hardware::NUM_CPU_CORES)) {
                 auto&& phyCore = system.Kernel().PhysicalCore(ix);
                 phyCore.StartTrace();
             }
@@ -1213,14 +1213,14 @@ bool MemorySniffer::Exec(const std::string& cmd, const std::string& arg) {
     }
     else if (cmd == "stoptrace") {
         if (arg.empty()) {
-            for (int ix = 0; ix < Core::Hardware::NUM_CPU_CORES; ++ix) {
+            for (int ix = 0; ix < static_cast<int>(Core::Hardware::NUM_CPU_CORES); ++ix) {
                 auto&& phyCore = system.Kernel().PhysicalCore(ix);
                 phyCore.StopTrace();
             }
         }
         else {
             int ix = std::stoi(arg, nullptr, 0);
-            if (ix >= 0 && ix < Core::Hardware::NUM_CPU_CORES) {
+            if (ix >= 0 && ix < static_cast<int>(Core::Hardware::NUM_CPU_CORES)) {
                 auto&& phyCore = system.Kernel().PhysicalCore(ix);
                 phyCore.StopTrace();
             }
@@ -1331,14 +1331,14 @@ bool MemorySniffer::Exec(const std::string& cmd, const std::string& arg) {
     }
     else if (cmd == "startpccount") {
         if (arg.empty()) {
-            for (int ix = 0; ix < Core::Hardware::NUM_CPU_CORES; ++ix) {
+            for (int ix = 0; ix < static_cast<int>(Core::Hardware::NUM_CPU_CORES); ++ix) {
                 auto&& phyCore = system.Kernel().PhysicalCore(ix);
                 phyCore.StartPcCount();
             }
         }
         else {
             int ix = std::stoi(arg, nullptr, 0);
-            if (ix >= 0 && ix < Core::Hardware::NUM_CPU_CORES) {
+            if (ix >= 0 && ix < static_cast<int>(Core::Hardware::NUM_CPU_CORES)) {
                 auto&& phyCore = system.Kernel().PhysicalCore(ix);
                 phyCore.StartPcCount();
             }
@@ -1347,14 +1347,14 @@ bool MemorySniffer::Exec(const std::string& cmd, const std::string& arg) {
     }
     else if (cmd == "stoppccount") {
             if (arg.empty()) {
-                for (int ix = 0; ix < Core::Hardware::NUM_CPU_CORES; ++ix) {
+                for (int ix = 0; ix < static_cast<int>(Core::Hardware::NUM_CPU_CORES); ++ix) {
                     auto&& phyCore = system.Kernel().PhysicalCore(ix);
                     phyCore.StopPcCount();
                 }
             }
             else {
                 int ix = std::stoi(arg, nullptr, 0);
-                if (ix >= 0 && ix < Core::Hardware::NUM_CPU_CORES) {
+                if (ix >= 0 && ix < static_cast<int>(Core::Hardware::NUM_CPU_CORES)) {
                     auto&& phyCore = system.Kernel().PhysicalCore(ix);
                     phyCore.StopPcCount();
                 }
@@ -1417,7 +1417,7 @@ bool MemorySniffer::Exec(const std::string& cmd, const std::string& arg) {
         return true;
     }
     else if (cmd == "setsession") {
-        impl->sessionHandle = std::stoul(arg, nullptr, 0);
+        impl->sessionHandle = static_cast<u32>(std::stoul(arg, nullptr, 0));
         return true;
     }
     else if (cmd == "clearmemscope") {
@@ -1756,11 +1756,6 @@ bool MemorySniffer::WriteMemory(uint64_t addr, uint64_t typeSizeOf, uint64_t val
 }
 
 bool MemorySniffer::DumpMemory(uint64_t addr, uint64_t size, std::ostream& os)const {
-    static const size_t s_u8 = sizeof(uint8_t);
-    static const size_t s_u16 = sizeof(uint16_t);
-    static const size_t s_u32 = sizeof(uint32_t);
-    static const size_t s_u64 = sizeof(uint64_t);
-
     auto&& memory = system.ApplicationMemory();
     bool succ = false;
     if (memory.IsValidVirtualAddressRange(addr, size)) {
@@ -1971,7 +1966,7 @@ void MemorySniffer::DumpMemoryTypes(std::ostream& os)const {
 }
 
 void MemorySniffer::DumpRegisterValues(std::ostream& os, bool includeStack)const {
-    for (int ix = 0; ix < Core::Hardware::NUM_CPU_CORES; ++ix) {
+    for (int ix = 0; ix < static_cast<int>(Core::Hardware::NUM_CPU_CORES); ++ix) {
         auto&& phyCore = system.Kernel().PhysicalCore(ix);
         if (ix > 0)
             os << std::endl;

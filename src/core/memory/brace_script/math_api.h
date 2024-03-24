@@ -10,6 +10,10 @@
 #include <limits>
 #include <random>
 
+#ifndef DBL_MAX
+#define DBL_MAX std::numeric_limits<double>::max()
+#endif
+
 #define PI 3.1415926
 
 namespace BraceScriptInterpreter
@@ -1099,7 +1103,6 @@ namespace BraceScriptInterpreter
         template<typename ArrayType>
         inline void DoCalc(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars, const Brace::OperandRuntimeInfo& resultInfo, const std::shared_ptr<void>& arrayWrap)const
         {
-            using value_type = typename ArrayType::value_type;
             auto* arrayObj = static_cast<ArrayType*>(arrayWrap.get());
             if (nullptr != arrayObj) {
                 auto& arr = *arrayObj;
@@ -1172,7 +1175,6 @@ namespace BraceScriptInterpreter
         template<typename ArrayType>
         inline void DoCalc(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars, const Brace::OperandRuntimeInfo& resultInfo, const std::shared_ptr<void>& arrayWrap)const
         {
-            using value_type = typename ArrayType::value_type;
             auto* arrayObj = static_cast<ArrayType*>(arrayWrap.get());
             if (nullptr != arrayObj) {
                 auto& arr = *arrayObj;
@@ -1245,7 +1247,6 @@ namespace BraceScriptInterpreter
         template<typename ArrayType>
         inline void DoCalc(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars, const Brace::OperandRuntimeInfo& resultInfo, const std::shared_ptr<void>& arrayWrap)const
         {
-            using value_type = typename ArrayType::value_type;
             auto* arrayObj = static_cast<ArrayType*>(arrayWrap.get());
             if (nullptr != arrayObj) {
                 auto& arr = *arrayObj;
@@ -1311,7 +1312,6 @@ namespace BraceScriptInterpreter
         template<typename ArrayType>
         inline void DoCalc(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars, const Brace::OperandRuntimeInfo& resultInfo, const std::shared_ptr<void>& arrayWrap)const
         {
-            using value_type = typename ArrayType::value_type;
             auto* arrayObj = static_cast<ArrayType*>(arrayWrap.get());
             if (nullptr != arrayObj) {
                 auto& arr = *arrayObj;
@@ -1379,7 +1379,6 @@ namespace BraceScriptInterpreter
         template<typename ArrayType>
         inline void DoCalc(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars, const Brace::OperandRuntimeInfo& resultInfo, const std::shared_ptr<void>& arrayWrap)const
         {
-            using value_type = typename ArrayType::value_type;
             auto* arrayObj = static_cast<ArrayType*>(arrayWrap.get());
             if (nullptr != arrayObj) {
                 auto& arr = *arrayObj;
@@ -1464,8 +1463,6 @@ namespace BraceScriptInterpreter
         template<typename HashType>
         inline void DoCalc(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars, const Brace::OperandRuntimeInfo& resultInfo, const std::shared_ptr<void>& hashWrap)const
         {
-            using key_type = typename HashType::key_type;
-            using val_type = typename HashType::mapped_type;
             auto* hashObj = static_cast<HashType*>(hashWrap.get());
             if (nullptr != hashObj) {
                 auto& hash = *hashObj;
@@ -1550,8 +1547,6 @@ namespace BraceScriptInterpreter
         template<typename HashType>
         inline void DoCalc(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars, const Brace::OperandRuntimeInfo& resultInfo, const std::shared_ptr<void>& hashWrap)const
         {
-            using key_type = typename HashType::key_type;
-            using val_type = typename HashType::mapped_type;
             auto* hashObj = static_cast<HashType*>(hashWrap.get());
             if (nullptr != hashObj) {
                 auto& hash = *hashObj;
@@ -1636,8 +1631,6 @@ namespace BraceScriptInterpreter
         template<typename HashType>
         inline void DoCalc(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars, const Brace::OperandRuntimeInfo& resultInfo, const std::shared_ptr<void>& hashWrap)const
         {
-            using key_type = typename HashType::key_type;
-            using val_type = typename HashType::mapped_type;
             auto* hashObj = static_cast<HashType*>(hashWrap.get());
             if (nullptr != hashObj) {
                 auto& hash = *hashObj;
@@ -1713,8 +1706,6 @@ namespace BraceScriptInterpreter
         template<typename HashType>
         inline void DoCalc(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars, const Brace::OperandRuntimeInfo& resultInfo, const std::shared_ptr<void>& hashWrap)const
         {
-            using key_type = typename HashType::key_type;
-            using val_type = typename HashType::mapped_type;
             auto* hashObj = static_cast<HashType*>(hashWrap.get());
             if (nullptr != hashObj) {
                 auto& hash = *hashObj;
@@ -1793,8 +1784,6 @@ namespace BraceScriptInterpreter
         template<typename HashType>
         inline void DoCalc(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars, const Brace::OperandRuntimeInfo& resultInfo, const std::shared_ptr<void>& hashWrap)const
         {
-            using key_type = typename HashType::key_type;
-            using val_type = typename HashType::mapped_type;
             auto* hashObj = static_cast<HashType*>(hashWrap.get());
             if (nullptr != hashObj) {
                 auto& hash = *hashObj;

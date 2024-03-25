@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2014 Citra Emulator Project  & 2024 suyu Emulator Project
+// SPDX-FileCopyrightText: 2014 Citra Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 // Modified by palfaiate on <2024/03/07>
@@ -1757,19 +1757,18 @@ void GMainWindow::AllowOSSleep() {
 }
 
 bool GMainWindow::LoadROM(const QString& filename, Service::AM::FrontendAppletParameters params) {
-    if (Loader::AppLoader_NRO::IdentifyType(Core::GetGameFileFromPath(vfs, filename.toStdString())) !=
-        Loader::FileType::NRO) {
+    if (Loader::AppLoader_NRO::IdentifyType(
+            Core::GetGameFileFromPath(vfs, filename.toStdString())) != Loader::FileType::NRO) {
         if (!CheckFirmwarePresence()) {
             QMessageBox::critical(this, tr("Component Missing"), tr("Missing Firmware."));
             return false;
         }
 
         if (!ContentManager::AreKeysPresent()) {
-            QMessageBox::warning(this, tr("Derivation Components Missing"),
-                                tr("Encryption keys are missing. "
-                                    "In order to use this emulator, "
-                                    "you need to provide your own encryption keys "
-                                    "in order to play them."));
+            QMessageBox::warning(
+                this, tr("Encryption Keys Missing"),
+                tr("In order to use suyu you need to provide your own encryption keys. "
+                   "You can install them by going to Tools -> Install encryption keys."));
             return false;
         }
     }

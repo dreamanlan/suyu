@@ -5,6 +5,7 @@
 [Bb]uild*/
 doc-build/
 cmake-build*/
+xcodebuild/
 
 # Generated source files
 src/common/scm_rev.cpp

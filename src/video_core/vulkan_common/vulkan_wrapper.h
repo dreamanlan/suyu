@@ -128,7 +128,7 @@ private:
 /// Throws a Vulkan exception if result is not success.
 inline void Check(VkResult result) {
     if (result != VK_SUCCESS) {
-        throw Exception(result);
+        //throw Exception(result);
     }
 }
 

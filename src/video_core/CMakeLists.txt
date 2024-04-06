@@ -391,6 +391,9 @@ add_dependencies(video_core host_shaders)
 target_include_directories(video_core PRIVATE ${HOST_SHADERS_INCLUDE})
 target_link_libraries(video_core PRIVATE sirit Vulkan::Headers Vulkan::UtilityHeaders GPUOpen::VulkanMemoryAllocator)
 
+target_include_directories(video_core PRIVATE ${Boost_INCLUDE_DIRS})
+target_link_libraries(video_core PRIVATE ${Boost_LIBRARIES})
+
 if (ENABLE_NSIGHT_AFTERMATH)
     if (NOT DEFINED ENV{NSIGHT_AFTERMATH_SDK})
         message(FATAL_ERROR "Environment variable NSIGHT_AFTERMATH_SDK has to be provided")

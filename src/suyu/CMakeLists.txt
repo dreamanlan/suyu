@@ -356,6 +356,7 @@ if (APPLE)
     target_sources(suyu PRIVATE ${MACOSX_ICON})
     set_target_properties(suyu PROPERTIES MACOSX_BUNDLE TRUE)
     set_target_properties(suyu PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist)
+    set_target_properties(suyu PROPERTIES LINK_FLAGS "-Wl,-stack_size,0x10000000")
     target_link_libraries(suyu PRIVATE libbrace_macos)
 
     if (NOT USE_SYSTEM_MOLTENVK)

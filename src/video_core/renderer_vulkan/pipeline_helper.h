@@ -24,8 +24,12 @@ public:
     DescriptorLayoutBuilder(const Device& device_) : device{&device_} {}
 
     bool CanUsePushDescriptor() const noexcept {
+#if __APPLE__
+        return false;
+#else
         return device->IsKhrPushDescriptorSupported() &&
                num_descriptors <= device->MaxPushDescriptors();
+#endif
     }
 
     vk::DescriptorSetLayout CreateDescriptorSetLayout(bool use_push_descriptor) const {

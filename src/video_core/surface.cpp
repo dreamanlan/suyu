@@ -120,11 +120,11 @@ PixelFormat PixelFormatFromRenderTargetFormat(Tegra::RenderTargetFormat format) 
         return PixelFormat::R16G16B16A16_SNORM;
     case Tegra::RenderTargetFormat::R16G16B16A16_SINT:
         if (isApple)
-            return PixelFormat::R16G16B16A16_SNORM;
+            return PixelFormat::R16G16B16A16_FLOAT;
         return PixelFormat::R16G16B16A16_SINT;
     case Tegra::RenderTargetFormat::R16G16B16A16_UINT:
         if (isApple)
-            return PixelFormat::R16G16B16A16_UNORM;
+            return PixelFormat::R16G16B16A16_FLOAT;
         return PixelFormat::R16G16B16A16_UINT;
     case Tegra::RenderTargetFormat::R16G16B16A16_FLOAT:
         return PixelFormat::R16G16B16A16_FLOAT;
@@ -150,7 +150,7 @@ PixelFormat PixelFormatFromRenderTargetFormat(Tegra::RenderTargetFormat format) 
         return PixelFormat::A2B10G10R10_UNORM;
     case Tegra::RenderTargetFormat::A2B10G10R10_UINT:
         if (isApple)
-            return PixelFormat::A2B10G10R10_UNORM;
+            return PixelFormat::R16G16B16A16_FLOAT;
         return PixelFormat::A2B10G10R10_UINT;
     case Tegra::RenderTargetFormat::A2R10G10B10_UNORM:
         return PixelFormat::A2R10G10B10_UNORM;
@@ -164,11 +164,11 @@ PixelFormat PixelFormatFromRenderTargetFormat(Tegra::RenderTargetFormat format) 
         return PixelFormat::A8B8G8R8_SNORM;
     case Tegra::RenderTargetFormat::A8B8G8R8_SINT:
         if (isApple)
-            return PixelFormat::A8B8G8R8_SNORM;
+            return PixelFormat::R16G16B16A16_FLOAT;
         return PixelFormat::A8B8G8R8_SINT;
     case Tegra::RenderTargetFormat::A8B8G8R8_UINT:
         if (isApple)
-            return PixelFormat::A8B8G8R8_UNORM;
+            return PixelFormat::R16G16B16A16_FLOAT;
         return PixelFormat::A8B8G8R8_UINT;
     case Tegra::RenderTargetFormat::R16G16_UNORM:
         return PixelFormat::R16G16_UNORM;
@@ -207,11 +207,11 @@ PixelFormat PixelFormatFromRenderTargetFormat(Tegra::RenderTargetFormat format) 
         return PixelFormat::R8G8_SNORM;
     case Tegra::RenderTargetFormat::R8G8_SINT:
         if (isApple)
-            return PixelFormat::R8G8_SNORM;
+            return PixelFormat::R16G16_FLOAT;
         return PixelFormat::R8G8_SINT;
     case Tegra::RenderTargetFormat::R8G8_UINT:
         if (isApple)
-            return PixelFormat::R8G8_UNORM;
+            return PixelFormat::R16G16_FLOAT;
         return PixelFormat::R8G8_UINT;
     case Tegra::RenderTargetFormat::R16_UNORM:
         return PixelFormat::R16_UNORM;
@@ -233,11 +233,11 @@ PixelFormat PixelFormatFromRenderTargetFormat(Tegra::RenderTargetFormat format) 
         return PixelFormat::R8_SNORM;
     case Tegra::RenderTargetFormat::R8_SINT:
         if (isApple)
-            return PixelFormat::R8_SNORM;
+            return PixelFormat::R16_FLOAT;
         return PixelFormat::R8_SINT;
     case Tegra::RenderTargetFormat::R8_UINT:
         if (isApple)
-            return PixelFormat::R8_UNORM;
+            return PixelFormat::R16_FLOAT;
         return PixelFormat::R8_UINT;
     default:
         UNIMPLEMENTED_MSG("Unimplemented render target format={}", format);

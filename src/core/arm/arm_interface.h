@@ -54,8 +54,11 @@ public:
     explicit ArmInterface(bool uses_wall_clock) : m_uses_wall_clock{uses_wall_clock} {}
     virtual ~ArmInterface() = default;
 
+    // Must be called once after the jit ctor and only after the jit ctor
+    virtual void InitJitOnceOnlyAfterJitCtor(u64 traceScopeBegin, u64 traceScopeEnd) {}
+
     // Perform any backend-specific initialization.
-    virtual void Initialize(u64 traceScopeBegin, u64 traceScopeEnd) {}
+    virtual void Initialize() {}
 
     // Runs the CPU until an event happens.
     virtual HaltReason RunThread(Kernel::KThread* thread) = 0;

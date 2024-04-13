@@ -336,7 +336,7 @@ bool ArmDynarmic32::IsInThumbMode() const {
     return (m_jit->Cpsr() & 0x20) != 0;
 }
 
-void ArmDynarmic32::Initialize(u64 traceScopeBegin, u64 traceScopeEnd) {
+void ArmDynarmic32::InitJitOnceOnlyAfterJitCtor(u64 traceScopeBegin, u64 traceScopeEnd) {
     u32 halt_reason_on_run = 0;
     if (!Settings::values.cpuopt_block_linking || !Settings::values.cpuopt_return_stack_buffer) {
         halt_reason_on_run = static_cast<u32>(PcCount);

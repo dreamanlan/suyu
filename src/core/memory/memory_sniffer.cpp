@@ -232,7 +232,7 @@ void MemorySniffer::AddModuleMemoryParameters(Kernel::KProcess& process, std::st
 
         for (int ix = 0; ix < static_cast<int>(Core::Hardware::NUM_CPU_CORES); ++ix) {
             auto* armIntf = process.GetArmInterface(ix);
-            armIntf->Initialize(addr_begin, addr_end);
+            armIntf->InitJitOnceOnlyAfterJitCtor(addr_begin, addr_end);
         }
     }
     impl->moduleMemArgs.push_back(ModuleMemoryArg{std::move(file_name), std::move(build_id), base, region_begin, region_size});

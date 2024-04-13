@@ -30,7 +30,7 @@ public:
 
     bool IsInThumbMode() const;
 
-    void Initialize(u64 traceScopeBegin, u64 traceScopeEnd) override;
+    void InitJitOnceOnlyAfterJitCtor(u64 traceScopeBegin, u64 traceScopeEnd) override;
     HaltReason RunThread(Kernel::KThread* thread) override;
     HaltReason StepThread(Kernel::KThread* thread) override;
 

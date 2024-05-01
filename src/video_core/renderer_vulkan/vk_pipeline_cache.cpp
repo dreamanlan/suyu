@@ -702,6 +702,14 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
         if (key.unique_hashes[index] == 0 && !is_emulated_stage) {
             continue;
         }
+#if __APPLE__
+        // Currently, Apple's Metal does not support geometry shader.
+        // [See MoltenVK]: The current plan for geometry shaders is to use Apple's new Shader Converter tech.
+        // As for more info, we've got this identified in th MoltenVK roadmap.
+        if (index == static_cast<u32>(Maxwell::ShaderType::Geometry)) {
+            continue;
+        }
+#endif
         UNIMPLEMENTED_IF(index == 0);
 
         Shader::IR::Program& program{programs[index]};
@@ -740,6 +748,17 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
         Shader::Maxwell::Flow::CFG cfg(env, pools.flow_block, cfg_offset, index == 0);
         env.Dump(hash, key.unique_hashes[index]);
     }
+    std::stringstream ss;
+    ss << "exception in graphics pipeline: ";
+    for (int ix = 0; ix < static_cast<int>(VideoCommon::NUM_STAGES); ++ix) {
+        if (ix > 0)
+            ss << "|";
+        ss << fmt::format("{:016x}", key.unique_hashes[ix + 1]);
+    }
+    ss << fmt::format(" {}", exception.what());
+    auto&& msg = ss.str();
+    printf("%s\n", msg.c_str());
+    Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
     LOG_ERROR(Render_Vulkan, "{}", exception.what());
     return nullptr;
 }
@@ -819,6 +838,12 @@ std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
                                              &shader_notify, key, program.info, std::move(spv_module));
 
 } catch (const Shader::Exception& exception) {
+    std::stringstream ss;
+    ss << "exception in compute pipeline: ";
+    ss << fmt::format("{:016x} {}", key.unique_hash, exception.what());
+    auto&& msg = ss.str();
+    printf("%s\n", msg.c_str());
+    Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
     LOG_ERROR(Render_Vulkan, "{}", exception.what());
     return nullptr;
 }

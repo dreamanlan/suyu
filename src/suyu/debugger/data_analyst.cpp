@@ -273,6 +273,10 @@ public:
         }
         else if (cmd == "dumpshaderinfo") {
             auto&& system = m_Widget.GetSystem();
+            if (system.ApplicationProcess() == nullptr) {
+                m_Widget.AddLog("game isn't running.");
+                return true;
+            }
             auto& gpu = system.GPU();
             gpu.RequestDumpShaderInfo(std::move(arg));
             return true;
@@ -301,6 +305,10 @@ public:
             uint64_t hash = std::stoull(arg, nullptr, 0);
 
             auto&& system = m_Widget.GetSystem();
+            if (system.ApplicationProcess() == nullptr) {
+                m_Widget.AddLog("game isn't running.");
+                return true;
+            }
             auto& gpu = system.GPU();
             gpu.RequestAddVsHash(hash);
             return true;
@@ -309,12 +317,20 @@ public:
             uint64_t hash = std::stoull(arg, nullptr, 0);
 
             auto&& system = m_Widget.GetSystem();
+            if (system.ApplicationProcess() == nullptr) {
+                m_Widget.AddLog("game isn't running.");
+                return true;
+            }
             auto& gpu = system.GPU();
             gpu.RequestRemoveVsHash(hash);
             return true;
-            }
+        }
         else if (cmd == "clearvshashes") {
             auto&& system = m_Widget.GetSystem();
+            if (system.ApplicationProcess() == nullptr) {
+                m_Widget.AddLog("game isn't running.");
+                return true;
+            }
             auto& gpu = system.GPU();
             gpu.RequestClearVsHashes();
             return true;
@@ -323,6 +339,10 @@ public:
             uint64_t hash = std::stoull(arg, nullptr, 0);
 
             auto&& system = m_Widget.GetSystem();
+            if (system.ApplicationProcess() == nullptr) {
+                m_Widget.AddLog("game isn't running.");
+                return true;
+            }
             auto& gpu = system.GPU();
             gpu.RequestAddPsHash(hash);
             return true;
@@ -331,12 +351,20 @@ public:
             uint64_t hash = std::stoull(arg, nullptr, 0);
 
             auto&& system = m_Widget.GetSystem();
+            if (system.ApplicationProcess() == nullptr) {
+                m_Widget.AddLog("game isn't running.");
+                return true;
+            }
             auto& gpu = system.GPU();
             gpu.RequestRemovePsHash(hash);
             return true;
         }
         else if (cmd == "clearpshashes") {
             auto&& system = m_Widget.GetSystem();
+            if (system.ApplicationProcess() == nullptr) {
+                m_Widget.AddLog("game isn't running.");
+                return true;
+            }
             auto& gpu = system.GPU();
             gpu.RequestClearPsHashes();
             return true;
@@ -347,6 +375,40 @@ public:
         }
         else if (cmd == "requestlinemodelog") {
             VideoCore::g_LineModeLogRequest = true;
+            return true;
+        }
+        else if (cmd == "clearlogpipelines") {
+            auto&& system = m_Widget.GetSystem();
+            if (system.ApplicationProcess() == nullptr) {
+                m_Widget.AddLog("game isn't running.");
+                return true;
+            }
+            auto& gpu = system.GPU();
+            gpu.RequestClearLogPipelines();
+            return true;
+        }
+        else if (cmd == "addlogpipeline") {
+            uint64_t hash = std::stoull(arg, nullptr, 0);
+
+            auto&& system = m_Widget.GetSystem();
+            if (system.ApplicationProcess() == nullptr) {
+                m_Widget.AddLog("game isn't running.");
+                return true;
+            }
+            auto& gpu = system.GPU();
+            gpu.RequestAddLogPipeline(hash);
+            return true;
+        }
+        else if (cmd == "removelogpipeline") {
+            uint64_t hash = std::stoull(arg, nullptr, 0);
+
+            auto&& system = m_Widget.GetSystem();
+            if (system.ApplicationProcess() == nullptr) {
+                m_Widget.AddLog("game isn't running.");
+                return true;
+            }
+            auto& gpu = system.GPU();
+            gpu.RequestRemoveLogPipeline(hash);
             return true;
         }
         else {
@@ -485,11 +547,19 @@ public:
     }
     virtual void ReplaceSourceShader(uint64_t hash, int stage, std::string&& code)const override {
         auto&& system = m_Widget.GetSystem();
+        if (system.ApplicationProcess() == nullptr) {
+            m_Widget.AddLog("game isn't running.");
+            return;
+        }
         auto&& gpu = system.GPU();
         gpu.RequestReplaceSourceShader(hash, stage, std::move(code));
     }
     virtual void ReplaceSpirvShader(uint64_t hash, int stage, std::vector<uint32_t>&& code)const override {
         auto&& system = m_Widget.GetSystem();
+        if (system.ApplicationProcess() == nullptr) {
+            m_Widget.AddLog("game isn't running.");
+            return;
+        }
         auto&& gpu = system.GPU();
         gpu.RequestReplaceSpirvShader(hash, stage, std::move(code));
     }
@@ -534,6 +604,9 @@ void DataAnalystWidget::InitCmdDocs() {
     cmdDocs.insert(std::make_pair("clearpshashes", "clearpshashes, clear all ps hashes for line render mode"));
     cmdDocs.insert(std::make_pair("setlinemodelogframecount", "setlinemodelogframecount num, def 2"));
     cmdDocs.insert(std::make_pair("requestlinemodelog", "requestlinemodelog, log shader info in line render mode"));
+    cmdDocs.insert(std::make_pair("clearlogpipelines", "clearlogpipelines, clear all logged pipelines"));
+    cmdDocs.insert(std::make_pair("addlogpipeline", "addlogpipeline hash, add a logged pipeline"));
+    cmdDocs.insert(std::make_pair("removelogpipeline", "removelogpipeline hash, remove a logged pipeline"));
 
     //in MemorySniffer
     cmdDocs.insert(std::make_pair("refreshsnapshot", "refreshsnapshot, snapshot sniffied memory data, same as UI"));

@@ -232,6 +232,21 @@ void RasterizerVulkan::ReplaceSpirvShader(uint64_t hash, int stage, const std::v
     Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
 }
 
+static inline bool IsLogPipeline(GraphicsPipelineCacheKey key) {
+    bool ret = false;
+    for (auto&& h : key.unique_hashes) {
+        if (VideoCore::NeedLogPipeline(h)) {
+            ret = true;
+            break;
+        }
+    }
+    return ret;
+}
+static inline bool IsLogPipeline(ComputePipelineCacheKey key) {
+    bool ret = VideoCore::NeedLogPipeline(key.unique_hash);
+    return ret;
+}
+
 template <typename Func>
 void RasterizerVulkan::PrepareDraw(bool indirect_draw, bool is_indexed, Func&& draw_func) {
     MICROPROFILE_SCOPE(Vulkan_Drawing);
@@ -246,9 +261,29 @@ void RasterizerVulkan::PrepareDraw(bool indirect_draw, bool is_indexed, Func&& d
 
     GraphicsPipeline* const pipeline{pipeline_cache.CurrentGraphicsPipeline()};
     if (!pipeline) {
+        auto gkey0 = pipeline_cache.CurrentGraphicsKey();
+        std::stringstream ss;
+        ss << "failed graphics pipeline: ";
+        for (int ix = 0; ix < static_cast<int>(VideoCommon::NUM_STAGES); ++ix) {
+            if (ix > 0)
+                ss << "|";
+            ss << fmt::format("{:016x}", gkey0.unique_hashes[ix + 1]);
+        }
+        auto&& msg = ss.str();
+        printf("%s\n", msg.c_str());
+        Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
         return;
     }
     auto gkey = pipeline_cache.CurrentGraphicsKey();
+
+    if (IsLogPipeline(gkey)) {
+        std::stringstream ss;
+        ss << "graphics pipeline: ";
+        pipeline->DumpInfo(ss, gkey);
+        auto&& msg = ss.str();
+        printf("%s\n", msg.c_str());
+        Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
+    }
 
     bool line_mode = false;
     if (indirect_draw) {
@@ -558,10 +593,27 @@ void RasterizerVulkan::DispatchCompute() {
     FlushWork();
     gpu_memory->FlushCaching();
 
-    ComputePipeline* const pipeline{pipeline_cache.CurrentComputePipeline()};
+    ComputePipelineCacheKey ckey;
+    ComputePipeline* const pipeline{pipeline_cache.CurrentComputePipeline(ckey)};
     if (!pipeline) {
+        std::stringstream ss;
+        ss << "failed compute pipeline: ";
+        ss << fmt::format("{:016x}", ckey.unique_hash);
+        auto&& msg = ss.str();
+        printf("%s\n", msg.c_str());
+        Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
         return;
     }
+
+    if (IsLogPipeline(ckey)) {
+        std::stringstream ss;
+        ss << "compute pipeline: ";
+        pipeline->DumpInfo(ss, ckey);
+        auto&& msg = ss.str();
+        printf("%s\n", msg.c_str());
+        Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
+    }
+
     std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};
     pipeline->Configure(*kepler_compute, *gpu_memory, scheduler, buffer_cache, texture_cache);
 

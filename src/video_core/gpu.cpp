@@ -37,17 +37,23 @@
 
 namespace VideoCore {
 
-    bool g_IsPolygonModeLine = false;
-    uint32_t g_LineModeMinVertexNum = 6;
-    uint32_t g_LineModeMaxVertexNum = 64;
-    uint32_t g_LineModeMinDrawCount = 2;
-    uint32_t g_LineModeMaxDrawCount = 12;
-    bool g_LineModeLogRequest = false;
-    int g_LineModeLogFrameCount = 2;
+bool g_IsPolygonModeLine = false;
+uint32_t g_LineModeMinVertexNum = 6;
+uint32_t g_LineModeMaxVertexNum = 64;
+uint32_t g_LineModeMinDrawCount = 2;
+uint32_t g_LineModeMaxDrawCount = 12;
+bool g_LineModeLogRequest = false;
+int g_LineModeLogFrameCount = 2;
 
-    int g_LineModeLogFrameIndex = -1;
-    std::unordered_set<uint64_t> g_LineModeVsHashes;
-    std::unordered_set<uint64_t> g_LineModePsHashes;
+int g_LineModeLogFrameIndex = -1;
+std::unordered_set<uint64_t> g_LineModeVsHashes;
+std::unordered_set<uint64_t> g_LineModePsHashes;
+
+std::unordered_set<uint64_t> g_LogPipelineKeys;
+
+bool NeedLogPipeline(uint64_t key) {
+    return g_LogPipelineKeys.find(key) != g_LogPipelineKeys.end();
+}
 } // namespace VideoCore
 
 namespace Tegra {
@@ -512,9 +518,24 @@ void GPU::RequestReplaceSourceShader(uint64_t hash, int stage, std::string&& cod
         impl->rasterizer->ReplaceSourceShader(hash, stage, code);
     });
 }
-void GPU::RequestReplaceSpirvShader(uint64_t hash, int stage, std::vector<uint32_t>&& code){
+void GPU::RequestReplaceSpirvShader(uint64_t hash, int stage, std::vector<uint32_t>&& code) {
     impl->RequestAsyncOperation([this, hash, stage, code = std::move(code)]() {
         impl->rasterizer->ReplaceSpirvShader(hash, stage, code);
+    });
+}
+void GPU::RequestClearLogPipelines() {
+    impl->RequestAsyncOperation([]() {
+        VideoCore::g_LogPipelineKeys.clear();
+    });
+}
+void GPU::RequestAddLogPipeline(uint64_t hash) {
+    impl->RequestAsyncOperation([hash]() {
+        VideoCore::g_LogPipelineKeys.insert(hash);
+    });
+}
+void GPU::RequestRemoveLogPipeline(uint64_t hash) {
+    impl->RequestAsyncOperation([hash]() {
+        VideoCore::g_LogPipelineKeys.erase(hash);
     });
 }
 

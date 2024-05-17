@@ -641,6 +641,15 @@ GraphicsPipeline* PipelineCache::BuiltPipeline(GraphicsPipeline* pipeline) const
     return nullptr;
 }
 
+[[nodiscard]] inline u32 GetHandleSecond(u32 raw, bool via_header_index) {
+    if (via_header_index) {
+        return raw;
+    } else {
+        const Tegra::Texture::TextureHandle handle{raw};
+        return handle.tsc_id;
+    }
+}
+
 std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
     ShaderPools& pools, const GraphicsPipelineCacheKey& key,
     std::span<Shader::Environment* const> envs, PipelineStatistics* statistics,
@@ -715,6 +724,40 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
         Shader::IR::Program& program{programs[index]};
         const size_t stage_index{index - 1};
         infos[stage_index] = &program.info;
+
+        if (maxwell3d) {
+            const auto& regs{maxwell3d->regs};
+            const bool via_header_index{regs.sampler_binding == Maxwell::SamplerBinding::ViaHeaderBinding};
+            const auto& cbufs{maxwell3d->state.shader_stages[stage_index].const_buffers};
+            const auto read_handle{[&](const auto& desc, u32 index) {
+                ASSERT(cbufs[desc.cbuf_index].enabled);
+                const u32 index_offset{index << desc.size_shift};
+                const u32 offset{desc.cbuf_offset + index_offset};
+                const GPUVAddr addr{cbufs[desc.cbuf_index].address + offset};
+                if constexpr (std::is_same_v<decltype(desc), const Shader::TextureDescriptor&> ||
+                              std::is_same_v<decltype(desc), const Shader::TextureBufferDescriptor&>) {
+                    if (desc.has_secondary) {
+                        ASSERT(cbufs[desc.secondary_cbuf_index].enabled);
+                        const u32 second_offset{desc.secondary_cbuf_offset + index_offset};
+                        const GPUVAddr separate_addr{cbufs[desc.secondary_cbuf_index].address +
+                            second_offset};
+                        const u32 lhs_raw{gpu_memory->Read<u32>(addr) << desc.shift_left};
+                        const u32 rhs_raw{gpu_memory->Read<u32>(separate_addr)
+                            << desc.secondary_shift_left};
+                        const u32 raw{lhs_raw | rhs_raw};
+                        return GetHandleSecond(raw, via_header_index);
+                    }
+                }
+                return GetHandleSecond(gpu_memory->Read<u32>(addr), via_header_index);
+            }};
+            for (const auto& desc : program.info.texture_descriptors) {
+                for (u32 index = 0; index < desc.count; ++index) {
+                    const auto handle{read_handle(desc, index)};
+                    VideoCommon::SamplerId sampler{texture_cache.GetGraphicsSamplerId(handle)};
+                    (void)sampler;
+                }
+            }
+        }
 
         const auto runtime_info{MakeRuntimeInfo(programs, key, program, previous_stage)};
         ConvertLegacyToGeneric(program, runtime_info);
@@ -824,6 +867,40 @@ std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
     }
 
     auto program{TranslateProgram(pools.inst, pools.block, env, cfg, host_info)};
+
+    if (kepler_compute) {
+        const auto& qmd{kepler_compute->launch_description};
+        const auto& cbufs{qmd.const_buffer_config};
+        const bool via_header_index{qmd.linked_tsc != 0};
+        const auto read_handle{[&](const auto& desc, u32 index) {
+            ASSERT(((qmd.const_buffer_enable_mask >> desc.cbuf_index) & 1) != 0);
+            const u32 index_offset{index << desc.size_shift};
+            const u32 offset{desc.cbuf_offset + index_offset};
+            const GPUVAddr addr{cbufs[desc.cbuf_index].Address() + offset};
+            if constexpr (std::is_same_v<decltype(desc), const Shader::TextureDescriptor&> ||
+                          std::is_same_v<decltype(desc), const Shader::TextureBufferDescriptor&>) {
+                if (desc.has_secondary) {
+                    ASSERT(((qmd.const_buffer_enable_mask >> desc.secondary_cbuf_index) & 1) != 0);
+                    const u32 secondary_offset{desc.secondary_cbuf_offset + index_offset};
+                    const GPUVAddr separate_addr{cbufs[desc.secondary_cbuf_index].Address() +
+                        secondary_offset};
+                    const u32 lhs_raw{gpu_memory->Read<u32>(addr) << desc.shift_left};
+                    const u32 rhs_raw{gpu_memory->Read<u32>(separate_addr) << desc.secondary_shift_left};
+                    return GetHandleSecond(lhs_raw | rhs_raw, via_header_index);
+                }
+            }
+            return GetHandleSecond(gpu_memory->Read<u32>(addr), via_header_index);
+        }};
+        for (const auto& desc : program.info.texture_descriptors) {
+            for (u32 index = 0; index < desc.count; ++index) {
+                const auto handle{read_handle(desc, index)};
+
+                VideoCommon::SamplerId sampler = texture_cache.GetComputeSamplerId(handle);
+                (void)sampler;
+            }
+        }
+    }
+
     const std::vector<u32> code{EmitSPIRV(profile, program)};
     device.SaveShader(code);
     VideoCommon::DumpSpirvShader(hash, key.unique_hash, Shader::Stage::Compute, code);

@@ -721,8 +721,8 @@ void MemorySniffer::GetMemorySearchInfo(uint64_t& scopeBegin, uint64_t& scopeEnd
     maxCount = impl->memSearchMaxCount;
 
     if (scopeBegin == scopeEnd) {
-        scopeBegin = impl->heapBase;
-        scopeEnd = impl->heapBase + impl->heapSize;
+        scopeBegin = impl->aliasStart;
+        scopeEnd = impl->aliasStart + impl->aliasSize;
     }
 }
 

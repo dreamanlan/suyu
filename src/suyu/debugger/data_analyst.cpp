@@ -1092,8 +1092,8 @@ void DataAnalystWidget::ClearResultList() {
 }
 
 void DataAnalystWidget::RefreshMemoryArgs() {
-    static std::string s_heapStr("heap");
-    const uint64_t c_max_size = 256 * 1024 * 1024;
+    static std::string s_SearchSection("alias");
+    const uint64_t c_max_size = 0x200000000ull;
 
     auto&& sniffer = system.MemorySniffer();
     if (system.ApplicationProcess()) {
@@ -1115,7 +1115,7 @@ void DataAnalystWidget::RefreshMemoryArgs() {
             ss << std::hex << size;
             new QListWidgetItem(tr(ss.str().c_str()), listWidget);
 
-            if (id == s_heapStr) {
+            if (id == s_SearchSection) {
                 auto txt1 = startAddrEdit->text();
                 auto txt2 = sizeAddrEdit->text();
                 if (txt1.isEmpty()) {

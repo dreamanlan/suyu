@@ -25,7 +25,9 @@ public:
 
     bool CanUsePushDescriptor() const noexcept {
 #if __APPLE__
-        return false;
+        //return false;
+        return device->IsKhrPushDescriptorSupported() &&
+               num_descriptors <= device->MaxPushDescriptors();
 #else
         return device->IsKhrPushDescriptorSupported() &&
                num_descriptors <= device->MaxPushDescriptors();

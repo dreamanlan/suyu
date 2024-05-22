@@ -111,6 +111,7 @@ protected:
     virtual void closeEvent(QCloseEvent* event) override;
 private:
     void ClearResultList();
+    void SetSniffingScope(const std::string& sectionId);
     void RefreshMemoryArgs();
     void RefreshResultList(const char* tag) {
         RefreshResultList(tag, false);

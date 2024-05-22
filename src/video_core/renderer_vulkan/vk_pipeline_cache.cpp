@@ -750,7 +750,7 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
                 }
                 return GetHandleSecond(gpu_memory->Read<u32>(addr), via_header_index);
             }};
-            for (const auto& desc : program.info.texture_descriptors) {
+            for (auto& desc : program.info.texture_descriptors) {
                 for (u32 index = 0; index < desc.count; ++index) {
                     const auto handle{read_handle(desc, index)};
                     VideoCommon::SamplerId sampler{texture_cache.GetGraphicsSamplerId(handle)};

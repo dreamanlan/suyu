@@ -211,6 +211,10 @@ public:
             m_Widget.ClearResultList();
             return true;
         }
+        else if (cmd == "setsniffingscope") {
+            m_Widget.SetSniffingScope(arg);
+            return true;
+        }
         else if (cmd == "clearlist") {
             m_Widget.ClearResultList();
             return true;
@@ -575,6 +579,7 @@ void DataAnalystWidget::InitCmdDocs() {
     cmdDocs.insert(std::make_pair("refresh", "refresh tag, refresh output list"));
     cmdDocs.insert(std::make_pair("showall", "showall tag, show all output list"));
     cmdDocs.insert(std::make_pair("clearall", "clearall, clear all sniffer data and output list"));
+    cmdDocs.insert(std::make_pair("setsniffingscope", "setsniffingscope section_id, set sniffing scope with memory section id"));
     cmdDocs.insert(std::make_pair("clearlist", "clearlist, clear output list"));
     cmdDocs.insert(std::make_pair("savelist", "savelist file, save output list"));
     cmdDocs.insert(std::make_pair("setmaxlist", "setmaxlist ct, set max output list count"));
@@ -1091,6 +1096,28 @@ void DataAnalystWidget::ClearResultList() {
     listWidget->clear();
 }
 
+void DataAnalystWidget::SetSniffingScope(const std::string& sectionId) {
+    const uint64_t c_max_size = 0x200000000ull;
+
+    auto&& sniffer = system.MemorySniffer();
+    if (system.ApplicationProcess()) {
+        sniffer.VisitMemoryArgs([=](auto name, auto id, u64 base, u64 addr, u64 size) {
+            std::stringstream ss;
+            if (name == sectionId || id == sectionId) {
+                auto txt1 = startAddrEdit->text();
+                auto txt2 = sizeAddrEdit->text();
+                ss.str("");
+                ss << "0x" << std::hex << base;
+                startAddrEdit->setText(tr(ss.str().c_str()));
+
+                ss.str("");
+                ss << "0x" << std::hex << (size < c_max_size ? size : c_max_size);
+                sizeAddrEdit->setText(tr(ss.str().c_str()));
+            }
+        });
+    }
+}
+
 void DataAnalystWidget::RefreshMemoryArgs() {
     static std::string s_SearchSection("alias");
     const uint64_t c_max_size = 0x200000000ull;
@@ -1131,6 +1158,7 @@ void DataAnalystWidget::RefreshMemoryArgs() {
             }
         });
     }
+    new QListWidgetItem(tr("[set sniffing scope]:setsniffingscope section_id"), listWidget);
     new QListWidgetItem(tr("use findmem([val1,val2,...]) command to get a smaller memory range"), listWidget);
     new QListWidgetItem(tr("or"), listWidget);
     new QListWidgetItem(tr("use searchmem([val1,val2,...]) command to get a smaller memory range"), listWidget);

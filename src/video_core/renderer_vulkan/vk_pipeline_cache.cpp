@@ -750,6 +750,7 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
                 }
                 return GetHandleSecond(gpu_memory->Read<u32>(addr), via_header_index);
             }};
+#if __APPLE__
             for (auto& desc : program.info.texture_descriptors) {
                 for (u32 tindex = 0; tindex < desc.count; ++tindex) {
                     const auto handle{read_handle(desc, tindex)};
@@ -757,6 +758,7 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
                     (void)sampler;
                 }
             }
+#endif
         }
 
         const auto runtime_info{MakeRuntimeInfo(programs, key, program, previous_stage)};
@@ -891,6 +893,7 @@ std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
             }
             return GetHandleSecond(gpu_memory->Read<u32>(addr), via_header_index);
         }};
+#if __APPLE__
         for (const auto& desc : program.info.texture_descriptors) {
             for (u32 index = 0; index < desc.count; ++index) {
                 const auto handle{read_handle(desc, index)};
@@ -899,6 +902,7 @@ std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
                 (void)sampler;
             }
         }
+#endif
     }
 
     const std::vector<u32> code{EmitSPIRV(profile, program)};

@@ -51,6 +51,7 @@ struct MemoryModifyInfo
         u64 u64OldVal;
     };
     uint64_t size;
+    uint64_t pid;
 
     bool IsIncreased()const;
     bool IsDecreased()const;
@@ -62,7 +63,7 @@ using MemoryModifyInfoMap = std::map<uint64_t, MemoryModifyInfoPtr>;
 
 class MemorySniffer final {
 public:
-    using VisitMemoryArg = std::function<void(const char*, const char*, u64, u64, u64)>;
+    using VisitMemoryArg = std::function<void(const char*, const char*, u64, u64, u64, u64, u64)>;
     enum class WatchPointType
     {
         NotWatchPoint = 0,
@@ -86,20 +87,21 @@ public:
     uint64_t GetAliasBase(uint64_t& size)const;
     uint64_t GetAliasCodeBase(uint64_t& size)const;
     int GetModuleCount()const;
-    uint64_t GetModuleBase(int ix, uint64_t& addr, uint64_t& size, std::string& build_id, std::string& name)const;
+    uint64_t GetModuleBase(int ix, uint64_t& addr, uint64_t& size, std::string& build_id, std::string& name, uint64_t& progId, uint64_t& pid)const;
     void ClearSessionInfos();
     void AddSessionInfo(uint64_t id, const std::string& name, u32 handle);
     bool TryUpdateSession(uint64_t id, u32 handle);
-    void ClearBreakPoints();
-    bool AddBreakPoint(uint64_t addr);
-    bool RemoveBreakPoint(uint64_t addr);
-    bool EnableBreakPoint(uint64_t addr);
-    bool DisableBreakPoint(uint64_t addr);
+    void ClearBreakPoints(Kernel::KProcess* process);
+    bool AddBreakPoint(Kernel::KProcess& process, uint64_t addr);
+    bool RemoveBreakPoint(Kernel::KProcess& process, uint64_t addr);
+    bool EnableBreakPoint(Kernel::KProcess& process, uint64_t addr);
+    bool DisableBreakPoint(Kernel::KProcess& process, uint64_t addr);
     bool IsBreakPoint(uint32_t addr)const;
     bool IsBreakPoint(uint64_t addr)const;
     uint64_t GetMaxStepCount()const;
 public://call by core
     bool IsEnabled()const;
+    bool IsTraceProcess(Kernel::KProcess& process)const;
     WatchPointType GetTraceOnAddr(WatchPointType watchType, uint64_t addr)const;
     WatchPointType GetTraceOnAddr(WatchPointType watchType, uint64_t addr, std::size_t size)const;
     bool IsStepInstruction(uint32_t inst)const;
@@ -116,9 +118,9 @@ public://call by core
     void TryLogCallStack(WatchPointType watchType, const Common::ProcessAddress addr, std::size_t size)const;
 public://call by user
     void SetEnable(bool val);
-    void GetMemorySearchInfo(uint64_t& scopeBegin, uint64_t& scopeEnd, uint64_t& step, uint64_t& valueSize, uint64_t& range, uint64_t& maxCount)const;
-    void MarkMemoryDebug(uint64_t addr, uint64_t size, bool debug)const;
-    void AddSniffing(uint64_t addr, uint64_t size, uint64_t step, uint64_t cur_val);
+    void GetMemorySearchInfo(uint64_t& scopeBegin, uint64_t& scopeEnd, uint64_t& step, uint64_t& valueSize, uint64_t& range, uint64_t& maxCount, uint64_t& pid)const;
+    void MarkMemoryDebug(uint64_t pid, uint64_t addr, uint64_t size, bool debug) const;
+    void AddSniffing(uint64_t pid, uint64_t addr, uint64_t size, uint64_t step, uint64_t cur_val);
     void AddLogInstruction(uint32_t mask, uint32_t value);
 
     void SetResultMemoryModifyInfo(MemoryModifyInfoMap&& newResult);
@@ -149,9 +151,13 @@ public://call by user
     void SaveHistory(const char* file_path)const;
     void SaveRollback(const char* file_path)const;
 
-    uint64_t ReadMemory(uint64_t addr, uint64_t typeSizeOf, bool& succ)const;
-    bool WriteMemory(uint64_t addr, uint64_t typeSizeOf, uint64_t val)const;
-    bool DumpMemory(uint64_t addr, uint64_t size, std::ostream& os)const;
+    Kernel::KProcess* GetProcess(u64 pid) const;
+    uint64_t ReadMemory(Kernel::KProcess& process, uint64_t addr, uint64_t typeSizeOf,
+                        bool& succ) const;
+    bool WriteMemory(Kernel::KProcess& process, uint64_t addr, uint64_t typeSizeOf,
+                     uint64_t val) const;
+    bool DumpMemory(Kernel::KProcess& process, uint64_t addr, uint64_t size,
+                    std::ostream& os) const;
 
     void StorePcCount()const;
     void KeepPcCount()const;

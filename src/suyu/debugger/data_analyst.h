@@ -159,6 +159,7 @@ private:
     QLineEdit* sizeAddrEdit;
     QLineEdit* stepAddrEdit;
     QLineEdit* curValueEdit;
+    QLineEdit* pidEdit;
 
     QVBoxLayout* layout;
 

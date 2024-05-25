@@ -625,6 +625,8 @@ namespace BraceScriptInterpreter
                 }
                 ss << std::dec;
                 ss << "," << pObj->size;
+                ss << std::hex;
+                ss << "," << pObj->pid;
                 Brace::VarSetString((m_ResultInfo.IsGlobal ? gvars : lvars), m_ResultInfo.VarIndex, ss.str());
             }
             return Brace::BRACE_FLOW_CONTROL_NORMAL;
@@ -755,6 +757,28 @@ namespace BraceScriptInterpreter
                 std::swap(m_Member, member);
                 return true;
             }
+            else if (member == "pid") {
+                if (argInfo.Type < Brace::BRACE_DATA_TYPE_INT8 ||
+                    argInfo.Type > Brace::BRACE_DATA_TYPE_UINT64) {
+                    std::stringstream ss;
+                    ss << "object.pid must assigned integer value, line: " << data.GetLine();
+                    LogError(ss.str());
+                    executor = nullptr;
+                    return false;
+                }
+                switch (objInfo.ObjectTypeId) {
+                case CUSTOM_BRACE_OBJECT_TYPE_CPP_MEM_MODIFY_INFO:
+                    executor.attach(this, &CppObjectMemberSetProvider::ExecuteSetMemModifyInfoPid);
+                    break;
+                }
+
+                m_ObjInfo = objInfo;
+                std::swap(m_Obj, obj);
+                m_ArgInfo = argInfo;
+                std::swap(m_Arg, arg);
+                std::swap(m_Member, member);
+                return true;
+            }
             else {
                 std::stringstream ss;
                 ss << "unknown writable property '" << member << "', line: " << data.GetLine();
@@ -831,6 +855,21 @@ namespace BraceScriptInterpreter
             if (nullptr != pObj) {
                 uint64_t size = static_cast<uint64_t>(Brace::VarGetI64((m_ArgInfo.IsGlobal ? gvars : lvars), m_ArgInfo.Type, m_ArgInfo.VarIndex));
                 pObj->size = size;
+            }
+            return Brace::BRACE_FLOW_CONTROL_NORMAL;
+        }
+        int ExecuteSetMemModifyInfoPid(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars) {
+            if (!m_Obj.isNull())
+                m_Obj(gvars, lvars);
+            if (!m_Arg.isNull())
+                m_Arg(gvars, lvars);
+            auto& ptr =
+                Brace::VarGetObject((m_ObjInfo.IsGlobal ? gvars : lvars), m_ObjInfo.VarIndex);
+            auto* pObj = static_cast<Core::Memory::MemoryModifyInfo*>(ptr.get());
+            if (nullptr != pObj) {
+                uint64_t pid = static_cast<uint64_t>(Brace::VarGetI64(
+                    (m_ArgInfo.IsGlobal ? gvars : lvars), m_ArgInfo.Type, m_ArgInfo.VarIndex));
+                pObj->pid = pid;
             }
             return Brace::BRACE_FLOW_CONTROL_NORMAL;
         }
@@ -941,6 +980,25 @@ namespace BraceScriptInterpreter
                 m_ResultInfo = resultInfo;
                 return true;
             }
+            else if (member == "pid") {
+                resultInfo.Type = Brace::BRACE_DATA_TYPE_UINT64;
+                resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+                resultInfo.IsGlobal = false;
+                resultInfo.Name = GenTempVarName();
+                resultInfo.VarIndex =
+                    AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+
+                switch (objInfo.ObjectTypeId) {
+                case CUSTOM_BRACE_OBJECT_TYPE_CPP_MEM_MODIFY_INFO:
+                    executor.attach(this, &CppObjectMemberGetProvider::ExecuteGetMemModifyInfoPid);
+                    break;
+                }
+
+                m_ObjInfo = objInfo;
+                std::swap(m_Obj, obj);
+                m_ResultInfo = resultInfo;
+                return true;
+            }
             else {
                 std::stringstream ss;
                 ss << "unknown property '" << member << "', line: " << data.GetLine();
@@ -1037,6 +1095,19 @@ namespace BraceScriptInterpreter
             Brace::VarSetUInt64((m_ResultInfo.IsGlobal ? gvars : lvars), m_ResultInfo.VarIndex, 0);
             if (nullptr != pObj) {
                 Brace::VarSetUInt64((m_ResultInfo.IsGlobal ? gvars : lvars), m_ResultInfo.VarIndex, pObj->size);
+            }
+            return Brace::BRACE_FLOW_CONTROL_NORMAL;
+        }
+        int ExecuteGetMemModifyInfoPid(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars) {
+            if (!m_Obj.isNull())
+                m_Obj(gvars, lvars);
+            auto& ptr =
+                Brace::VarGetObject((m_ObjInfo.IsGlobal ? gvars : lvars), m_ObjInfo.VarIndex);
+            auto* pObj = static_cast<Core::Memory::MemoryModifyInfo*>(ptr.get());
+            Brace::VarSetUInt64((m_ResultInfo.IsGlobal ? gvars : lvars), m_ResultInfo.VarIndex, 0);
+            if (nullptr != pObj) {
+                Brace::VarSetUInt64((m_ResultInfo.IsGlobal ? gvars : lvars), m_ResultInfo.VarIndex,
+                                    pObj->pid);
             }
             return Brace::BRACE_FLOW_CONTROL_NORMAL;
         }

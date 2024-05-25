@@ -32,6 +32,7 @@
 #include "input_common/drivers/touch_screen.h"
 #include "input_common/drivers/virtual_gamepad.h"
 #include "input_common/main.h"
+#include "common/hex_util.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -579,7 +580,7 @@ void DataAnalystWidget::InitCmdDocs() {
     cmdDocs.insert(std::make_pair("refresh", "refresh tag, refresh output list"));
     cmdDocs.insert(std::make_pair("showall", "showall tag, show all output list"));
     cmdDocs.insert(std::make_pair("clearall", "clearall, clear all sniffer data and output list"));
-    cmdDocs.insert(std::make_pair("setsniffingscope", "setsniffingscope section_id, set sniffing scope with memory section id"));
+    cmdDocs.insert(std::make_pair("setsniffingscope", "setsniffingscope section_key, set sniffing scope with memory section key (id or name)"));
     cmdDocs.insert(std::make_pair("clearlist", "clearlist, clear output list"));
     cmdDocs.insert(std::make_pair("savelist", "savelist file, save output list"));
     cmdDocs.insert(std::make_pair("setmaxlist", "setmaxlist ct, set max output list count"));
@@ -628,6 +629,7 @@ void DataAnalystWidget::InitCmdDocs() {
     cmdDocs.insert(std::make_pair("settracescope", "settracescope section_key"));
     cmdDocs.insert(std::make_pair("settracescopebegin", "settracescopebegin addr"));
     cmdDocs.insert(std::make_pair("settracescopeend", "settracescopeend addr"));
+    cmdDocs.insert(std::make_pair("settracepid", "settracepid pid"));
     cmdDocs.insert(std::make_pair("cleartrace", "cleartrace"));
     cmdDocs.insert(std::make_pair("starttrace", "starttrace or starttrace ix, start trace immediately"));
     cmdDocs.insert(std::make_pair("stoptrace", "stoptrace or stoptrace ix, stop trace immediately"));
@@ -659,9 +661,10 @@ void DataAnalystWidget::InitCmdDocs() {
     cmdDocs.insert(std::make_pair("savetracebuffer", "savetracebuffer file, save trace buffer data"));
     cmdDocs.insert(std::make_pair("setsession", "setsession handle, set monitor session for software interrupt"));
     cmdDocs.insert(std::make_pair("clearmemscope", "clearmemscope, clear memory search scope"));
-    cmdDocs.insert(std::make_pair("setmemscope", "setmemscope section_key, set memory search scope"));
+    cmdDocs.insert(std::make_pair("setmemscope", "setmemscope section_key, set memory search scope with section key (id or name)"));
     cmdDocs.insert(std::make_pair("setmemscopebegin", "setmemscopebegin addr, set memory search scope"));
     cmdDocs.insert(std::make_pair("setmemscopeend", "setmemscopeend addr, set memory search scope"));
+    cmdDocs.insert(std::make_pair("setmempid", "setmempid pid, set memory search process id"));
     cmdDocs.insert(std::make_pair("setmemstep", "setmemstep num, set addr step for memory search"));
     cmdDocs.insert(std::make_pair("setmemsize", "setmemsize num, set data size for memory search"));
     cmdDocs.insert(std::make_pair("setmemrange", "setmemrange num, set data addr range for memory search"));
@@ -671,6 +674,7 @@ void DataAnalystWidget::InitCmdDocs() {
     cmdDocs.insert(std::make_pair("saverollback", "saverollback file, save rollback memory snapshot"));
     cmdDocs.insert(std::make_pair("dumpreg", "dumpreg, dump current register value of physics cores"));
     cmdDocs.insert(std::make_pair("dumpsession", "dumpsession, dump sessions info"));
+    cmdDocs.insert(std::make_pair("listprocess", "listprocess, list processes info"));
 }
 
 void DataAnalystWidget::ShowHelp(const std::string& filter)const {
@@ -727,10 +731,12 @@ DataAnalystWidget::DataAnalystWidget(Core::System& system_, std::shared_ptr<Inpu
     QLabel* sizeAddrLabel = new QLabel(tr("Size:"));
     QLabel* stepAddrLabel = new QLabel(tr("Step:"));
     QLabel* curValueLabel = new QLabel(tr("Value:"));
+    QLabel* pidLabel = new QLabel(tr("Sniffing Process:"));
 
+    pidEdit = new QLineEdit();
+    stepAddrEdit = new QLineEdit();
     startAddrEdit = new QLineEdit();
     sizeAddrEdit = new QLineEdit();
-    stepAddrEdit = new QLineEdit();
     curValueEdit = new QLineEdit();
 
     commandEdit = new QLineEdit();
@@ -743,20 +749,23 @@ DataAnalystWidget::DataAnalystWidget(Core::System& system_, std::shared_ptr<Inpu
     scriptBtn4 = new QPushButton(tr("Script Btn4"));
     listWidget = new QListWidget();
 
+    stepAddrEdit->setFixedWidth(20);
     runButton->setFixedWidth(80);
     clearAllButton->setFixedWidth(80);
 
     buttonLayout1->addWidget(enableCheckBox);
     buttonLayout1->addWidget(runButton);
     buttonLayout1->addWidget(clearAllButton);
+    buttonLayout1->addWidget(pidLabel);
+    buttonLayout1->addWidget(pidEdit);
+    buttonLayout1->addWidget(stepAddrLabel);
+    buttonLayout1->addWidget(stepAddrEdit);
     layout->addLayout(buttonLayout1);
 
     buttonLayout2->addWidget(startAddrLabel);
     buttonLayout2->addWidget(startAddrEdit);
     buttonLayout2->addWidget(sizeAddrLabel);
     buttonLayout2->addWidget(sizeAddrEdit);
-    buttonLayout2->addWidget(stepAddrLabel);
-    buttonLayout2->addWidget(stepAddrEdit);
     buttonLayout2->addWidget(curValueLabel);
     buttonLayout2->addWidget(curValueEdit);
     buttonLayout2->addWidget(addSniffingButton);
@@ -836,7 +845,9 @@ DataAnalystWidget::DataAnalystWidget(Core::System& system_, std::shared_ptr<Inpu
     sizeAddrEdit->setInputMask(tr("0xhhhhhhhhhhhhhhhh"));
     stepAddrEdit->setInputMask(tr("0"));
     curValueEdit->setInputMask(tr("0xhhhhhhhhhhhhhhhh"));
+    pidEdit->setInputMask(tr("0xhhhhhhhhhhhhhhhh"));
     stepAddrEdit->setText(tr("4"));
+    pidEdit->setText(tr("0x0"));
 
     Core::g_MainThreadCaller.Init(*this);
     BraceScriptInterpreter::Init(new BraceApiProvider(*this));
@@ -918,13 +929,15 @@ void DataAnalystWidget::OnAddSniffing() {
     std::string sizeStr = sizeAddrEdit->text().toStdString();
     std::string stepStr = stepAddrEdit->text().toStdString();
     std::string valueStr = curValueEdit->text().toStdString();
+    std::string pidStr = pidEdit->text().toStdString();
 
     uint64_t start = std::strtoull(startStr.c_str(), nullptr, 0);
     uint64_t size = std::strtoull(sizeStr.c_str(), nullptr, 0);
     uint64_t step = std::strtoull(stepStr.c_str(), nullptr, 0);
     uint64_t val = std::strtoull(valueStr.c_str(), nullptr, 0);
+    uint64_t pid = std::strtoull(pidStr.c_str(), nullptr, 0);
 
-    sniffer.AddSniffing(start, size, step, val);
+    sniffer.AddSniffing(pid, start, size, step, val);
 
     RefreshResultList("Sniffing");
     BraceScriptInterpreter::Send("OnAddSniffing");
@@ -1101,11 +1114,10 @@ void DataAnalystWidget::SetSniffingScope(const std::string& sectionId) {
 
     auto&& sniffer = system.MemorySniffer();
     if (system.ApplicationProcess()) {
-        sniffer.VisitMemoryArgs([=](auto name, auto id, u64 base, u64 addr, u64 size) {
+        sniffer.VisitMemoryArgs(
+            [=](auto name, auto id, u64 base, u64 addr, u64 size, u64 progId, u64 pid) {
             std::stringstream ss;
             if (name == sectionId || id == sectionId) {
-                auto txt1 = startAddrEdit->text();
-                auto txt2 = sizeAddrEdit->text();
                 ss.str("");
                 ss << "0x" << std::hex << base;
                 startAddrEdit->setText(tr(ss.str().c_str()));
@@ -1113,6 +1125,10 @@ void DataAnalystWidget::SetSniffingScope(const std::string& sectionId) {
                 ss.str("");
                 ss << "0x" << std::hex << (size < c_max_size ? size : c_max_size);
                 sizeAddrEdit->setText(tr(ss.str().c_str()));
+
+                ss.str("");
+                ss << "0x" << std::hex << pid;
+                pidEdit->setText(tr(ss.str().c_str()));
             }
         });
     }
@@ -1125,10 +1141,17 @@ void DataAnalystWidget::RefreshMemoryArgs() {
     auto&& sniffer = system.MemorySniffer();
     if (system.ApplicationProcess()) {
         u64 title_id = system.GetApplicationProcessProgramID();
+        Core::System::CurrentBuildProcessID build_id = system.GetApplicationProcessBuildID();
+        const auto build_id_raw = Common::HexToString(build_id, true);
+        auto build_id_str = build_id_raw.substr(0, sizeof(u64) * 2);
         QString qstr =
             QString::fromStdString("title_id:") + QString::asprintf("%16.16llx", title_id);
         new QListWidgetItem(qstr, listWidget);
-        sniffer.VisitMemoryArgs([=](auto name, auto id, u64 base, u64 addr, u64 size) {
+        QString qstr2 =
+            QString::fromStdString("build_id:") + QString::fromStdString(build_id_str);
+        new QListWidgetItem(qstr2, listWidget);
+        sniffer.VisitMemoryArgs(
+            [=](auto name, auto id, u64 base, u64 addr, u64 size, u64 progId, u64 pid) {
             std::stringstream ss;
             ss << "name:";
             ss << name;
@@ -1140,11 +1163,16 @@ void DataAnalystWidget::RefreshMemoryArgs() {
             ss << std::hex << addr;
             ss << ", size:";
             ss << std::hex << size;
+            ss << ", program id:";
+            ss << std::hex << progId;
+            ss << ", pid:";
+            ss << std::hex << pid;
             new QListWidgetItem(tr(ss.str().c_str()), listWidget);
 
             if (id == s_SearchSection) {
                 auto txt1 = startAddrEdit->text();
                 auto txt2 = sizeAddrEdit->text();
+                auto txt3 = pidEdit->text();
                 if (txt1.isEmpty()) {
                     ss.str("");
                     ss << "0x" << std::hex << base;
@@ -1155,14 +1183,19 @@ void DataAnalystWidget::RefreshMemoryArgs() {
                     ss << "0x" << std::hex << (size < c_max_size ? size : c_max_size);
                     sizeAddrEdit->setText(tr(ss.str().c_str()));
                 }
+                if (txt3.isEmpty()) {
+                    ss.str("");
+                    ss << "0x" << std::hex << pid;
+                    pidEdit->setText(tr(ss.str().c_str()));
+                }
             }
         });
     }
-    new QListWidgetItem(tr("[set sniffing scope]:setsniffingscope section_id"), listWidget);
+    new QListWidgetItem(tr("[set sniffing scope]:setsniffingscope section_id_or_name"), listWidget);
     new QListWidgetItem(tr("use findmem([val1,val2,...]) command to get a smaller memory range"), listWidget);
     new QListWidgetItem(tr("or"), listWidget);
     new QListWidgetItem(tr("use searchmem([val1,val2,...]) command to get a smaller memory range"), listWidget);
-    new QListWidgetItem(tr("[mem search scope commands]:clearmemscope, setmemscope main, setmemscopebegin 0x80004000, setmemscopeend 0x87000000"), listWidget);
+    new QListWidgetItem(tr("[mem search scope commands]:clearmemscope, setmemscope main, setmemscopebegin 0x80004000, setmemscopeend 0x87000000, setmempid 0x51"), listWidget);
     new QListWidgetItem(tr("[mem search arg commands]:setmemstep 4, setmemsize 4, setmemrange 256, setmemcount 10, showmem(0x21593f0000, 200)"), listWidget);
     new QListWidgetItem(tr("[mem read/write commands]:echo(readmemory(0x21593f0000, 4)), writememory(0x21593f0000, 127[, 1|2|4|8])"), listWidget);
     new QListWidgetItem(tr("[help command]:help filter, search commands or apis"), listWidget);

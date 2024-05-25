@@ -452,7 +452,7 @@ bool MemorySniffer::IsEnabled() const {
 bool MemorySniffer::IsTraceProcess(Kernel::KProcess& process) const {
     u64 pid = process.GetProcessId();
     return (impl->traceProcessId == pid ||
-        impl->traceProcessId == 0 && system.ApplicationProcess() == &process);
+        (impl->traceProcessId == 0 && system.ApplicationProcess() == &process));
 }
 
 MemorySniffer::WatchPointType MemorySniffer::GetTraceOnAddr(WatchPointType watchType,

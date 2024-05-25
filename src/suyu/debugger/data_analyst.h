@@ -76,6 +76,7 @@ public:
     void InitCmdDocs();
     void ShowHelp(const std::string& filter)const;
     void AddLog(const std::string& info);
+    void Reset();
     void EnableSniffer();
     void DisableSniffer();
     uint32_t GetPixel(int x, int y)const;

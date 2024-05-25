@@ -713,7 +713,7 @@ DataAnalystWidget::DataAnalystWidget(Core::System& system_, std::shared_ptr<Inpu
     QHBoxLayout* scriptBtnLayout = new QHBoxLayout();
     QHBoxLayout* commandLayout = new QHBoxLayout();
 
-    enableCheckBox = new QCheckBox(tr("Enable"));
+    enableCheckBox = new QCheckBox(tr("Sniffing"));
     QPushButton* runButton = new QPushButton(tr("Run Script"));
     QPushButton* clearAllButton = new QPushButton(tr("ClearAll"));
     QPushButton* addSniffingButton = new QPushButton(tr("AddSniffing"));
@@ -727,17 +727,17 @@ DataAnalystWidget::DataAnalystWidget(Core::System& system_, std::shared_ptr<Inpu
     QPushButton* saveRelButton = new QPushButton(tr("SaveRel"));
     QPushButton* execButton = new QPushButton(tr("Exec Command"));
     QLabel* label = new QLabel(tr("Tag:"));
+    QLabel* curValueLabel = new QLabel(tr("Value:"));
+    QLabel* stepAddrLabel = new QLabel(tr("Step:"));
+    QLabel* pidLabel = new QLabel(tr("Process:"));
     QLabel* startAddrLabel = new QLabel(tr("Start:"));
     QLabel* sizeAddrLabel = new QLabel(tr("Size:"));
-    QLabel* stepAddrLabel = new QLabel(tr("Step:"));
-    QLabel* curValueLabel = new QLabel(tr("Value:"));
-    QLabel* pidLabel = new QLabel(tr("Sniffing Process:"));
 
-    pidEdit = new QLineEdit();
+    curValueEdit = new QLineEdit();
     stepAddrEdit = new QLineEdit();
+    pidEdit = new QLineEdit();
     startAddrEdit = new QLineEdit();
     sizeAddrEdit = new QLineEdit();
-    curValueEdit = new QLineEdit();
 
     commandEdit = new QLineEdit();
     tagEdit = new QLineEdit();
@@ -750,35 +750,36 @@ DataAnalystWidget::DataAnalystWidget(Core::System& system_, std::shared_ptr<Inpu
     listWidget = new QListWidget();
 
     stepAddrEdit->setFixedWidth(20);
+    pidEdit->setFixedWidth(80);
     runButton->setFixedWidth(80);
     clearAllButton->setFixedWidth(80);
 
-    buttonLayout1->addWidget(enableCheckBox);
     buttonLayout1->addWidget(runButton);
-    buttonLayout1->addWidget(clearAllButton);
-    buttonLayout1->addWidget(pidLabel);
-    buttonLayout1->addWidget(pidEdit);
+    buttonLayout1->addWidget(enableCheckBox);
+    buttonLayout1->addWidget(curValueLabel);
+    buttonLayout1->addWidget(curValueEdit);
     buttonLayout1->addWidget(stepAddrLabel);
     buttonLayout1->addWidget(stepAddrEdit);
+    buttonLayout1->addWidget(pidLabel);
+    buttonLayout1->addWidget(pidEdit);
     layout->addLayout(buttonLayout1);
 
+    buttonLayout2->addWidget(clearAllButton);
     buttonLayout2->addWidget(startAddrLabel);
     buttonLayout2->addWidget(startAddrEdit);
     buttonLayout2->addWidget(sizeAddrLabel);
     buttonLayout2->addWidget(sizeAddrEdit);
-    buttonLayout2->addWidget(curValueLabel);
-    buttonLayout2->addWidget(curValueEdit);
     buttonLayout2->addWidget(addSniffingButton);
     layout->addLayout(buttonLayout2);
 
     rollbackButton->setFixedWidth(80);
     unrollbackButton->setFixedWidth(80);
 
+    buttonLayout3->addWidget(rollbackButton);
     buttonLayout3->addWidget(keepUnchangedButton);
     buttonLayout3->addWidget(keepChangedButton);
     buttonLayout3->addWidget(keepIncreasedButton);
     buttonLayout3->addWidget(keepDecreasedButton);
-    buttonLayout3->addWidget(rollbackButton);
     buttonLayout3->addWidget(unrollbackButton);
     layout->addLayout(buttonLayout3);
 
@@ -843,11 +844,11 @@ DataAnalystWidget::DataAnalystWidget(Core::System& system_, std::shared_ptr<Inpu
 
     startAddrEdit->setInputMask(tr("0xhhhhhhhhhhhhhhhh"));
     sizeAddrEdit->setInputMask(tr("0xhhhhhhhhhhhhhhhh"));
+    pidEdit->setInputMask(tr("0xhhhhhhhh"));
     stepAddrEdit->setInputMask(tr("0"));
     curValueEdit->setInputMask(tr("0xhhhhhhhhhhhhhhhh"));
-    pidEdit->setInputMask(tr("0xhhhhhhhhhhhhhhhh"));
-    stepAddrEdit->setText(tr("4"));
     pidEdit->setText(tr("0x0"));
+    stepAddrEdit->setText(tr("4"));
 
     Core::g_MainThreadCaller.Init(*this);
     BraceScriptInterpreter::Init(new BraceApiProvider(*this));
@@ -1495,6 +1496,14 @@ void DataAnalystWidget::AddLog(const std::string& info) {
     new QListWidgetItem(tr(info.c_str()), listWidget);
 
     RemoveExcessResults();
+}
+
+void DataAnalystWidget::Reset() {
+    startAddrEdit->setText(tr(""));
+    sizeAddrEdit->setText(tr(""));
+    curValueEdit->setText(tr(""));
+    stepAddrEdit->setText(tr("4"));
+    pidEdit->setText(tr("0x0"));
 }
 
 void DataAnalystWidget::EnableSniffer() {

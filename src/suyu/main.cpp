@@ -3436,6 +3436,7 @@ void GMainWindow::OnRestartGame() {
     }
 
     if (ConfirmShutdownGame()) {
+        dataAnalystWidget->Reset();
         system->MemorySniffer().ClearModuleMemoryParameters();
         system->MemorySniffer().ClearSessionInfos();
         // Make a copy since ShutdownGame edits game_path
@@ -3468,6 +3469,7 @@ void GMainWindow::OnPauseContinueGame() {
 
 void GMainWindow::OnStopGame() {
     if (ConfirmShutdownGame()) {
+        dataAnalystWidget->Reset();
         system->MemorySniffer().ClearModuleMemoryParameters();
         system->MemorySniffer().ClearSessionInfos();
         play_time_manager->Stop();

@@ -58,16 +58,21 @@ class MyDbgHook(ida_dbg.DBG_Hooks):
                 f2 = 0.0
                 f3 = 0.0
                 f4 = 0.0
+                d1 = 0.0
+                d2 = 0.0
                 num = regval.get_data_size()
                 if num==16:
                     bytes = regval.bytes()
                     data = bytearray(bytes)
                     fvals = struct.unpack("<4f", data)
+                    dvals = struct.unpack("<2d", data)
                     f1 = fvals[0]
                     f2 = fvals[1]
                     f3 = fvals[2]
                     f4 = fvals[3]
-                rval = ("ival:%x size:%u fval:%f %f %f %f" % (regval.ival, regval.get_data_size(), f1, f2, f3, f4))
+                    d1 = dvals[0]
+                    d2 = dvals[1]
+                rval = ("ival:%x size:%u fval:%f %f %f %f %f %f" % (regval.ival, regval.get_data_size(), f1, f2, f3, f4, d1, d2))
             self.log("    %s: %s" % (rinfo.name, rval))
         self.log("=== end of registers  ===")
 

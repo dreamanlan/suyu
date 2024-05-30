@@ -616,10 +616,12 @@ void DataAnalystWidget::InitCmdDocs() {
 
     //in MemorySniffer
     cmdDocs.insert(std::make_pair("refreshsnapshot", "refreshsnapshot, snapshot sniffied memory data, same as UI"));
-    cmdDocs.insert(std::make_pair("keepunchanged", "keepunchanged, keep unchanged memory data, same as UI"));
-    cmdDocs.insert(std::make_pair("keepchanged", "keepchanged, keep changed memory data, same as UI"));
-    cmdDocs.insert(std::make_pair("keepincreased", "keepincreased, keep increased memory data, same as UI"));
-    cmdDocs.insert(std::make_pair("keepdecreased", "keepdecreased, keep decreased memory data, same as UI"));
+    cmdDocs.insert(std::make_pair("keepunchanged", "keepunchanged, keep unchanged memory data, not refresh data"));
+    cmdDocs.insert(std::make_pair("keepchanged", "keepchanged, keep changed memory data, not refresh data"));
+    cmdDocs.insert(std::make_pair("keepincreased", "keepincreased, keep increased memory data, not refresh data"));
+    cmdDocs.insert(std::make_pair("keepdecreased", "keepdecreased, keep decreased memory data, not refresh data"));
+    cmdDocs.insert(std::make_pair("keepvalue", "keepvalue val, keep memory data with value, not refresh data"));
+    cmdDocs.insert(std::make_pair("addtotracewrite", "addtotracewrite, add result memory to trace write, same as UI"));
     cmdDocs.insert(std::make_pair("setdebugsnapshot", "setdebugsnapshot 0_or_1"));
     cmdDocs.insert(std::make_pair("clearloginsts", "clearloginsts, clear all log instructions"));
     cmdDocs.insert(std::make_pair("addlogbl", "addlogbl, add BL/BLR/BLRxxx to log instructions"));

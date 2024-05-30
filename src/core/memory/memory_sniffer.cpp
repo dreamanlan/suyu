@@ -1194,19 +1194,26 @@ void MemorySniffer::KeepValue(uint64_t val) {
     if (!impl->enabled)
         return;
 
-    if (impl->resultMemModifyInfo.size() > 0) {
-        auto&& result = impl->resultMemModifyInfo;
-        MemoryModifyInfoMap newResult;
-        for (auto&& pair : result) {
-            if(pair.second->IsValue(val)) {
+    auto&& result = impl->resultMemModifyInfo;
+    MemoryModifyInfoMap newResult;
+    for (auto&& pair : result) {
+        if(pair.second->IsValue(val)) {
+            newResult.insert(pair);
+        }
+    }
+    if (impl->historyMemModifyInfos.size() > 0) {
+        auto&& history = impl->historyMemModifyInfos.back();
+        for (auto&& pair : history) {
+            auto&& it = result.find(pair.first);
+            if (it == result.end() && pair.second->IsValue(val)) {
                 newResult.insert(pair);
             }
         }
-        if (impl->debugSnapshot) {
-            impl->historyMemModifyInfos.push_back(impl->resultMemModifyInfo);
-        }
-        std::swap(impl->resultMemModifyInfo, newResult);
     }
+    if (impl->debugSnapshot) {
+        impl->historyMemModifyInfos.push_back(impl->resultMemModifyInfo);
+    }
+    std::swap(impl->resultMemModifyInfo, newResult);
 }
 
 void MemorySniffer::AddToTraceWrite() {

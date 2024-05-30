@@ -57,6 +57,7 @@ struct MemoryModifyInfo
     bool IsDecreased()const;
     bool IsChanged()const;
     bool IsUnchanged()const;
+    bool IsValue(uint64_t val)const;
 };
 using MemoryModifyInfoPtr = std::shared_ptr<MemoryModifyInfo>;
 using MemoryModifyInfoMap = std::map<uint64_t, MemoryModifyInfoPtr>;
@@ -143,6 +144,8 @@ public://call by user
     void KeepDecreased();
     void Rollback();
     void Unrollback();
+    void KeepValue(uint64_t val);
+    void AddToTraceWrite();
     bool Exec(const std::string& cmd, const std::string& arg);
     void SaveAbsAsCheatVM(const char* file_path, const char* tag)const;
     void SaveRelAsCheatVM(const char* file_path, const char* tag)const;

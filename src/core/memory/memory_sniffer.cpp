@@ -109,6 +109,19 @@ bool MemoryModifyInfo::IsUnchanged() const {
     }
     return false;
 }
+bool MemoryModifyInfo::IsValue(uint64_t val) const {
+    switch (type) {
+    case type_u8:
+        return val == u8Val;
+    case type_u16:
+        return val == u16Val;
+    case type_u32:
+        return val == u32Val;
+    case type_u64:
+        return val == u64Val;
+    }
+    return false;
+}
 
 struct MemorySniffer::Impl {
     explicit Impl(Core::System& system_)
@@ -647,7 +660,10 @@ void MemorySniffer::TryLogCallStack(const Kernel::KThread& thread) const {
         auto&& ctx = thread.GetContext();
         std::stringstream ss2;
         ss2 << "log call stack, pc:" << std::hex << ctx.pc;
-        g_MainThreadCaller.RequestLogToView(ss2.str());
+
+        std::string str = ss2.str();
+        ss << str << std::endl;
+        g_MainThreadCaller.RequestLogToView(std::move(str));
     }
     g_MainThreadCaller.RequestSyncCallback(&thread);
 }
@@ -669,7 +685,10 @@ void MemorySniffer::TryLogCallStack(WatchPointType matchWatchPoint, uint64_t add
             std::stringstream ss2;
             ss2 << "log watch point:" << GetWatchTypeName(watchType) << ", addr:" << std::hex
                 << addr;
-            g_MainThreadCaller.RequestLogToView(ss2.str());
+
+            std::string str = ss2.str();
+            ss << str << std::endl;
+            g_MainThreadCaller.RequestLogToView(std::move(str));
         }
         g_MainThreadCaller.RequestSyncCallback(static_cast<int>(watchType), addr, pThread);
     }
@@ -693,7 +712,10 @@ void MemorySniffer::TryLogCallStack(WatchPointType matchWatchPoint,
             std::stringstream ss2;
             ss2 << "log watch point:" << GetWatchTypeName(watchType) << ", addr:" << std::hex
                 << addr.GetValue();
-            g_MainThreadCaller.RequestLogToView(ss2.str());
+
+            std::string str = ss2.str();
+            ss << str << std::endl;
+            g_MainThreadCaller.RequestLogToView(std::move(str));
         }
         g_MainThreadCaller.RequestSyncCallback(static_cast<int>(watchType), addr.GetValue(),
                                                pThread);
@@ -718,7 +740,10 @@ void MemorySniffer::TryLogCallStack(WatchPointType matchWatchPoint, uint64_t add
             std::stringstream ss2;
             ss2 << "log watch point:" << GetWatchTypeName(watchType) << ", addr:" << std::hex
                 << addr << " size:" << size;
-            g_MainThreadCaller.RequestLogToView(ss2.str());
+
+            std::string str = ss2.str();
+            ss << str << std::endl;
+            g_MainThreadCaller.RequestLogToView(std::move(str));
         }
         g_MainThreadCaller.RequestSyncCallback(static_cast<int>(watchType), addr, size, pThread);
     }
@@ -742,7 +767,10 @@ void MemorySniffer::TryLogCallStack(WatchPointType matchWatchPoint,
             std::stringstream ss2;
             ss2 << "log watch point:" << GetWatchTypeName(watchType) << ", addr:" << std::hex
                 << addr.GetValue() << " size:" << size;
-            g_MainThreadCaller.RequestLogToView(ss2.str());
+
+            std::string str = ss2.str();
+            ss << str << std::endl;
+            g_MainThreadCaller.RequestLogToView(std::move(str));
         }
         g_MainThreadCaller.RequestSyncCallback(static_cast<int>(watchType), addr.GetValue(), size,
                                                pThread);
@@ -776,6 +804,7 @@ void MemorySniffer::MarkMemoryDebug(uint64_t pid, uint64_t addr, uint64_t size, 
 
 void MemorySniffer::AddSniffing(uint64_t pid, uint64_t addr, uint64_t size, uint64_t step,
                                 uint64_t cur_val) {
+    const int c_max_data_count = 1000000;
     if (!impl->enabled)
         return;
 
@@ -789,6 +818,7 @@ void MemorySniffer::AddSniffing(uint64_t pid, uint64_t addr, uint64_t size, uint
     auto* pProcess = GetProcess(pid);
     if (nullptr != pProcess) {
         auto&& memory = pProcess->GetMemory();
+        int ct = 0;
         for (uint64_t maddr = addr; maddr <= addr + size - step; maddr += step) {
             int type = 0;
             uint64_t newval = 0;
@@ -855,6 +885,9 @@ void MemorySniffer::AddSniffing(uint64_t pid, uint64_t addr, uint64_t size, uint
                     break;
                 }
                 result.insert(std::make_pair(maddr, std::move(newPtr)));
+                ++ct;
+                if (ct >= c_max_data_count)
+                    break;
             }
         }
     }
@@ -1157,6 +1190,44 @@ void MemorySniffer::Unrollback() {
     }
 }
 
+void MemorySniffer::KeepValue(uint64_t val) {
+    if (!impl->enabled)
+        return;
+
+    if (impl->resultMemModifyInfo.size() > 0) {
+        auto&& result = impl->resultMemModifyInfo;
+        MemoryModifyInfoMap newResult;
+        for (auto&& pair : result) {
+            if(pair.second->IsValue(val)) {
+                newResult.insert(pair);
+            }
+        }
+        if (impl->debugSnapshot) {
+            impl->historyMemModifyInfos.push_back(impl->resultMemModifyInfo);
+        }
+        std::swap(impl->resultMemModifyInfo, newResult);
+    }
+}
+
+void MemorySniffer::AddToTraceWrite() {
+    if (!impl->enabled)
+        return;
+
+    if (impl->resultMemModifyInfo.size() > 0) {
+        auto&& result = impl->resultMemModifyInfo;
+        uint64_t minAddr = std::numeric_limits<uint64_t>::max();
+        uint64_t maxAddr = std::numeric_limits<uint64_t>::min();
+        for (auto&& pair : result) {
+            if (minAddr > pair.first)
+                minAddr = pair.first;
+            if (maxAddr < pair.first + pair.second->size)
+                maxAddr = pair.first + pair.second->size;
+            impl->traceAddrsOnWrite.insert(pair.first);
+        }
+        MarkMemoryDebug(impl->traceProcessId, minAddr, maxAddr - minAddr, true);
+    }
+}
+
 bool MemorySniffer::Exec(const std::string& cmd, const std::string& arg) {
     if (cmd == "refreshsnapshot") {
         RefreshSnapshot();
@@ -1172,6 +1243,13 @@ bool MemorySniffer::Exec(const std::string& cmd, const std::string& arg) {
         return true;
     } else if (cmd == "keepdecreased") {
         KeepDecreased();
+        return true;
+    } else if (cmd == "keepvalue") {
+        uint64_t val = std::stoull(arg, nullptr, 0);
+        KeepValue(val);
+        return true;
+    } else if (cmd == "addtotracewrite") {
+        AddToTraceWrite();
         return true;
     } else if (cmd == "setdebugsnapshot") {
         impl->debugSnapshot =
@@ -1283,6 +1361,7 @@ bool MemorySniffer::Exec(const std::string& cmd, const std::string& arg) {
     } else if (cmd == "addtraceread") {
         uint64_t addr = std::stoull(arg, nullptr, 0);
         impl->traceAddrsOnRead.insert(addr);
+        MarkMemoryDebug(impl->traceProcessId, addr, sizeof(uint64_t), true);
         return true;
     } else if (cmd == "removetraceread") {
         uint64_t addr = std::stoull(arg, nullptr, 0);
@@ -1291,6 +1370,7 @@ bool MemorySniffer::Exec(const std::string& cmd, const std::string& arg) {
     } else if (cmd == "addtracewrite") {
         uint64_t addr = std::stoull(arg, nullptr, 0);
         impl->traceAddrsOnWrite.insert(addr);
+        MarkMemoryDebug(impl->traceProcessId, addr, sizeof(uint64_t), true);
         return true;
     } else if (cmd == "removetracewrite") {
         uint64_t addr = std::stoull(arg, nullptr, 0);
@@ -1299,6 +1379,7 @@ bool MemorySniffer::Exec(const std::string& cmd, const std::string& arg) {
     } else if (cmd == "addtracepointer") {
         uint64_t addr = std::stoull(arg, nullptr, 0);
         impl->traceAddrsOnGetPointer.insert(addr);
+        MarkMemoryDebug(impl->traceProcessId, addr, sizeof(uint64_t), true);
         return true;
     } else if (cmd == "removetracepointer") {
         uint64_t addr = std::stoull(arg, nullptr, 0);
@@ -1307,6 +1388,7 @@ bool MemorySniffer::Exec(const std::string& cmd, const std::string& arg) {
     } else if (cmd == "addtracecstring") {
         uint64_t addr = std::stoull(arg, nullptr, 0);
         impl->traceAddrsOnReadCString.insert(addr);
+        MarkMemoryDebug(impl->traceProcessId, addr, sizeof(uint64_t), true);
         return true;
     } else if (cmd == "removetracecstring") {
         uint64_t addr = std::stoull(arg, nullptr, 0);

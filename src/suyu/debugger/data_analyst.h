@@ -54,6 +54,8 @@ public slots:
     void OnKeepDecreased();
     void OnRollback();
     void OnUnrollback();
+    void OnKeepValue();
+    void OnTraceWrite();
     void OnSaveAbs();
     void OnSaveRel();
     void OnScriptBtn1();

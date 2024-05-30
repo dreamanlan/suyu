@@ -723,6 +723,8 @@ DataAnalystWidget::DataAnalystWidget(Core::System& system_, std::shared_ptr<Inpu
     QPushButton* keepDecreasedButton = new QPushButton(tr("Keep Decreased"));
     QPushButton* rollbackButton = new QPushButton(tr("Rollback"));
     QPushButton* unrollbackButton = new QPushButton(tr("Unrollback"));
+    QPushButton* keepValueButton = new QPushButton(tr("KeepValue"));
+    QPushButton* traceWriteButton = new QPushButton(tr("TraceWrite"));
     QPushButton* saveAbsButton = new QPushButton(tr("SaveAbs"));
     QPushButton* saveRelButton = new QPushButton(tr("SaveRel"));
     QPushButton* execButton = new QPushButton(tr("Exec Command"));
@@ -783,9 +785,13 @@ DataAnalystWidget::DataAnalystWidget(Core::System& system_, std::shared_ptr<Inpu
     buttonLayout3->addWidget(unrollbackButton);
     layout->addLayout(buttonLayout3);
 
+    keepValueButton->setFixedWidth(80);
+    traceWriteButton->setFixedWidth(80);
     saveAbsButton->setFixedWidth(80);
     saveRelButton->setFixedWidth(80);
 
+    saveLayout->addWidget(keepValueButton);
+    saveLayout->addWidget(traceWriteButton);
     saveLayout->addWidget(label);
     saveLayout->addWidget(tagEdit);
     saveLayout->addWidget(saveAbsButton);
@@ -832,6 +838,8 @@ DataAnalystWidget::DataAnalystWidget(Core::System& system_, std::shared_ptr<Inpu
     QObject::connect(keepDecreasedButton, &QPushButton::pressed, std::bind(&DataAnalystWidget::OnKeepDecreased, this));
     QObject::connect(rollbackButton, &QPushButton::pressed, std::bind(&DataAnalystWidget::OnRollback, this));
     QObject::connect(unrollbackButton, &QPushButton::pressed, std::bind(&DataAnalystWidget::OnUnrollback, this));
+    QObject::connect(keepValueButton, &QPushButton::pressed, std::bind(&DataAnalystWidget::OnKeepValue, this));
+    QObject::connect(traceWriteButton, &QPushButton::pressed, std::bind(&DataAnalystWidget::OnTraceWrite, this));
     QObject::connect(saveAbsButton, &QPushButton::pressed, std::bind(&DataAnalystWidget::OnSaveAbs, this));
     QObject::connect(saveRelButton, &QPushButton::pressed, std::bind(&DataAnalystWidget::OnSaveRel, this));
     QObject::connect(scriptBtn1, &QPushButton::pressed, std::bind(&DataAnalystWidget::OnScriptBtn1, this));
@@ -924,6 +932,7 @@ void DataAnalystWidget::OnClearAll() {
 }
 
 void DataAnalystWidget::OnAddSniffing() {
+    const uint64_t c_max_data_count = 1000000;
     auto&& sniffer = system.MemorySniffer();
 
     std::string startStr = startAddrEdit->text().toStdString();
@@ -937,6 +946,18 @@ void DataAnalystWidget::OnAddSniffing() {
     uint64_t step = std::strtoull(stepStr.c_str(), nullptr, 0);
     uint64_t val = std::strtoull(valueStr.c_str(), nullptr, 0);
     uint64_t pid = std::strtoull(pidStr.c_str(), nullptr, 0);
+
+    if (step <= 0) {
+        QMessageBox::warning(this, tr("Warning"), tr("step must be 1|2|4|8"), QMessageBox::Ok);
+        return;
+    }
+    if (size / step > c_max_data_count && val == 0) {
+        int ret = QMessageBox::question(this, tr("Question"), tr("So many datas, are you sure?"),
+                                        QMessageBox::Yes | QMessageBox::No);
+        if (ret != QMessageBox::Yes) {
+            return;
+        }
+    }
 
     sniffer.AddSniffing(pid, start, size, step, val);
 
@@ -1000,6 +1021,30 @@ void DataAnalystWidget::OnUnrollback() {
 
     RefreshResultList("Unrollback");
     BraceScriptInterpreter::Send("OnUnrollback");
+    FocusRenderWindow();
+}
+
+void DataAnalystWidget::OnKeepValue() {
+    std::string curVal = curValueEdit->text().toStdString();
+    uint64_t val = std::strtoull(curVal.c_str(), nullptr, 0);
+
+    auto&& sniffer = system.MemorySniffer();
+    sniffer.RefreshSnapshot();
+    sniffer.KeepValue(val);
+
+    RefreshResultList("KeepValue");
+    BraceScriptInterpreter::MessageArgs args;
+    args.push_back(val);
+    BraceScriptInterpreter::Send("OnKeepValue", std::move(args));
+    FocusRenderWindow();
+}
+
+void DataAnalystWidget::OnTraceWrite() {
+    auto&& sniffer = system.MemorySniffer();
+    sniffer.AddToTraceWrite();
+
+    RefreshResultList("TraceWrite");
+    BraceScriptInterpreter::Send("OnTraceWrite");
     FocusRenderWindow();
 }
 

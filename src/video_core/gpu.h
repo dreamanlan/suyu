@@ -179,6 +179,7 @@ public:
     void RequestClearLogPipelines();
     void RequestAddLogPipeline(uint64_t hash);
     void RequestRemoveLogPipeline(uint64_t hash);
+    void RequestPipelineDebugArgs();
 
     /// Tick pending requests within the GPU.
     void TickWork();

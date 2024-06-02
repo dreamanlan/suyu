@@ -54,6 +54,30 @@ std::unordered_set<uint64_t> g_LogPipelineKeys;
 bool NeedLogPipeline(uint64_t key) {
     return g_LogPipelineKeys.find(key) != g_LogPipelineKeys.end();
 }
+void LogPipelineDebugArgs() {
+    std::stringstream ss;
+    ss << "polygon mode line:" << std::dec << g_IsPolygonModeLine << std::endl;
+    ss << "\tmin vertex num:" << std::dec << g_LineModeMinVertexNum << std::endl;
+    ss << "\tmax vertex num:" << std::dec << g_LineModeMaxVertexNum << std::endl;
+    ss << "\tmin draw count:" << std::dec << g_LineModeMinDrawCount << std::endl;
+    ss << "\tmax draw count:" << std::dec << g_LineModeMaxDrawCount << std::endl;
+    ss << "\tline mode log frame count:" << std::dec << g_LineModeLogFrameCount << std::endl;
+    ss << "\tvs hashes:" << std::endl;
+    for (auto&& hash : g_LineModeVsHashes) {
+        ss << "\t\t" << std::hex << "0x" << hash << std::endl;
+    }
+    ss << "\tps hashes:" << std::endl;
+    for (auto&& hash : g_LineModePsHashes) {
+        ss << "\t\t" << std::hex << "0x" << hash << std::endl;
+    }
+    ss << "\tlog pipeline keys:" << std::endl;
+    for (auto&& hash : g_LogPipelineKeys) {
+        ss << "\t\t" << std::hex << "0x" << hash << std::endl;
+    }
+
+    auto&& msg = ss.str();
+    Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
+}
 } // namespace VideoCore
 
 namespace Tegra {
@@ -536,6 +560,11 @@ void GPU::RequestAddLogPipeline(uint64_t hash) {
 void GPU::RequestRemoveLogPipeline(uint64_t hash) {
     impl->RequestAsyncOperation([hash]() {
         VideoCore::g_LogPipelineKeys.erase(hash);
+    });
+}
+void GPU::RequestPipelineDebugArgs() {
+    impl->RequestAsyncOperation([]() {
+        VideoCore::LogPipelineDebugArgs();
     });
 }
 

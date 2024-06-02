@@ -416,6 +416,16 @@ public:
             gpu.RequestRemoveLogPipeline(hash);
             return true;
         }
+        else if (cmd == "requestpipelinedebugargs") {
+            auto&& system = m_Widget.GetSystem();
+            if (system.ApplicationProcess() == nullptr) {
+                m_Widget.AddLog("game isn't running.");
+                return true;
+            }
+            auto& gpu = system.GPU();
+            gpu.RequestPipelineDebugArgs();
+            return true;
+        }
         else {
             auto&& system = m_Widget.GetSystem();
             auto&& sniffer = system.MemorySniffer();
@@ -613,6 +623,7 @@ void DataAnalystWidget::InitCmdDocs() {
     cmdDocs.insert(std::make_pair("clearlogpipelines", "clearlogpipelines, clear all logged pipelines"));
     cmdDocs.insert(std::make_pair("addlogpipeline", "addlogpipeline hash, add a logged pipeline"));
     cmdDocs.insert(std::make_pair("removelogpipeline", "removelogpipeline hash, remove a logged pipeline"));
+    cmdDocs.insert(std::make_pair("requestpipelinedebugargs", "requestpipelinedebugargs, log  pipeline debug command args"));
 
     //in MemorySniffer
     cmdDocs.insert(std::make_pair("refreshsnapshot", "refreshsnapshot, snapshot sniffied memory data, same as UI"));

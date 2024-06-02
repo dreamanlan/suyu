@@ -849,7 +849,7 @@ DataAnalystWidget::DataAnalystWidget(Core::System& system_, std::shared_ptr<Inpu
     QObject::connect(scriptBtn3, &QPushButton::pressed, std::bind(&DataAnalystWidget::OnScriptBtn3, this));
     QObject::connect(scriptBtn4, &QPushButton::pressed, std::bind(&DataAnalystWidget::OnScriptBtn4, this));
     QObject::connect(execButton, &QPushButton::pressed, std::bind(&DataAnalystWidget::OnExecCmd, this));
-
+    updateTimer.setInterval(30);
     connect(&updateTimer, &QTimer::timeout, this, std::bind(&DataAnalystWidget::OnUpdate, this));
 
     startAddrEdit->setInputMask(tr("0xhhhhhhhhhhhhhhhh"));
@@ -868,11 +868,14 @@ DataAnalystWidget::DataAnalystWidget(Core::System& system_, std::shared_ptr<Inpu
 }
 
 DataAnalystWidget::~DataAnalystWidget() {
+    if(updateTimer.isActive()){
+        updateTimer.stop();
+    }
     BraceScriptInterpreter::Release();
 }
 
 void DataAnalystWidget::showEvent(QShowEvent* ev) {
-    updateTimer.start(30);
+    updateTimer.start();
 }
 
 void DataAnalystWidget::hideEvent(QHideEvent* ev) {
@@ -901,12 +904,18 @@ void DataAnalystWidget::OnRunScript() {
     auto&& fileName = QFileDialog::getOpenFileName(this, tr("choose script file"), tr("."), tr("script files (*.scp *.txt)"));
     if (fileName.isEmpty())
         return;
+    if(!updateTimer.isActive()){
+        updateTimer.start();
+    }
     auto&& strFileName = fileName.toStdString();
     BraceScriptInterpreter::Exec(("load " + strFileName).c_str());
     FocusRenderWindow();
 }
 
 void DataAnalystWidget::OnExecCmd() {
+    if(!updateTimer.isActive()){
+        updateTimer.start();
+    }
     BraceScriptInterpreter::Exec(commandEdit->text().toStdString().c_str());
     FocusRenderWindow();
 }

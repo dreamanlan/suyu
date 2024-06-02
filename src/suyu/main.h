@@ -414,6 +414,7 @@ private slots:
     void OnToggleAdaptingFilter();
     void OnConfigurePerGame();
     void OnLoadAmiibo();
+    void OnRunDataAnalystScript();
     void OnOpenSuyuFolder();
     void OnVerifyInstalledContents();
     void OnInstallFirmware();

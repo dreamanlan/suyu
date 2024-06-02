@@ -1326,6 +1326,7 @@ void GMainWindow::InitializeHotkeys() {
 
     LinkActionShortcut(ui->action_Load_File, QStringLiteral("Load File"));
     LinkActionShortcut(ui->action_Load_Amiibo, QStringLiteral("Load/Remove Amiibo"));
+    LinkActionShortcut(ui->action_Run_Data_Analyst_Script, QStringLiteral("Run Data Analyst Script"));
     LinkActionShortcut(ui->action_Exit, QStringLiteral("Exit suyu"));
     LinkActionShortcut(ui->action_Restart, QStringLiteral("Restart Emulation"));
     LinkActionShortcut(ui->action_Pause, QStringLiteral("Continue/Pause Emulation"));
@@ -1528,6 +1529,7 @@ void GMainWindow::ConnectMenuEvents() {
     connect_menu(ui->action_Install_File_NAND, &GMainWindow::OnMenuInstallToNAND);
     connect_menu(ui->action_Exit, &QMainWindow::close);
     connect_menu(ui->action_Load_Amiibo, &GMainWindow::OnLoadAmiibo);
+    connect_menu(ui->action_Run_Data_Analyst_Script, &GMainWindow::OnRunDataAnalystScript);
 
     // Emulation
     connect_menu(ui->action_Pause, &GMainWindow::OnPauseContinueGame);
@@ -4075,6 +4077,10 @@ void GMainWindow::OnLoadAmiibo() {
     }
 
     LoadAmiibo(filename);
+}
+
+void GMainWindow::OnRunDataAnalystScript() {
+    dataAnalystWidget->OnRunScript();
 }
 
 bool GMainWindow::question(QWidget* parent, const QString& title, const QString& text,

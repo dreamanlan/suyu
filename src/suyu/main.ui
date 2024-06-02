@@ -66,6 +66,8 @@
     <addaction name="separator"/>
     <addaction name="action_Load_Amiibo"/>
     <addaction name="separator"/>
+    <addaction name="action_Run_Data_Analyst_Script"/>
+    <addaction name="separator"/>
     <addaction name="action_Open_suyu_Folder"/>
     <addaction name="separator"/>
     <addaction name="action_Exit"/>
@@ -361,6 +363,11 @@
     <string>Load/Remove &amp;Amiibo...</string>
    </property>
   </action>
+<action name="action_Run_Data_Analyst_Script">
+ <property name="text">
+  <string>Run &amp;Data Analyst Script...</string>
+ </property>
+</action>
   <action name="action_Report_Compatibility">
    <property name="enabled">
     <bool>false</bool>

@@ -1978,7 +1978,7 @@ bool MemorySniffer::MapMemory(Kernel::KProcess& process, uint64_t addr, uint64_t
         if (curThread) {
             curThread->TrySuspend();
         }
-        for (int i = 0; i < Core::Hardware::NUM_CPU_CORES; ++i) {
+        for (u32 i = 0; i < Core::Hardware::NUM_CPU_CORES; ++i) {
             auto* runningThread = process.GetRunningThread(i);
             if (nullptr != runningThread) {
                 Kernel::SetCurrentThread(system.Kernel(), runningThread);
@@ -2008,7 +2008,7 @@ bool MemorySniffer::UnmapMemory(Kernel::KProcess& process, uint64_t addr, uint64
         if (curThread) {
             curThread->TrySuspend();
         }
-        for (int i = 0; i < Core::Hardware::NUM_CPU_CORES; ++i) {
+        for (u32 i = 0; i < Core::Hardware::NUM_CPU_CORES; ++i) {
             auto* runningThread = process.GetRunningThread(i);
             if (nullptr != runningThread) {
                 Kernel::SetCurrentThread(system.Kernel(), runningThread);

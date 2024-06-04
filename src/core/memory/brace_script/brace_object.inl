@@ -797,7 +797,7 @@ namespace BraceScriptInterpreter
             auto& ptr = Brace::VarGetObject((m_ObjInfo.IsGlobal ? gvars : lvars), m_ObjInfo.VarIndex);
             auto* pObj = static_cast<Core::Memory::MemoryModifyInfo*>(ptr.get());
             if (nullptr != pObj) {
-                uint64_t addr = static_cast<uint64_t>(Brace::VarGetI64((m_ArgInfo.IsGlobal ? gvars : lvars), m_ArgInfo.Type, m_ArgInfo.VarIndex));
+                uint64_t addr = Brace::VarGetU64((m_ArgInfo.IsGlobal ? gvars : lvars), m_ArgInfo.Type, m_ArgInfo.VarIndex);
                 pObj->addr = Common::ProcessAddress(addr);
             }
             return Brace::BRACE_FLOW_CONTROL_NORMAL;
@@ -825,7 +825,7 @@ namespace BraceScriptInterpreter
             auto& ptr = Brace::VarGetObject((m_ObjInfo.IsGlobal ? gvars : lvars), m_ObjInfo.VarIndex);
             auto* pObj = static_cast<Core::Memory::MemoryModifyInfo*>(ptr.get());
             if (nullptr != pObj) {
-                uint64_t val = static_cast<uint64_t>(Brace::VarGetI64((m_ArgInfo.IsGlobal ? gvars : lvars), m_ArgInfo.Type, m_ArgInfo.VarIndex));
+                uint64_t val = Brace::VarGetU64((m_ArgInfo.IsGlobal ? gvars : lvars), m_ArgInfo.Type, m_ArgInfo.VarIndex);
                 pObj->u64Val = val;
             }
             return Brace::BRACE_FLOW_CONTROL_NORMAL;
@@ -839,7 +839,7 @@ namespace BraceScriptInterpreter
             auto& ptr = Brace::VarGetObject((m_ObjInfo.IsGlobal ? gvars : lvars), m_ObjInfo.VarIndex);
             auto* pObj = static_cast<Core::Memory::MemoryModifyInfo*>(ptr.get());
             if (nullptr != pObj) {
-                uint64_t val = static_cast<uint64_t>(Brace::VarGetI64((m_ArgInfo.IsGlobal ? gvars : lvars), m_ArgInfo.Type, m_ArgInfo.VarIndex));
+                uint64_t val = Brace::VarGetU64((m_ArgInfo.IsGlobal ? gvars : lvars), m_ArgInfo.Type, m_ArgInfo.VarIndex);
                 pObj->u64OldVal = val;
             }
             return Brace::BRACE_FLOW_CONTROL_NORMAL;
@@ -853,7 +853,7 @@ namespace BraceScriptInterpreter
             auto& ptr = Brace::VarGetObject((m_ObjInfo.IsGlobal ? gvars : lvars), m_ObjInfo.VarIndex);
             auto* pObj = static_cast<Core::Memory::MemoryModifyInfo*>(ptr.get());
             if (nullptr != pObj) {
-                uint64_t size = static_cast<uint64_t>(Brace::VarGetI64((m_ArgInfo.IsGlobal ? gvars : lvars), m_ArgInfo.Type, m_ArgInfo.VarIndex));
+                uint64_t size = Brace::VarGetU64((m_ArgInfo.IsGlobal ? gvars : lvars), m_ArgInfo.Type, m_ArgInfo.VarIndex);
                 pObj->size = size;
             }
             return Brace::BRACE_FLOW_CONTROL_NORMAL;
@@ -867,8 +867,8 @@ namespace BraceScriptInterpreter
                 Brace::VarGetObject((m_ObjInfo.IsGlobal ? gvars : lvars), m_ObjInfo.VarIndex);
             auto* pObj = static_cast<Core::Memory::MemoryModifyInfo*>(ptr.get());
             if (nullptr != pObj) {
-                uint64_t pid = static_cast<uint64_t>(Brace::VarGetI64(
-                    (m_ArgInfo.IsGlobal ? gvars : lvars), m_ArgInfo.Type, m_ArgInfo.VarIndex));
+                uint64_t pid = Brace::VarGetU64((m_ArgInfo.IsGlobal ? gvars : lvars),
+                                                m_ArgInfo.Type, m_ArgInfo.VarIndex);
                 pObj->pid = pid;
             }
             return Brace::BRACE_FLOW_CONTROL_NORMAL;

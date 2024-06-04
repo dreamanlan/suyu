@@ -1143,6 +1143,101 @@ protected:
         Brace::VarSetUInt64((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, tv);
     }
 };
+class BaseTypeCastExp final : public Brace::SimpleBraceApiBase {
+public:
+    BaseTypeCastExp(Brace::BraceScript& interpreter, int type)
+        : Brace::SimpleBraceApiBase(interpreter), m_Type(type) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        if (argInfos.size() != 1) {
+            // error
+            std::stringstream ss;
+            ss << "expected base_type(numeric_expression), base_type:bool|int8|uint8|int16|uint16|int32|uint32|int64|uint64|float|double,"
+               << data.GetId() << " line " << data.GetLine();
+            LogError(ss.str());
+            return false;
+        }
+        resultInfo.Type = m_Type;
+        resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+        resultInfo.Name = GenTempVarName();
+        resultInfo.VarIndex =
+            AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+        return true;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        auto&& argInfo1 = argInfos[0];
+        switch (resultInfo.Type) {
+        case Brace::BRACE_DATA_TYPE_BOOL: {
+            int64_t val = Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+            Brace::VarSetBool(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, val != 0);
+        }break;
+        case Brace::BRACE_DATA_TYPE_INT8: {
+            int64_t val = Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type,
+                                           argInfo1.VarIndex);
+            Brace::VarSetInt8(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex,
+                               static_cast<int8_t>(val));
+        } break;
+        case Brace::BRACE_DATA_TYPE_UINT8: {
+            int64_t val = Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type,
+                                           argInfo1.VarIndex);
+            Brace::VarSetUInt8(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex,
+                                static_cast<uint8_t>(val));
+        } break;
+        case Brace::BRACE_DATA_TYPE_INT16: {
+            int64_t val = Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type,
+                                           argInfo1.VarIndex);
+            Brace::VarSetInt16(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex,
+                               static_cast<int16_t>(val));
+        } break;
+        case Brace::BRACE_DATA_TYPE_UINT16: {
+            int64_t val = Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type,
+                                           argInfo1.VarIndex);
+            Brace::VarSetUInt16(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex,
+                                static_cast<uint16_t>(val));
+        } break;
+        case Brace::BRACE_DATA_TYPE_INT32: {
+            int64_t val = Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type,
+                                           argInfo1.VarIndex);
+            Brace::VarSetInt32(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex,
+                                static_cast<int32_t>(val));
+        } break;
+        case Brace::BRACE_DATA_TYPE_UINT32: {
+            int64_t val = Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type,
+                                           argInfo1.VarIndex);
+            Brace::VarSetUInt32(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex,
+                                static_cast<uint32_t>(val));
+        } break;
+        case Brace::BRACE_DATA_TYPE_INT64: {
+            int64_t val = Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type,
+                                           argInfo1.VarIndex);
+            Brace::VarSetInt64(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, val);
+        } break;
+        case Brace::BRACE_DATA_TYPE_UINT64: {
+            uint64_t val = Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type,
+                                           argInfo1.VarIndex);
+            Brace::VarSetUInt64(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, val);
+        }break;
+        case Brace::BRACE_DATA_TYPE_FLOAT: {
+            double val = Brace::VarGetF64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type,
+                                           argInfo1.VarIndex);
+            Brace::VarSetFloat(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex,
+                                static_cast<float>(val));
+        } break;
+        case Brace::BRACE_DATA_TYPE_DOUBLE: {
+            double val = Brace::VarGetF64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type,
+                                           argInfo1.VarIndex);
+            Brace::VarSetDouble(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, val);
+        } break;
+        }
+    }
+private:
+    int m_Type;
+};
 class Int2CharExp final : public Brace::SimpleBraceApiBase {
 public:
     Int2CharExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
@@ -5897,19 +5992,18 @@ protected:
         static const size_t s_u64 = sizeof(uint64_t);
 
         auto&& argInfo1 = argInfos[0];
-        uint64_t addr = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
+        uint64_t addr = Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
         uint64_t val_size = sizeof(uint32_t);
         uint64_t pid = 0;
         if (argInfos.size() >= 2) {
             auto&& argInfo2 = argInfos[1];
-            val_size = static_cast<uint64_t>(Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars,
-                                                              argInfo2.Type, argInfo2.VarIndex));
+            val_size = Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type,
+                                        argInfo2.VarIndex);
         }
         if (argInfos.size() == 3) {
             auto&& argInfo3 = argInfos[2];
-            pid = static_cast<uint64_t>(Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars,
-                                                         argInfo3.Type, argInfo3.VarIndex));
+            pid = Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type,
+                                   argInfo3.VarIndex);
         }
         if (val_size < sizeof(uint8_t) || val_size > sizeof(uint64_t))
             val_size = sizeof(uint32_t);
@@ -6003,19 +6097,19 @@ protected:
         static const size_t s_u64 = sizeof(uint64_t);
 
         auto&& argInfo1 = argInfos[0];
-        uint64_t addr = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
+        uint64_t addr =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
         uint64_t val_size = sizeof(uint32_t);
         uint64_t pid = 0;
         if (argInfos.size() >= 2) {
             auto&& argInfo2 = argInfos[1];
-            val_size = static_cast<uint64_t>(Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars,
-                                                              argInfo2.Type, argInfo2.VarIndex));
+            val_size = Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type,
+                                        argInfo2.VarIndex);
         }
         if (argInfos.size() == 3) {
             auto&& argInfo3 = argInfos[2];
-            pid = static_cast<uint64_t>(Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars,
-                                                         argInfo3.Type, argInfo3.VarIndex));
+            pid = Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type,
+                                   argInfo3.VarIndex);
         }
         if (val_size < sizeof(uint8_t) || val_size > sizeof(uint64_t))
             val_size = sizeof(uint32_t);
@@ -6598,10 +6692,10 @@ protected:
             return;
         auto&& argInfo1 = argInfos[0];
         auto&& argInfo2 = argInfos[1];
-        uint64_t addr = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
-        uint64_t size = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
+        uint64_t addr =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t size =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
         bool debug = true;
         uint64_t pid = 0;
         if (argInfos.size() >= 3) {
@@ -6657,27 +6751,27 @@ protected:
             return;
         auto&& argInfo1 = argInfos[0];
         auto&& argInfo2 = argInfos[1];
-        uint64_t addr = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
-        uint64_t size = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
+        uint64_t addr =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t size =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
         uint64_t step = sizeof(uint32_t);
         uint64_t val = 0;
         uint64_t pid = 0;
         if (argInfos.size() >= 3) {
             auto&& argInfo3 = argInfos[2];
-            step = static_cast<uint64_t>(Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars,
-                                                          argInfo3.Type, argInfo3.VarIndex));
+            step = Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars,
+                                                          argInfo3.Type, argInfo3.VarIndex);
         }
         if (argInfos.size() >= 4) {
             auto&& argInfo4 = argInfos[3];
-            val = static_cast<uint64_t>(Brace::VarGetI64(argInfo4.IsGlobal ? gvars : lvars,
-                                                         argInfo4.Type, argInfo4.VarIndex));
+            val = Brace::VarGetU64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type,
+                                   argInfo4.VarIndex);
         }
         if (argInfos.size() == 5) {
             auto&& argInfo5 = argInfos[4];
-            pid = static_cast<uint64_t>(Brace::VarGetI64(argInfo5.IsGlobal ? gvars : lvars,
-                                                         argInfo5.Type, argInfo5.VarIndex));
+            pid = Brace::VarGetU64(argInfo5.IsGlobal ? gvars : lvars, argInfo5.Type,
+                                   argInfo5.VarIndex);
         }
 
         auto&& system = g_pApiProvider->GetSystem();
@@ -6834,21 +6928,21 @@ protected:
             return;
         auto&& argInfo1 = argInfos[0];
         auto&& argInfo2 = argInfos[1];
-        uint64_t addr = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
-        uint64_t size = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
+        uint64_t addr =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t size =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
         uint64_t step = sizeof(uint32_t);
         uint64_t pid = 0;
         if (argInfos.size() >= 3) {
             auto&& argInfo3 = argInfos[2];
-            step = static_cast<uint64_t>(Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars,
-                                                          argInfo3.Type, argInfo3.VarIndex));
+            step = Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type,
+                                    argInfo3.VarIndex);
         }
         if (argInfos.size() == 4) {
             auto&& argInfo4 = argInfos[3];
-            pid = static_cast<uint64_t>(Brace::VarGetI64(argInfo4.IsGlobal ? gvars : lvars,
-                                                          argInfo4.Type, argInfo4.VarIndex));
+            pid = Brace::VarGetU64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type,
+                                   argInfo4.VarIndex);
         }
 
         auto&& system = g_pApiProvider->GetSystem();
@@ -7161,14 +7255,14 @@ protected:
         auto&& argInfo3 = argInfos[2];
         auto&& argInfo4 = argInfos[3];
         auto&& argInfo5 = argInfos[4];
-        uint64_t start = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
-        uint64_t size = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
-        uint64_t step = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex));
-        uint64_t range = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type, argInfo4.VarIndex));
+        uint64_t start =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t size =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
+        uint64_t step =
+            Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex);
+        uint64_t range =
+            Brace::VarGetU64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type, argInfo4.VarIndex);
         auto&& objPtr = Brace::VarGetObject(argInfo5.IsGlobal ? gvars : lvars, argInfo5.VarIndex);
         using Array64 = ArrayT<uint64_t>;
         auto* pArr = static_cast<Array64*>(objPtr.get());
@@ -7176,13 +7270,13 @@ protected:
         uint64_t pid = 0;
         if (argInfos.size() >= 6) {
             auto&& argInfo6 = argInfos[5];
-            val_size = static_cast<uint64_t>(Brace::VarGetI64(argInfo6.IsGlobal ? gvars : lvars,
-                                                              argInfo6.Type, argInfo6.VarIndex));
+            val_size = Brace::VarGetU64(argInfo6.IsGlobal ? gvars : lvars, argInfo6.Type,
+                                        argInfo6.VarIndex);
         }
         if (argInfos.size() == 7) {
             auto&& argInfo7 = argInfos[6];
-            pid = static_cast<uint64_t>(Brace::VarGetI64(argInfo7.IsGlobal ? gvars : lvars,
-                                                              argInfo7.Type, argInfo7.VarIndex));
+            pid = Brace::VarGetU64(argInfo7.IsGlobal ? gvars : lvars, argInfo7.Type,
+                                   argInfo7.VarIndex);
         }
         if (val_size < sizeof(uint8_t) || val_size > sizeof(uint64_t))
             val_size = sizeof(uint32_t);
@@ -7305,14 +7399,14 @@ protected:
         auto&& argInfo3 = argInfos[2];
         auto&& argInfo4 = argInfos[3];
         auto&& argInfo5 = argInfos[4];
-        uint64_t start = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
-        uint64_t size = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
-        uint64_t step = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex));
-        uint64_t range = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type, argInfo4.VarIndex));
+        uint64_t start =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t size =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
+        uint64_t step =
+            Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex);
+        uint64_t range =
+            Brace::VarGetU64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type, argInfo4.VarIndex);
         auto&& objPtr = Brace::VarGetObject(argInfo5.IsGlobal ? gvars : lvars, argInfo5.VarIndex);
         using Array64 = ArrayT<uint64_t>;
         auto* pArr = static_cast<Array64*>(objPtr.get());
@@ -7321,18 +7415,18 @@ protected:
         uint64_t pid = 0;
         if (argInfos.size() >= 6) {
             auto&& argInfo6 = argInfos[5];
-            val_size = static_cast<uint64_t>(Brace::VarGetI64(argInfo6.IsGlobal ? gvars : lvars,
-                                                              argInfo6.Type, argInfo6.VarIndex));
+            val_size = Brace::VarGetU64(argInfo6.IsGlobal ? gvars : lvars, argInfo6.Type,
+                                        argInfo6.VarIndex);
         }
         if (argInfos.size() == 7) {
             auto&& argInfo7 = argInfos[6];
-            max_count = static_cast<uint64_t>(Brace::VarGetI64(argInfo7.IsGlobal ? gvars : lvars,
-                                                               argInfo7.Type, argInfo7.VarIndex));
+            max_count = Brace::VarGetU64(argInfo7.IsGlobal ? gvars : lvars, argInfo7.Type,
+                                         argInfo7.VarIndex);
         }
         if (argInfos.size() == 8) {
             auto&& argInfo8 = argInfos[7];
-            pid = static_cast<uint64_t>(Brace::VarGetI64(argInfo8.IsGlobal ? gvars : lvars,
-                                                               argInfo8.Type, argInfo8.VarIndex));
+            pid = Brace::VarGetU64(argInfo8.IsGlobal ? gvars : lvars, argInfo8.Type,
+                                   argInfo8.VarIndex);
         }
         if (val_size < sizeof(uint8_t) || val_size > sizeof(uint64_t))
             val_size = sizeof(uint32_t);
@@ -7451,19 +7545,19 @@ protected:
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
         auto&& argInfo1 = argInfos[0];
-        uint64_t addr = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
+        uint64_t addr =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
         uint64_t val_size = sizeof(uint32_t);
         uint64_t pid = 0;
         if (argInfos.size() >= 2) {
             auto&& argInfo2 = argInfos[1];
-            val_size = static_cast<uint64_t>(Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars,
-                                                              argInfo2.Type, argInfo2.VarIndex));
+            val_size = Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type,
+                                        argInfo2.VarIndex);
         }
         if (argInfos.size() == 3) {
             auto&& argInfo3 = argInfos[2];
-            pid = static_cast<uint64_t>(Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars,
-                                                              argInfo3.Type, argInfo3.VarIndex));
+            pid = Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type,
+                                   argInfo3.VarIndex);
         }
         if (val_size < sizeof(uint8_t) || val_size > sizeof(uint64_t))
             val_size = sizeof(uint32_t);
@@ -7523,21 +7617,21 @@ protected:
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
         auto&& argInfo1 = argInfos[0];
         auto&& argInfo2 = argInfos[1];
-        uint64_t addr = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
-        uint64_t val = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
+        uint64_t addr =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t val =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
         uint64_t val_size = sizeof(uint32_t);
         uint64_t pid = 0;
         if (argInfos.size() >= 3) {
             auto&& argInfo3 = argInfos[2];
-            val_size = static_cast<uint64_t>(Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars,
-                                                              argInfo3.Type, argInfo3.VarIndex));
+            val_size = Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type,
+                                        argInfo3.VarIndex);
         }
         if (argInfos.size() == 4) {
             auto&& argInfo4 = argInfos[3];
-            pid = static_cast<uint64_t>(Brace::VarGetI64(argInfo4.IsGlobal ? gvars : lvars,
-                                                              argInfo4.Type, argInfo4.VarIndex));
+            pid = Brace::VarGetU64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type,
+                                   argInfo4.VarIndex);
         }
         if (val_size < sizeof(uint8_t) || val_size > sizeof(uint64_t))
             val_size = sizeof(uint32_t);
@@ -7596,17 +7690,17 @@ protected:
         auto&& argInfo1 = argInfos[0];
         auto&& argInfo2 = argInfos[1];
         auto&& argInfo3 = argInfos[2];
-        uint64_t addr = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
-        uint64_t size = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
+        uint64_t addr =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t size =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
         const std::string& file_path =
             Brace::VarGetString(argInfo3.IsGlobal ? gvars : lvars, argInfo3.VarIndex);
         uint64_t pid = 0;
         if (argInfos.size() == 4) {
             auto&& argInfo4 = argInfos[3];
-            pid = static_cast<uint64_t>(Brace::VarGetI64(argInfo4.IsGlobal ? gvars : lvars,
-                                                         argInfo4.Type, argInfo4.VarIndex));
+            pid = Brace::VarGetU64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type,
+                                   argInfo4.VarIndex);
         }
 
         bool result = false;
@@ -7619,11 +7713,405 @@ protected:
                                    std::ios::out | std::ios::binary);
                 if (file.is_open()) {
                     result = sniffer.DumpMemory(*pProcess, addr, size, file);
-                    result = true;
                 }
             }
         }
         Brace::VarSetBool(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, result);
+    }
+};
+class LoadMemoryExp final : public Brace::SimpleBraceApiBase {
+public:
+    LoadMemoryExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        if (argInfos.size() < 3 || argInfos.size() > 4 ||
+            argInfos[0].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+            argInfos[0].Type > Brace::BRACE_DATA_TYPE_UINT64 ||
+            argInfos[1].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+            argInfos[1].Type > Brace::BRACE_DATA_TYPE_UINT64 ||
+            argInfos[2].Type != Brace::BRACE_DATA_TYPE_STRING ||
+            (argInfos.size() == 4 && (argInfos[3].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+                                      argInfos[3].Type > Brace::BRACE_DATA_TYPE_UINT64))) {
+            // error
+            std::stringstream ss;
+            ss << "expected loadmemory(uint64 addr, uint64 size, string file_path[, pid]),"
+               << data.GetId() << " line " << data.GetLine();
+            LogError(ss.str());
+            return false;
+        }
+        resultInfo.Type = Brace::BRACE_DATA_TYPE_BOOL;
+        resultInfo.Name = GenTempVarName();
+        resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+        resultInfo.VarIndex =
+            AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+        return true;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        auto&& argInfo1 = argInfos[0];
+        auto&& argInfo2 = argInfos[1];
+        auto&& argInfo3 = argInfos[2];
+        uint64_t addr =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t size =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
+        const std::string& file_path =
+            Brace::VarGetString(argInfo3.IsGlobal ? gvars : lvars, argInfo3.VarIndex);
+        uint64_t pid = 0;
+        if (argInfos.size() == 4) {
+            auto&& argInfo4 = argInfos[3];
+            pid = Brace::VarGetU64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type,
+                                   argInfo4.VarIndex);
+        }
+
+        bool result = false;
+        if (nullptr != g_pApiProvider) {
+            auto&& system = g_pApiProvider->GetSystem();
+            auto&& sniffer = system.MemorySniffer();
+            auto* pProcess = sniffer.GetProcess(pid);
+            if (nullptr != pProcess) {
+                std::ifstream file(get_absolutely_path(file_path),
+                                   std::ios::in | std::ios::binary);
+                if (file.is_open()) {
+                    result = sniffer.LoadMemory(*pProcess, addr, size, file);
+                }
+            }
+        }
+        Brace::VarSetBool(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, result);
+    }
+};
+class ProtectMemoryExp final : public Brace::SimpleBraceApiBase {
+public:
+    ProtectMemoryExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        if (argInfos.size() < 3 || argInfos.size() > 4 ||
+            argInfos[0].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+            argInfos[0].Type > Brace::BRACE_DATA_TYPE_UINT64 ||
+            argInfos[1].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+            argInfos[1].Type > Brace::BRACE_DATA_TYPE_UINT64 ||
+            argInfos[2].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+            argInfos[2].Type > Brace::BRACE_DATA_TYPE_UINT64 ||
+            (argInfos.size() == 4 && (argInfos[3].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+                                      argInfos[3].Type > Brace::BRACE_DATA_TYPE_UINT64))) {
+            // error
+            std::stringstream ss;
+            ss << "expected protectmemory(uint64 addr, uint64 size, uint32_t flag[, pid]),"
+               << data.GetId() << " line " << data.GetLine();
+            LogError(ss.str());
+            return false;
+        }
+        resultInfo.Type = Brace::BRACE_DATA_TYPE_BOOL;
+        resultInfo.Name = GenTempVarName();
+        resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+        resultInfo.VarIndex =
+            AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+        return true;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        auto&& argInfo1 = argInfos[0];
+        auto&& argInfo2 = argInfos[1];
+        auto&& argInfo3 = argInfos[2];
+        uint64_t addr =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t size =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
+        uint32_t flag = static_cast<uint32_t>(
+            Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex));
+        uint64_t pid = 0;
+        if (argInfos.size() == 4) {
+            auto&& argInfo4 = argInfos[3];
+            pid = Brace::VarGetU64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type,
+                                   argInfo4.VarIndex);
+        }
+
+        bool result = false;
+        if (nullptr != g_pApiProvider) {
+            auto&& system = g_pApiProvider->GetSystem();
+            auto&& sniffer = system.MemorySniffer();
+            auto* pProcess = sniffer.GetProcess(pid);
+            if (nullptr != pProcess) {
+                result = sniffer.ProtectMemory(*pProcess, addr, size, flag);
+            }
+        }
+        Brace::VarSetBool(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, result);
+    }
+};
+class MapMemoryExp final : public Brace::SimpleBraceApiBase {
+public:
+    MapMemoryExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        if (argInfos.size() < 3 || argInfos.size() > 5 ||
+            argInfos[0].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+            argInfos[0].Type > Brace::BRACE_DATA_TYPE_UINT64 ||
+            argInfos[1].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+            argInfos[1].Type > Brace::BRACE_DATA_TYPE_UINT64 ||
+            argInfos[2].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+            argInfos[2].Type > Brace::BRACE_DATA_TYPE_UINT64 ||
+            (argInfos.size() >= 4 && (argInfos[3].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+                                      argInfos[3].Type > Brace::BRACE_DATA_TYPE_UINT64)) ||
+            (argInfos.size() == 5 && (argInfos[4].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+                                      argInfos[4].Type > Brace::BRACE_DATA_TYPE_UINT64))) {
+            // error
+            std::stringstream ss;
+            ss << "expected mapmemory(uint64 addr, uint64 size, uint64_t phy_addr[, uint32_t flag, pid]),"
+               << data.GetId() << " line " << data.GetLine();
+            LogError(ss.str());
+            return false;
+        }
+        resultInfo.Type = Brace::BRACE_DATA_TYPE_BOOL;
+        resultInfo.Name = GenTempVarName();
+        resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+        resultInfo.VarIndex =
+            AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+        return true;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        auto&& argInfo1 = argInfos[0];
+        auto&& argInfo2 = argInfos[1];
+        auto&& argInfo3 = argInfos[2];
+        uint64_t addr =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t size =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
+        uint64_t phy_addr =
+            Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex);
+        uint32_t flag = static_cast<uint32_t>(Common::MemoryPermission::ReadWrite);
+        uint64_t pid = 0;
+        if (argInfos.size() >= 4) {
+            auto&& argInfo4 = argInfos[3];
+            flag = static_cast<uint32_t>(Brace::VarGetI64(argInfo4.IsGlobal ? gvars : lvars,
+                                                         argInfo4.Type, argInfo4.VarIndex));
+        }
+        if (argInfos.size() == 5) {
+            auto&& argInfo5 = argInfos[4];
+            pid = Brace::VarGetU64(argInfo5.IsGlobal ? gvars : lvars, argInfo5.Type,
+                                   argInfo5.VarIndex);
+        }
+
+        bool result = false;
+        if (nullptr != g_pApiProvider) {
+            auto&& system = g_pApiProvider->GetSystem();
+            auto&& sniffer = system.MemorySniffer();
+            auto* pProcess = sniffer.GetProcess(pid);
+            if (nullptr != pProcess) {
+                result = sniffer.MapMemory(*pProcess, addr, size, phy_addr, flag);
+            }
+        }
+        Brace::VarSetBool(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, result);
+    }
+};
+class UnmapMemoryExp final : public Brace::SimpleBraceApiBase {
+public:
+    UnmapMemoryExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        if (argInfos.size() < 2 || argInfos.size() > 3 ||
+            argInfos[0].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+            argInfos[0].Type > Brace::BRACE_DATA_TYPE_UINT64 ||
+            argInfos[1].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+            argInfos[1].Type > Brace::BRACE_DATA_TYPE_UINT64 ||
+            (argInfos.size() == 3 && (argInfos[2].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+                                      argInfos[2].Type > Brace::BRACE_DATA_TYPE_UINT64))) {
+            // error
+            std::stringstream ss;
+            ss << "expected unmapmemory(uint64 addr, uint64 size[, pid]),"
+               << data.GetId() << " line " << data.GetLine();
+            LogError(ss.str());
+            return false;
+        }
+        resultInfo.Type = Brace::BRACE_DATA_TYPE_BOOL;
+        resultInfo.Name = GenTempVarName();
+        resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+        resultInfo.VarIndex =
+            AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+        return true;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        auto&& argInfo1 = argInfos[0];
+        auto&& argInfo2 = argInfos[1];
+        uint64_t addr =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t size =
+            Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
+        uint64_t pid = 0;
+        if (argInfos.size() == 3) {
+            auto&& argInfo3 = argInfos[2];
+            pid = Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type,
+                                   argInfo3.VarIndex);
+        }
+
+        bool result = false;
+        if (nullptr != g_pApiProvider) {
+            auto&& system = g_pApiProvider->GetSystem();
+            auto&& sniffer = system.MemorySniffer();
+            auto* pProcess = sniffer.GetProcess(pid);
+            if (nullptr != pProcess) {
+                result = sniffer.UnmapMemory(*pProcess, addr, size);
+            }
+        }
+        Brace::VarSetBool(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, result);
+    }
+};
+class FindUnmappedMemoryExp final : public Brace::SimpleBraceApiBase {
+public:
+    FindUnmappedMemoryExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        if (argInfos.size() < 3 || argInfos.size() > 4 ||
+            argInfos[0].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+            argInfos[0].Type > Brace::BRACE_DATA_TYPE_UINT64 ||
+            argInfos[1].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+            argInfos[1].Type > Brace::BRACE_DATA_TYPE_UINT64 ||
+            argInfos[2].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+            argInfos[2].Type > Brace::BRACE_DATA_TYPE_UINT64 ||
+            (argInfos.size() == 4 && (argInfos[3].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+                                      argInfos[3].Type > Brace::BRACE_DATA_TYPE_UINT64))) {
+            // error
+            std::stringstream ss;
+            ss << "expected findunmappedmemory(uint64 addr, uint64 size, uint64_t expect_size[, pid]),"
+               << data.GetId() << " line " << data.GetLine();
+            LogError(ss.str());
+            return false;
+        }
+        resultInfo.Type = Brace::BRACE_DATA_TYPE_UINT64;
+        resultInfo.Name = GenTempVarName();
+        resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+        resultInfo.VarIndex =
+            AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+        return true;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        auto&& argInfo1 = argInfos[0];
+        auto&& argInfo2 = argInfos[1];
+        auto&& argInfo3 = argInfos[2];
+        uint64_t addr =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t size =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
+        uint64_t expect_size =
+            Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex);
+        uint64_t pid = 0;
+        if (argInfos.size() == 4) {
+            auto&& argInfo4 = argInfos[3];
+            pid = Brace::VarGetU64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type,
+                                   argInfo4.VarIndex);
+        }
+
+        uint64_t result = 0;
+        if (nullptr != g_pApiProvider) {
+            auto&& system = g_pApiProvider->GetSystem();
+            auto&& sniffer = system.MemorySniffer();
+            auto* pProcess = sniffer.GetProcess(pid);
+            if (nullptr != pProcess) {
+                result = sniffer.FindUnmapMemory(*pProcess, addr, size, expect_size);
+            }
+        }
+        Brace::VarSetUInt64(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, result);
+    }
+};
+class AllocPhyPagesExp final : public Brace::SimpleBraceApiBase {
+public:
+    AllocPhyPagesExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        if (argInfos.size() == 1) {
+            auto& argInfo = argInfos[0];
+            if (Brace::IsSignedType(argInfo.Type) || Brace::IsUnsignedType(argInfo.Type)) {
+                resultInfo.Type = Brace::BRACE_DATA_TYPE_UINT64;
+                resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+                resultInfo.Name = GenTempVarName();
+                resultInfo.VarIndex =
+                    AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+                return true;
+            }
+        }
+        std::stringstream ss;
+        ss << "expected allocphypages(uint64_t n_pages) ! line: " << data.GetLine();
+        LogError(ss.str());
+        return false;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        auto& argInfo = argInfos[0];
+        uint64_t n_pages =
+            Brace::VarGetU64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex);
+        uint64_t addr = 0;
+        if (nullptr != g_pApiProvider) {
+            auto&& system = g_pApiProvider->GetSystem();
+            auto&& sniffer = system.MemorySniffer();
+            addr = sniffer.AllocPhyPages(n_pages);
+        }
+        Brace::VarSetUInt64((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex,
+                            addr);
+    }
+};
+class FreePhyPagesExp final : public Brace::SimpleBraceApiBase {
+public:
+    FreePhyPagesExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        if (argInfos.size() == 1) {
+            auto& argInfo = argInfos[0];
+            if (Brace::IsSignedType(argInfo.Type) || Brace::IsUnsignedType(argInfo.Type)) {
+                resultInfo.Type = Brace::BRACE_DATA_TYPE_BOOL;
+                resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+                resultInfo.Name = GenTempVarName();
+                resultInfo.VarIndex =
+                    AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+                return true;
+            }
+        }
+        std::stringstream ss;
+        ss << "expected allocphypages(uint64_t addr) ! line: " << data.GetLine();
+        LogError(ss.str());
+        return false;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        auto& argInfo = argInfos[0];
+        uint64_t addr =
+            Brace::VarGetU64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex);
+        bool result = false;
+        if (nullptr != g_pApiProvider) {
+            auto&& system = g_pApiProvider->GetSystem();
+            auto&& sniffer = system.MemorySniffer();
+            result = sniffer.FreePhyPages(addr);
+        }
+        Brace::VarSetBool((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, result);
     }
 };
 class AddLogInstructionExp final : public Brace::SimpleBraceApiBase {
@@ -7698,8 +8186,8 @@ protected:
         auto&& argInfo1 = argInfos[0];
         auto&& argInfo2 = argInfos[1];
         auto&& argInfo3 = argInfos[2];
-        uint64_t hash = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
+        uint64_t hash =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
         int stage = static_cast<int>(
             Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
         const std::string& filePath =
@@ -7752,8 +8240,8 @@ protected:
         auto&& argInfo1 = argInfos[0];
         auto&& argInfo2 = argInfos[1];
         auto&& argInfo3 = argInfos[2];
-        uint64_t hash = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
+        uint64_t hash =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
         int stage = static_cast<int>(
             Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
         const std::string& filePath =
@@ -8600,12 +9088,12 @@ protected:
         auto&& argInfo1 = argInfos[0];
         auto&& argInfo2 = argInfos[1];
         auto&& argInfo3 = argInfos[2];
-        uint64_t offset = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
-        uint64_t addr = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
-        uint64_t region = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex));
+        uint64_t offset =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t addr =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
+        uint64_t region =
+            Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex);
 
         if (offset == 0) {
             auto&& system = g_pApiProvider->GetSystem();
@@ -8669,21 +9157,21 @@ protected:
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
         auto&& argInfo1 = argInfos[0];
         auto&& argInfo2 = argInfos[1];
-        uint64_t val = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
-        uint64_t addr = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
+        uint64_t val =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t addr =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
         uint64_t val_size = sizeof(uint32_t);
         uint64_t pid = 0;
         if (argInfos.size() >= 3) {
             auto&& argInfo3 = argInfos[2];
-            val_size = static_cast<uint64_t>(Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars,
-                                                              argInfo3.Type, argInfo3.VarIndex));
+            val_size = Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type,
+                                        argInfo3.VarIndex);
         }
         if (argInfos.size() == 4) {
             auto&& argInfo4 = argInfos[3];
-            pid = static_cast<uint64_t>(Brace::VarGetI64(argInfo4.IsGlobal ? gvars : lvars,
-                                                              argInfo4.Type, argInfo4.VarIndex));
+            pid = Brace::VarGetU64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type,
+                                   argInfo4.VarIndex);
         }
         if (val_size < sizeof(uint8_t) || val_size > sizeof(uint64_t))
             val_size = sizeof(uint32_t);
@@ -8773,16 +9261,16 @@ protected:
         auto&& argInfo3 = argInfos[2];
         auto&& argInfo4 = argInfos[3];
         auto&& argInfo5 = argInfos[4];
-        uint64_t mem_width = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
-        uint64_t mem_region = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
-        uint64_t reg = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex));
-        uint64_t offset = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type, argInfo4.VarIndex));
-        uint64_t val = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo5.IsGlobal ? gvars : lvars, argInfo5.Type, argInfo5.VarIndex));
+        uint64_t mem_width =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t mem_region =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
+        uint64_t reg =
+            Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex);
+        uint64_t offset =
+            Brace::VarGetU64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type, argInfo4.VarIndex);
+        uint64_t val =
+            Brace::VarGetU64(argInfo5.IsGlobal ? gvars : lvars, argInfo5.Type, argInfo5.VarIndex);
 
         uint32_t h32 = static_cast<uint32_t>(offset >> 32);
         uint32_t l32 = static_cast<uint32_t>(offset & 0xffffffffull);
@@ -8848,14 +9336,14 @@ protected:
         auto&& argInfo2 = argInfos[1];
         auto&& argInfo3 = argInfos[2];
         auto&& argInfo4 = argInfos[3];
-        uint64_t mem_width = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
-        uint64_t mem_region = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
-        uint64_t offset = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex));
-        uint64_t val = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type, argInfo4.VarIndex));
+        uint64_t mem_width =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t mem_region =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
+        uint64_t offset =
+            Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex);
+        uint64_t val =
+            Brace::VarGetU64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type, argInfo4.VarIndex);
 
         uint32_t h32 = static_cast<uint32_t>(offset >> 32);
         uint32_t l32 = static_cast<uint32_t>(offset & 0xffffffffull);
@@ -8938,10 +9426,10 @@ protected:
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
         auto&& argInfo1 = argInfos[0];
         auto&& argInfo2 = argInfos[1];
-        uint64_t reg = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
-        uint64_t val = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
+        uint64_t reg =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t val =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
 
         uint32_t vh32 = static_cast<uint32_t>(val >> 32);
         uint32_t vl32 = static_cast<uint32_t>(val & 0xffffffffull);
@@ -8995,12 +9483,12 @@ protected:
         auto&& argInfo1 = argInfos[0];
         auto&& argInfo2 = argInfos[1];
         auto&& argInfo3 = argInfos[2];
-        uint64_t v1 = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
-        uint64_t v2 = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
-        uint64_t v3 = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex));
+        uint64_t v1 =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t v2 =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
+        uint64_t v3 =
+            Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex);
         uint64_t v4 = 0;
 
         int mem_width;
@@ -9010,8 +9498,8 @@ protected:
         bool fixed;
         if (argInfos.size() == 4) {
             auto&& argInfo4 = argInfos[3];
-            v4 = static_cast<uint64_t>(Brace::VarGetI64(argInfo4.IsGlobal ? gvars : lvars,
-                                                        argInfo4.Type, argInfo4.VarIndex));
+            v4 = Brace::VarGetU64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type,
+                                  argInfo4.VarIndex);
 
             mem_width = static_cast<int>(v1);
             mem_region = static_cast<int>(v2);
@@ -9098,20 +9586,20 @@ protected:
         auto&& argInfo2 = argInfos[1];
         auto&& argInfo3 = argInfos[2];
         auto&& argInfo4 = argInfos[3];
-        uint64_t mem_width = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
-        uint64_t mem_reg = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
-        uint64_t reg_inc_1or0 = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex));
-        uint64_t val = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type, argInfo4.VarIndex));
+        uint64_t mem_width =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t mem_reg =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
+        uint64_t reg_inc_1or0 =
+            Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex);
+        uint64_t val =
+            Brace::VarGetU64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type, argInfo4.VarIndex);
         uint64_t offset_reg = 0;
         int use_offset = 0;
         if (argInfos.size() == 5) {
             auto&& argInfo5 = argInfos[4];
-            offset_reg = static_cast<uint64_t>(Brace::VarGetI64(argInfo5.IsGlobal ? gvars : lvars,
-                                                                argInfo5.Type, argInfo5.VarIndex));
+            offset_reg = Brace::VarGetU64(argInfo5.IsGlobal ? gvars : lvars, argInfo5.Type,
+                                          argInfo5.VarIndex);
             use_offset = 1;
         }
 
@@ -9173,12 +9661,12 @@ protected:
         auto&& argInfo1 = argInfos[0];
         auto&& argInfo2 = argInfos[1];
         auto&& argInfo3 = argInfos[2];
-        uint64_t mem_width = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
-        uint64_t reg = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
-        uint64_t val = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex));
+        uint64_t mem_width =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t reg =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
+        uint64_t val =
+            Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex);
 
         [[maybe_unused]] uint32_t vh32 = static_cast<uint32_t>(val >> 32);
         uint32_t vl32 = static_cast<uint32_t>(val & 0xffffffffull);
@@ -9330,14 +9818,14 @@ protected:
         auto&& argInfo2 = argInfos[1];
         auto&& argInfo3 = argInfos[2];
         auto&& argInfo4 = argInfos[3];
-        uint64_t mem_width = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
-        uint64_t reg = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
-        uint64_t lhs_reg = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex));
-        uint64_t rhs = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type, argInfo4.VarIndex));
+        uint64_t mem_width =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t reg =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
+        uint64_t lhs_reg =
+            Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex);
+        uint64_t rhs =
+            Brace::VarGetU64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type, argInfo4.VarIndex);
         int rhs_is_val_1or0 = 0;
         if (argInfos.size() == 5) {
             auto&& argInfo5 = argInfos[4];
@@ -9466,14 +9954,14 @@ protected:
         auto&& argInfo2 = argInfos[1];
         auto&& argInfo3 = argInfos[2];
         auto&& argInfo4 = argInfos[3];
-        uint64_t mem_width = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
-        uint64_t src_reg = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
-        uint64_t mem_reg = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex));
-        uint64_t reg_inc_1or0 = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type, argInfo4.VarIndex));
+        uint64_t mem_width =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
+        uint64_t src_reg =
+            Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
+        uint64_t mem_reg =
+            Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex);
+        uint64_t reg_inc_1or0 =
+            Brace::VarGetU64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type, argInfo4.VarIndex);
         int offset_type = 0;
         int reg_or_region = 0;
         uint64_t offset = 0;
@@ -9483,8 +9971,8 @@ protected:
             offset_type = static_cast<int>(Brace::VarGetI64(argInfo5.IsGlobal ? gvars : lvars,
                                                             argInfo5.Type, argInfo5.VarIndex));
             if (offset_type == 2) {
-                offset = static_cast<uint64_t>(Brace::VarGetI64(argInfo6.IsGlobal ? gvars : lvars,
-                                                                argInfo6.Type, argInfo6.VarIndex));
+                offset = Brace::VarGetU64(argInfo6.IsGlobal ? gvars : lvars, argInfo6.Type,
+                                          argInfo6.VarIndex);
             } else {
                 reg_or_region = static_cast<int>(Brace::VarGetI64(
                     argInfo6.IsGlobal ? gvars : lvars, argInfo6.Type, argInfo6.VarIndex));
@@ -9492,8 +9980,8 @@ protected:
         }
         if (argInfos.size() >= 7) {
             auto&& argInfo7 = argInfos[6];
-            offset = static_cast<uint64_t>(Brace::VarGetI64(argInfo7.IsGlobal ? gvars : lvars,
-                                                            argInfo7.Type, argInfo7.VarIndex));
+            offset = Brace::VarGetU64(argInfo7.IsGlobal ? gvars : lvars, argInfo7.Type,
+                                      argInfo7.VarIndex);
         }
 
         uint32_t vh32 = static_cast<uint32_t>(offset >> 32);
@@ -9566,19 +10054,19 @@ protected:
         auto&& argInfo2 = argInfos[1];
         auto&& argInfo3 = argInfos[2];
         auto&& argInfo4 = argInfos[3];
-        uint64_t mem_width = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex));
+        uint64_t mem_width =
+            Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
         int src_reg = static_cast<int>(
             Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
         int opd_type = static_cast<int>(
             Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex));
-        uint64_t val1 = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type, argInfo4.VarIndex));
+        uint64_t val1 =
+            Brace::VarGetU64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type, argInfo4.VarIndex);
         uint64_t val2 = 0;
         if (argInfos.size() == 5) {
             auto&& argInfo5 = argInfos[4];
-            val2 = static_cast<uint64_t>(Brace::VarGetI64(argInfo5.IsGlobal ? gvars : lvars,
-                                                          argInfo5.Type, argInfo5.VarIndex));
+            val2 = Brace::VarGetU64(argInfo5.IsGlobal ? gvars : lvars, argInfo5.Type,
+                                    argInfo5.VarIndex);
         }
 
         uint32_t v1h32 = static_cast<uint32_t>(val1 >> 32);
@@ -9924,13 +10412,12 @@ protected:
             Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
         int opd_type = static_cast<int>(
             Brace::VarGetI64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex));
-        uint64_t val1 = static_cast<uint64_t>(
-            Brace::VarGetI64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type, argInfo4.VarIndex));
+        uint64_t val1 = Brace::VarGetU64(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type, argInfo4.VarIndex);
         uint64_t val2 = 0;
         if (argInfos.size() == 5) {
             auto&& argInfo5 = argInfos[4];
-            val2 = static_cast<uint64_t>(Brace::VarGetI64(argInfo5.IsGlobal ? gvars : lvars,
-                                                          argInfo5.Type, argInfo5.VarIndex));
+            val2 = Brace::VarGetU64(argInfo5.IsGlobal ? gvars : lvars,
+                                                          argInfo5.Type, argInfo5.VarIndex);
         }
 
         uint32_t vh32 = static_cast<uint32_t>(val2 >> 32);
@@ -10537,6 +11024,39 @@ inline void BraceScriptManager::InitBraceScript(Brace::BraceScript*& pBraceScrip
                                   new Brace::BraceApiFactory<WaitUntilQuitExp>());
     }
     pBraceScript->RegisterApi("time", "time() api", new Brace::BraceApiFactory<TimeExp>());
+    pBraceScript->RegisterApi(
+        "bool", "bool(exp) api",
+        new Brace::BraceApiFactoryWithArgs<BaseTypeCastExp, int>(Brace::BRACE_DATA_TYPE_BOOL));
+    pBraceScript->RegisterApi(
+        "int8", "int8(exp) api",
+        new Brace::BraceApiFactoryWithArgs<BaseTypeCastExp, int>(Brace::BRACE_DATA_TYPE_INT8));
+    pBraceScript->RegisterApi(
+        "uint8", "uint8(exp) api",
+        new Brace::BraceApiFactoryWithArgs<BaseTypeCastExp, int>(Brace::BRACE_DATA_TYPE_UINT8));
+    pBraceScript->RegisterApi(
+        "int16", "int16(exp) api",
+        new Brace::BraceApiFactoryWithArgs<BaseTypeCastExp, int>(Brace::BRACE_DATA_TYPE_INT16));
+    pBraceScript->RegisterApi(
+        "uint16", "uint16(exp) api",
+        new Brace::BraceApiFactoryWithArgs<BaseTypeCastExp, int>(Brace::BRACE_DATA_TYPE_UINT16));
+    pBraceScript->RegisterApi(
+        "int32", "int32(exp) api",
+        new Brace::BraceApiFactoryWithArgs<BaseTypeCastExp, int>(Brace::BRACE_DATA_TYPE_INT32));
+    pBraceScript->RegisterApi(
+        "uint32", "uint32(exp) api",
+        new Brace::BraceApiFactoryWithArgs<BaseTypeCastExp, int>(Brace::BRACE_DATA_TYPE_UINT32));
+    pBraceScript->RegisterApi(
+        "int64", "int64(exp) api",
+        new Brace::BraceApiFactoryWithArgs<BaseTypeCastExp, int>(Brace::BRACE_DATA_TYPE_INT64));
+    pBraceScript->RegisterApi(
+        "uint64", "uint64(exp) api",
+        new Brace::BraceApiFactoryWithArgs<BaseTypeCastExp, int>(Brace::BRACE_DATA_TYPE_UINT64));
+    pBraceScript->RegisterApi(
+        "float", "float(exp) api",
+        new Brace::BraceApiFactoryWithArgs<BaseTypeCastExp, int>(Brace::BRACE_DATA_TYPE_FLOAT));
+    pBraceScript->RegisterApi(
+        "double", "double(exp) api",
+        new Brace::BraceApiFactoryWithArgs<BaseTypeCastExp, int>(Brace::BRACE_DATA_TYPE_DOUBLE));
     pBraceScript->RegisterApi("int2char", "int2char(val) api",
                               new Brace::BraceApiFactory<Int2CharExp>());
     pBraceScript->RegisterApi("char2int", "char2int(str) api",
@@ -10850,6 +11370,20 @@ inline void BraceScriptManager::InitBraceScript(Brace::BraceScript*& pBraceScrip
                               new Brace::BraceApiFactory<WriteMemoryExp>());
     pBraceScript->RegisterApi("dumpmemory", "dumpmemory(addr,size,file_path[,pid])",
                               new Brace::BraceApiFactory<DumpMemoryExp>());
+    pBraceScript->RegisterApi("loadmemory", "loadmemory(addr,size,file_path[,pid])",
+                              new Brace::BraceApiFactory<LoadMemoryExp>());
+    pBraceScript->RegisterApi("protectmemory", "protectmemory(addr,size,flag[,pid]),flag:1-read 2-write 3-readwrite 4-execute",
+                              new Brace::BraceApiFactory<ProtectMemoryExp>());
+    pBraceScript->RegisterApi("mapmemory", "mapmemory(addr,size,phy_addr[,flag,pid]),flag:1-read 2-write 3-readwrite 4-execute,def is readwrite",
+                              new Brace::BraceApiFactory<MapMemoryExp>());
+    pBraceScript->RegisterApi("unmapmemory", "unmapmemory(addr,size[,pid])",
+                              new Brace::BraceApiFactory<UnmapMemoryExp>());
+    pBraceScript->RegisterApi("findunmappedmemory", "findunmappedmemory(addr,size,expect_size[,pid])",
+                              new Brace::BraceApiFactory<FindUnmappedMemoryExp>());
+    pBraceScript->RegisterApi("allocphypages", "allocphypages(n_pages)",
+                              new Brace::BraceApiFactory<AllocPhyPagesExp>());
+    pBraceScript->RegisterApi("freephypages", "freephypages(addr)",
+                              new Brace::BraceApiFactory<FreePhyPagesExp>());
 
     pBraceScript->RegisterApi("addloginst", "addloginst(mask, value), all type is int32",
                               new Brace::BraceApiFactory<AddLogInstructionExp>());

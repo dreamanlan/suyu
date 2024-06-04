@@ -45,6 +45,7 @@ using PcCountInfo = std::unordered_map<uint64_t, uint64_t>;
 using PcCountMap = std::map<uint64_t, uint64_t>;
 // pair<mask,value>, log when inst_op & mask == value
 using LogInstructions = std::vector<std::pair<uint32_t, uint32_t>>;
+using PhyMemories = std::unordered_set<uint64_t>;
 
 static inline u32 BreakPointInstructionOn32() {
     // A32: trap
@@ -201,13 +202,21 @@ struct MemorySniffer::Impl {
     MemoryModifyInfoMap resultMemModifyInfo;
     MemoryModifyInfoList historyMemModifyInfos;
     MemoryModifyInfoList rollbackMemModifyInfos;
+
+    PhyMemories phyMemoryPages;
 };
 
 MemorySniffer::MemorySniffer(Core::System& system_) : system{system_} {
     impl = std::make_unique<Impl>(system_);
 }
 
-MemorySniffer::~MemorySniffer() {}
+MemorySniffer::~MemorySniffer() {
+    for (auto&& addr : impl->phyMemoryPages) {
+        char* pMem = reinterpret_cast<char*>(addr);
+        delete[] pMem;
+    }
+    impl->phyMemoryPages.clear();
+}
 
 void MemorySniffer::Initialize() {
     const auto& page_table = system.ApplicationProcess()->GetPageTable();
@@ -1931,6 +1940,113 @@ bool MemorySniffer::DumpMemory(Kernel::KProcess& process, uint64_t addr, uint64_
         }
     }
     return succ;
+}
+
+bool MemorySniffer::LoadMemory(Kernel::KProcess& process, uint64_t addr, uint64_t size,
+                               std::istream& is) const {
+    auto&& memory = process.GetMemory();
+    bool succ = false;
+    if (memory.IsValidVirtualAddressRange(addr, size)) {
+        auto* pMem = memory.GetPointerSilent(addr);
+        if (nullptr != pMem) {
+            succ = true;
+            is.read(reinterpret_cast<char*>(pMem), size);
+        }
+    }
+    return succ;
+}
+
+bool MemorySniffer::ProtectMemory(Kernel::KProcess& process, uint64_t addr, uint64_t size,
+                                  int flag) const {
+    auto&& memory = process.GetMemory();
+    bool succ = false;
+    if (memory.IsValidVirtualAddressRange(addr, size)) {
+        addr &= ~SUYU_PAGEMASK;
+        uint64_t mod = size % SUYU_PAGESIZE;
+        if (mod > 0) {
+            size += SUYU_PAGESIZE - mod;
+        }
+        memory.ProtectRegion(process.GetPageTable().GetImpl(), addr, size,
+                             static_cast<Common::MemoryPermission>(flag));
+        succ = true;
+    }
+    return succ;
+}
+
+bool MemorySniffer::MapMemory(Kernel::KProcess& process, uint64_t addr, uint64_t size,
+                              uint64_t phy_addr, int flag) const {
+    auto&& memory = process.GetMemory();
+    bool succ = false;
+    auto&& hostmem = system.DeviceMemory().buffer;
+    if (hostmem.IsInVirtualRange(reinterpret_cast<void*>(addr)) &&
+        hostmem.IsInVirtualRange(reinterpret_cast<void*>(addr + size - sizeof(void*)))) {
+        addr &= ~SUYU_PAGEMASK;
+        uint64_t mod = size % SUYU_PAGESIZE;
+        if (mod > 0) {
+            size += SUYU_PAGESIZE - mod;
+        }
+        memory.MapMemoryRegion(process.GetPageTable().GetImpl(), addr, size, phy_addr,
+                               static_cast<Common::MemoryPermission>(flag), true);
+        succ = true;
+    }
+    return succ;
+}
+
+bool MemorySniffer::UnmapMemory(Kernel::KProcess& process, uint64_t addr, uint64_t size) const {
+    auto&& memory = process.GetMemory();
+    bool succ = false;
+    if (memory.IsValidVirtualAddressRange(addr, size)) {
+        addr &= ~SUYU_PAGEMASK;
+        uint64_t mod = size % SUYU_PAGESIZE;
+        if (mod > 0) {
+            size += SUYU_PAGESIZE - mod;
+        }
+        memory.UnmapRegion(process.GetPageTable().GetImpl(), addr, size, true);
+        succ = true;
+    }
+    return succ;
+}
+
+uint64_t MemorySniffer::FindUnmapMemory(Kernel::KProcess& process, uint64_t addr,
+                                        uint64_t size, uint64_t expect_size) const {
+    auto&& memory = process.GetMemory();
+    addr &= ~SUYU_PAGEMASK;
+    uint64_t mod = size % SUYU_PAGESIZE;
+    if (mod > 0) {
+        size += SUYU_PAGESIZE - mod;
+    }
+    uint64_t raddr = 0;
+    for (u64 adr = addr; adr < addr + size; adr += SUYU_PAGESIZE) {
+        if (memory.IsValidVirtualAddress(adr)) {
+            raddr = 0;
+        } else if (raddr == 0) {
+            raddr = adr;
+        } else if (adr - raddr >= expect_size) {
+            return raddr;
+        }
+    }
+    return 0;
+}
+
+uint64_t MemorySniffer::AllocPhyPages(uint64_t n_pages) const {
+    uint64_t addr = 0;
+    char* pMem = new char[n_pages * SUYU_PAGESIZE];
+    if (nullptr != pMem) {
+        addr = reinterpret_cast<uint64_t>(pMem);
+        impl->phyMemoryPages.insert(addr);
+    }
+    return addr;
+}
+
+bool MemorySniffer::FreePhyPages(uint64_t addr) const {
+    size_t count = impl->phyMemoryPages.erase(addr);
+    bool result = false;
+    if (count > 0) {
+        char* pMem = reinterpret_cast<char*>(addr);
+        delete[] pMem;
+        result = true;
+    }
+    return result;
 }
 
 void MemorySniffer::StorePcCount() const {

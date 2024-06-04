@@ -33,6 +33,7 @@
 #include "input_common/drivers/virtual_gamepad.h"
 #include "input_common/main.h"
 #include "common/hex_util.h"
+#include "main.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -187,6 +188,22 @@ public:
 
         if (cmd == "help") {
             m_Widget.ShowHelp(arg);
+            return true;
+        }
+        else if (cmd == "start") {
+            m_Widget.StartGame();
+            return true;
+        }
+        else if (cmd == "pause") {
+            m_Widget.PauseGame();
+            return true;
+        }
+        else if (cmd == "stop") {
+            m_Widget.StopGame();
+            return true;
+        }
+        else if (cmd == "restart") {
+            m_Widget.RestartGame();
             return true;
         }
         else if (cmd == "enablesniffer") {
@@ -585,6 +602,10 @@ private:
 void DataAnalystWidget::InitCmdDocs() {
     //in DataAnalyst
     cmdDocs.insert(std::make_pair("help", "help filter, show commands and apis"));
+    cmdDocs.insert(std::make_pair("start", "start, start or continue game, same as menu"));
+    cmdDocs.insert(std::make_pair("pause", "pause, pause game, same as menu"));
+    cmdDocs.insert(std::make_pair("stop", "stop, stop game, same as menu but no confirm"));
+    cmdDocs.insert(std::make_pair("restart", "restart, restart game, same as menu but no confirm"));
     cmdDocs.insert(std::make_pair("enablesniffer", "enablesniffer"));
     cmdDocs.insert(std::make_pair("disablesniffer", "disablesniffer"));
     cmdDocs.insert(std::make_pair("refresh", "refresh tag, refresh output list"));
@@ -709,7 +730,9 @@ void DataAnalystWidget::ShowHelp(const std::string& filter)const {
 }
 
 DataAnalystWidget::DataAnalystWidget(Core::System& system_, std::shared_ptr<InputCommon::InputSubsystem> input_subsystem_, GRenderWindow* renderWindow_, QWidget* parent)
-    : QDockWidget(tr("&Data Analyst"), parent), system{ system_ }, inputSubSystem{ input_subsystem_ }, renderWindow{ renderWindow_ }, screenImage{}, lastTime(0),
+    : QDockWidget(tr("&Data Analyst"), parent), system{system_}, inputSubSystem{input_subsystem_},
+      mainWindow{static_cast<GMainWindow*>(parent)}, renderWindow{renderWindow_}, screenImage{},
+      lastTime(0),
     screenCaptureInterval(1000), captureEnabled(false), logCaptureTimeConsuming(false), mouseX(0), mouseY(0), maxResultList(16384),
     maxRecords(10), maxHistories(10), maxRollbacks(10),
     paramPackage{ std::make_shared<Common::ParamPackage>() } {
@@ -1557,6 +1580,24 @@ void DataAnalystWidget::SaveResultList(const std::string& file_path) const {
             of << pItem->text().toStdString() << std::endl;
         }
     }
+}
+
+void DataAnalystWidget::StartGame() {
+    mainWindow->OnStartGame();
+}
+
+void DataAnalystWidget::PauseGame() {
+    mainWindow->OnPauseGame();
+}
+
+void DataAnalystWidget::StopGame() {
+    UISettings::values.confirm_before_stopping.SetValue(ConfirmStop::Ask_Never);
+    mainWindow->OnStopGame();
+}
+
+void DataAnalystWidget::RestartGame() {
+    UISettings::values.confirm_before_stopping.SetValue(ConfirmStop::Ask_Never);
+    mainWindow->OnRestartGame();
 }
 
 void DataAnalystWidget::AddLog(const std::string& info) {

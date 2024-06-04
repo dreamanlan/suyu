@@ -165,6 +165,8 @@ class GMainWindow : public QMainWindow {
         CREATE_SHORTCUT_MSGBOX_ERROR,
         CREATE_SHORTCUT_MSGBOX_APPVOLATILE_WARNING,
     };
+    friend class DataAnalystWidget;
+
 public:
     DataAnalystWidget* GetDataAnalystWidget()const {
         return dataAnalystWidget;

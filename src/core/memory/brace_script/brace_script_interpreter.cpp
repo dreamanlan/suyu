@@ -7854,20 +7854,16 @@ protected:
     virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
                                const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
                                Brace::OperandLoadtimeInfo& resultInfo) override {
-        if (argInfos.size() < 3 || argInfos.size() > 5 ||
+        if (argInfos.size() < 2 || argInfos.size() > 3 ||
             argInfos[0].Type < Brace::BRACE_DATA_TYPE_INT8 ||
             argInfos[0].Type > Brace::BRACE_DATA_TYPE_UINT64 ||
             argInfos[1].Type < Brace::BRACE_DATA_TYPE_INT8 ||
             argInfos[1].Type > Brace::BRACE_DATA_TYPE_UINT64 ||
-            argInfos[2].Type < Brace::BRACE_DATA_TYPE_INT8 ||
-            argInfos[2].Type > Brace::BRACE_DATA_TYPE_UINT64 ||
-            (argInfos.size() >= 4 && (argInfos[3].Type < Brace::BRACE_DATA_TYPE_INT8 ||
-                                      argInfos[3].Type > Brace::BRACE_DATA_TYPE_UINT64)) ||
-            (argInfos.size() == 5 && (argInfos[4].Type < Brace::BRACE_DATA_TYPE_INT8 ||
-                                      argInfos[4].Type > Brace::BRACE_DATA_TYPE_UINT64))) {
+            (argInfos.size() == 3 && (argInfos[2].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+                                      argInfos[2].Type > Brace::BRACE_DATA_TYPE_UINT64))) {
             // error
             std::stringstream ss;
-            ss << "expected mapmemory(uint64 addr, uint64 size, uint64_t phy_addr[, uint32_t flag, pid]),"
+            ss << "expected mapmemory(uint64 addr, uint64 size[, pid]),"
                << data.GetId() << " line " << data.GetLine();
             LogError(ss.str());
             return false;
@@ -7884,24 +7880,15 @@ protected:
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
         auto&& argInfo1 = argInfos[0];
         auto&& argInfo2 = argInfos[1];
-        auto&& argInfo3 = argInfos[2];
         uint64_t addr =
             Brace::VarGetU64(argInfo1.IsGlobal ? gvars : lvars, argInfo1.Type, argInfo1.VarIndex);
         uint64_t size =
             Brace::VarGetU64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex);
-        uint64_t phy_addr =
-            Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex);
-        uint32_t flag = static_cast<uint32_t>(Common::MemoryPermission::ReadWrite);
         uint64_t pid = 0;
-        if (argInfos.size() >= 4) {
-            auto&& argInfo4 = argInfos[3];
-            flag = static_cast<uint32_t>(Brace::VarGetI64(argInfo4.IsGlobal ? gvars : lvars,
-                                                         argInfo4.Type, argInfo4.VarIndex));
-        }
-        if (argInfos.size() == 5) {
-            auto&& argInfo5 = argInfos[4];
-            pid = Brace::VarGetU64(argInfo5.IsGlobal ? gvars : lvars, argInfo5.Type,
-                                   argInfo5.VarIndex);
+        if (argInfos.size() == 3) {
+            auto&& argInfo3 = argInfos[2];
+            pid = Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type,
+                                   argInfo3.VarIndex);
         }
 
         bool result = false;
@@ -7910,7 +7897,7 @@ protected:
             auto&& sniffer = system.MemorySniffer();
             auto* pProcess = sniffer.GetProcess(pid);
             if (nullptr != pProcess) {
-                result = sniffer.MapMemory(*pProcess, addr, size, phy_addr, flag);
+                result = sniffer.MapMemory(*pProcess, addr, size);
             }
         }
         Brace::VarSetBool(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, result);
@@ -8033,85 +8020,6 @@ protected:
             }
         }
         Brace::VarSetUInt64(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, result);
-    }
-};
-class AllocPhyPagesExp final : public Brace::SimpleBraceApiBase {
-public:
-    AllocPhyPagesExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
-
-protected:
-    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
-                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
-                               Brace::OperandLoadtimeInfo& resultInfo) override {
-        if (argInfos.size() == 1) {
-            auto& argInfo = argInfos[0];
-            if (Brace::IsSignedType(argInfo.Type) || Brace::IsUnsignedType(argInfo.Type)) {
-                resultInfo.Type = Brace::BRACE_DATA_TYPE_UINT64;
-                resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
-                resultInfo.Name = GenTempVarName();
-                resultInfo.VarIndex =
-                    AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
-                return true;
-            }
-        }
-        std::stringstream ss;
-        ss << "expected allocphypages(uint64_t n_pages) ! line: " << data.GetLine();
-        LogError(ss.str());
-        return false;
-    }
-    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
-                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
-                         const Brace::OperandRuntimeInfo& resultInfo) const override {
-        auto& argInfo = argInfos[0];
-        uint64_t n_pages =
-            Brace::VarGetU64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex);
-        uint64_t addr = 0;
-        if (nullptr != g_pApiProvider) {
-            auto&& system = g_pApiProvider->GetSystem();
-            auto&& sniffer = system.MemorySniffer();
-            addr = sniffer.AllocPhyPages(n_pages);
-        }
-        Brace::VarSetUInt64((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex,
-                            addr);
-    }
-};
-class FreePhyPagesExp final : public Brace::SimpleBraceApiBase {
-public:
-    FreePhyPagesExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
-
-protected:
-    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
-                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
-                               Brace::OperandLoadtimeInfo& resultInfo) override {
-        if (argInfos.size() == 1) {
-            auto& argInfo = argInfos[0];
-            if (Brace::IsSignedType(argInfo.Type) || Brace::IsUnsignedType(argInfo.Type)) {
-                resultInfo.Type = Brace::BRACE_DATA_TYPE_BOOL;
-                resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
-                resultInfo.Name = GenTempVarName();
-                resultInfo.VarIndex =
-                    AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
-                return true;
-            }
-        }
-        std::stringstream ss;
-        ss << "expected allocphypages(uint64_t addr) ! line: " << data.GetLine();
-        LogError(ss.str());
-        return false;
-    }
-    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
-                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
-                         const Brace::OperandRuntimeInfo& resultInfo) const override {
-        auto& argInfo = argInfos[0];
-        uint64_t addr =
-            Brace::VarGetU64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex);
-        bool result = false;
-        if (nullptr != g_pApiProvider) {
-            auto&& system = g_pApiProvider->GetSystem();
-            auto&& sniffer = system.MemorySniffer();
-            result = sniffer.FreePhyPages(addr);
-        }
-        Brace::VarSetBool((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, result);
     }
 };
 class AddLogInstructionExp final : public Brace::SimpleBraceApiBase {
@@ -11372,18 +11280,16 @@ inline void BraceScriptManager::InitBraceScript(Brace::BraceScript*& pBraceScrip
                               new Brace::BraceApiFactory<DumpMemoryExp>());
     pBraceScript->RegisterApi("loadmemory", "loadmemory(addr,size,file_path[,pid])",
                               new Brace::BraceApiFactory<LoadMemoryExp>());
-    pBraceScript->RegisterApi("protectmemory", "protectmemory(addr,size,flag[,pid]),flag:1-read 2-write 3-readwrite 4-execute",
-                              new Brace::BraceApiFactory<ProtectMemoryExp>());
-    pBraceScript->RegisterApi("mapmemory", "mapmemory(addr,size,phy_addr[,flag,pid]),flag:1-read 2-write 3-readwrite 4-execute,def is readwrite",
+    pBraceScript->RegisterApi(
+        "protectmemory",
+        "protectmemory(addr,size,flag[,pid]),flag:1-read 2-write 3-readwrite 4-execute",
+        new Brace::BraceApiFactory<ProtectMemoryExp>());
+    pBraceScript->RegisterApi("mapmemory", "mapmemory(addr,size[,pid])",
                               new Brace::BraceApiFactory<MapMemoryExp>());
     pBraceScript->RegisterApi("unmapmemory", "unmapmemory(addr,size[,pid])",
                               new Brace::BraceApiFactory<UnmapMemoryExp>());
     pBraceScript->RegisterApi("findunmappedmemory", "findunmappedmemory(addr,size,expect_size[,pid])",
                               new Brace::BraceApiFactory<FindUnmappedMemoryExp>());
-    pBraceScript->RegisterApi("allocphypages", "allocphypages(n_pages)",
-                              new Brace::BraceApiFactory<AllocPhyPagesExp>());
-    pBraceScript->RegisterApi("freephypages", "freephypages(addr)",
-                              new Brace::BraceApiFactory<FreePhyPagesExp>());
 
     pBraceScript->RegisterApi("addloginst", "addloginst(mask, value), all type is int32",
                               new Brace::BraceApiFactory<AddLogInstructionExp>());

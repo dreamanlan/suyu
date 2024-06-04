@@ -31,6 +31,7 @@ namespace InputCommon {
     class InputSubsystem;
 }
 class GRenderWindow;
+class GMainWindow;
 
 //class BraceApiProvider;
 class DataAnalystWidget : public QDockWidget {
@@ -128,10 +129,16 @@ private:
     void ShowMotionParam(int index);
     void ShowInputState();
     void SaveResultList(const std::string& file_path) const;
+    void StartGame();
+    void PauseGame();
+    void StopGame();
+    void RestartGame();
+
 private:
     Core::System& system;
     std::shared_ptr<InputCommon::InputSubsystem> inputSubSystem;
     QTimer updateTimer;
+    GMainWindow* mainWindow;
     GRenderWindow* renderWindow;
     QImage screenImage;
     uint64_t lastTime;

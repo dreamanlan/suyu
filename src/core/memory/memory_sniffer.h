@@ -164,13 +164,10 @@ public://call by user
     bool LoadMemory(Kernel::KProcess& process, uint64_t addr, uint64_t size,
                     std::istream& is) const;
     bool ProtectMemory(Kernel::KProcess& process, uint64_t addr, uint64_t size, int flag) const;
-    bool MapMemory(Kernel::KProcess& process, uint64_t addr, uint64_t size, uint64_t phy_addr,
-                   int flag) const;
+    bool MapMemory(Kernel::KProcess& process, uint64_t addr, uint64_t size) const;
     bool UnmapMemory(Kernel::KProcess& process, uint64_t addr, uint64_t size) const;
     uint64_t FindUnmapMemory(Kernel::KProcess& process, uint64_t addr, uint64_t size,
                              uint64_t expect_size) const;
-    uint64_t AllocPhyPages(uint64_t n_pages) const;
-    bool FreePhyPages(uint64_t addr) const;
 
     void StorePcCount()const;
     void KeepPcCount()const;

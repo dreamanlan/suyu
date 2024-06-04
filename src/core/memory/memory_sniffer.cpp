@@ -45,7 +45,6 @@ using PcCountInfo = std::unordered_map<uint64_t, uint64_t>;
 using PcCountMap = std::map<uint64_t, uint64_t>;
 // pair<mask,value>, log when inst_op & mask == value
 using LogInstructions = std::vector<std::pair<uint32_t, uint32_t>>;
-using PhyMemories = std::unordered_set<uint64_t>;
 
 static inline u32 BreakPointInstructionOn32() {
     // A32: trap
@@ -202,8 +201,6 @@ struct MemorySniffer::Impl {
     MemoryModifyInfoMap resultMemModifyInfo;
     MemoryModifyInfoList historyMemModifyInfos;
     MemoryModifyInfoList rollbackMemModifyInfos;
-
-    PhyMemories phyMemoryPages;
 };
 
 MemorySniffer::MemorySniffer(Core::System& system_) : system{system_} {
@@ -211,11 +208,6 @@ MemorySniffer::MemorySniffer(Core::System& system_) : system{system_} {
 }
 
 MemorySniffer::~MemorySniffer() {
-    for (auto&& addr : impl->phyMemoryPages) {
-        char* pMem = reinterpret_cast<char*>(addr);
-        delete[] pMem;
-    }
-    impl->phyMemoryPages.clear();
 }
 
 void MemorySniffer::Initialize() {
@@ -1973,21 +1965,32 @@ bool MemorySniffer::ProtectMemory(Kernel::KProcess& process, uint64_t addr, uint
     return succ;
 }
 
-bool MemorySniffer::MapMemory(Kernel::KProcess& process, uint64_t addr, uint64_t size,
-                              uint64_t phy_addr, int flag) const {
-    auto&& memory = process.GetMemory();
+bool MemorySniffer::MapMemory(Kernel::KProcess& process, uint64_t addr, uint64_t size) const {
     bool succ = false;
-    auto&& hostmem = system.DeviceMemory().buffer;
-    if (hostmem.IsInVirtualRange(reinterpret_cast<void*>(addr)) &&
-        hostmem.IsInVirtualRange(reinterpret_cast<void*>(addr + size - sizeof(void*)))) {
-        addr &= ~SUYU_PAGEMASK;
-        uint64_t mod = size % SUYU_PAGESIZE;
-        if (mod > 0) {
-            size += SUYU_PAGESIZE - mod;
+    addr &= ~SUYU_PAGEMASK;
+    uint64_t mod = size % SUYU_PAGESIZE;
+    if (mod > 0) {
+        size += SUYU_PAGESIZE - mod;
+    }
+    bool canMap = process.GetPageTable().Contains(addr, size);
+    if (canMap) {
+        auto* curThread = system.Kernel().GetCurrentEmuThread();
+        if (curThread) {
+            curThread->TrySuspend();
         }
-        memory.MapMemoryRegion(process.GetPageTable().GetImpl(), addr, size, phy_addr,
-                               static_cast<Common::MemoryPermission>(flag), true);
-        succ = true;
+        for (int i = 0; i < Core::Hardware::NUM_CPU_CORES; ++i) {
+            auto* runningThread = process.GetRunningThread(i);
+            if (nullptr != runningThread) {
+                Kernel::SetCurrentThread(system.Kernel(), runningThread);
+                break;
+            }
+        }
+        auto&& result = process.GetPageTable().MapPhysicalMemory(addr, size);
+        succ = result.IsSuccess();
+        if (curThread) {
+            curThread->Resume(Kernel::SuspendType::Thread);
+            Kernel::SetCurrentThread(system.Kernel(), curThread);
+        }
     }
     return succ;
 }
@@ -2001,8 +2004,23 @@ bool MemorySniffer::UnmapMemory(Kernel::KProcess& process, uint64_t addr, uint64
         if (mod > 0) {
             size += SUYU_PAGESIZE - mod;
         }
-        memory.UnmapRegion(process.GetPageTable().GetImpl(), addr, size, true);
-        succ = true;
+        auto* curThread = system.Kernel().GetCurrentEmuThread();
+        if (curThread) {
+            curThread->TrySuspend();
+        }
+        for (int i = 0; i < Core::Hardware::NUM_CPU_CORES; ++i) {
+            auto* runningThread = process.GetRunningThread(i);
+            if (nullptr != runningThread) {
+                Kernel::SetCurrentThread(system.Kernel(), runningThread);
+                break;
+            }
+        }
+        auto&& result = process.GetPageTable().UnmapPhysicalMemory(addr, size);
+        if (curThread) {
+            curThread->Resume(Kernel::SuspendType::Thread);
+            Kernel::SetCurrentThread(system.Kernel(), curThread);
+        }
+        succ = result.IsSuccess();
     }
     return succ;
 }
@@ -2026,27 +2044,6 @@ uint64_t MemorySniffer::FindUnmapMemory(Kernel::KProcess& process, uint64_t addr
         }
     }
     return 0;
-}
-
-uint64_t MemorySniffer::AllocPhyPages(uint64_t n_pages) const {
-    uint64_t addr = 0;
-    char* pMem = new char[n_pages * SUYU_PAGESIZE];
-    if (nullptr != pMem) {
-        addr = reinterpret_cast<uint64_t>(pMem);
-        impl->phyMemoryPages.insert(addr);
-    }
-    return addr;
-}
-
-bool MemorySniffer::FreePhyPages(uint64_t addr) const {
-    size_t count = impl->phyMemoryPages.erase(addr);
-    bool result = false;
-    if (count > 0) {
-        char* pMem = reinterpret_cast<char*>(addr);
-        delete[] pMem;
-        result = true;
-    }
-    return result;
 }
 
 void MemorySniffer::StorePcCount() const {

@@ -376,8 +376,7 @@ bool MemorySniffer::AddBreakPoint(Kernel::KProcess& process, uint64_t addr) {
     if (process.GetMemory().IsValidVirtualAddressRange(addr, sizeof(u32))) {
         std::scoped_lock<std::mutex> lock(g_breakpoint_lock);
 
-        auto&& phyCore = system.CurrentPhysicalCore();
-        bool is32 = phyCore.IsAArch32();
+        bool is32 = process.GetArmInterface(0)->GetArchitecture() == Architecture::AArch32;
         impl->breakPointInfo[addr] = process.GetMemory().Read32(addr);
         process.GetMemory().Write32(addr, is32 ? BreakPointInstructionOn32()
                                                       : BreakPointInstructionOn64());
@@ -411,8 +410,7 @@ bool MemorySniffer::EnableBreakPoint(Kernel::KProcess& process, uint64_t addr) {
     auto&& it = impl->breakPointInfo.find(addr);
     if (it != impl->breakPointInfo.end()) {
         if (process.GetMemory().IsValidVirtualAddressRange(addr, sizeof(u32))) {
-            auto&& phyCore = system.CurrentPhysicalCore();
-            bool is32 = phyCore.IsAArch32();
+            bool is32 = process.GetArmInterface(0)->GetArchitecture() == Architecture::AArch32;
             process.GetMemory().Write32(addr, is32 ? BreakPointInstructionOn32()
                                                           : BreakPointInstructionOn64());
             Core::InvalidateInstructionCacheRange(&process, addr, sizeof(u32));

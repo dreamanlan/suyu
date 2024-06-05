@@ -120,13 +120,11 @@ void PhysicalCore::RunThread(Kernel::KThread* thread) {
                 }
             }
 
-            if (((m_tracing || m_addrForEnableBreakPoint != 0) && isInScope &&
-                 stepCount < system.MemorySniffer().GetMaxStepCount() &&
-                 system.MemorySniffer().IsTraceProcess(*process)) ||
-                thread->GetStepState() == StepState::StepPending) {
+            bool tracing = m_tracing && isInScope && stepCount < system.MemorySniffer().GetMaxStepCount() && system.MemorySniffer().IsTraceProcess(*process);
+            bool bp = m_addrForEnableBreakPoint != 0 && system.MemorySniffer().IsTraceProcess(*process);
+            if (tracing || bp || thread->GetStepState() == StepState::StepPending) {
                 hr = interface->StepThread(thread);
                 interface->GetContext(ctx);
-                ++stepCount;
 
                 if (True(hr & Core::HaltReason::StepThread)) {
                     if (m_tracing || m_addrForEnableBreakPoint != 0)
@@ -134,9 +132,10 @@ void PhysicalCore::RunThread(Kernel::KThread* thread) {
                     else
                         thread->SetStepState(StepState::StepPerformed);
                 }
-
+                if(tracing)
+                    ++stepCount;
                 u64 pc = ctx.pc;
-                if (m_addrForEnableBreakPoint != 0 && m_addrForEnableBreakPoint != pc) {
+                if (bp && m_addrForEnableBreakPoint != pc) {
                     system.MemorySniffer().EnableBreakPoint(*process, m_addrForEnableBreakPoint);
                     m_addrForEnableBreakPoint = 0;
                 }
@@ -170,6 +169,7 @@ void PhysicalCore::RunThread(Kernel::KThread* thread) {
         if (breakpoint || prefetch_abort) {
             if (breakpoint) {
                 interface->RewindBreakpointInstruction();
+                interface->GetContext(ctx);
             }
             u64 pc = ctx.pc;
             if (system.MemorySniffer().IsBreakPoint(pc) &&

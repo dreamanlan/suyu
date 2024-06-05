@@ -8022,6 +8022,35 @@ protected:
         Brace::VarSetUInt64(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, result);
     }
 };
+class IsGameStartedExp final : public Brace::SimpleBraceApiBase {
+public:
+    IsGameStartedExp(Brace::BraceScript& interpreter)
+        : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        resultInfo.Type = Brace::BRACE_DATA_TYPE_BOOL;
+        resultInfo.Name = GenTempVarName();
+        resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+        resultInfo.VarIndex =
+            AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+        return true;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        bool result = false;
+        if (nullptr != g_pApiProvider) {
+            auto&& system = g_pApiProvider->GetSystem();
+            auto* pAppProc = system.ApplicationProcess();
+            auto* pCurThread = Kernel::GetCurrentThreadPointer(system.Kernel());
+            result = nullptr != pAppProc && nullptr != pCurThread;
+        }
+        Brace::VarSetBool(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, result);
+    }
+};
 class AddLogInstructionExp final : public Brace::SimpleBraceApiBase {
 public:
     AddLogInstructionExp(Brace::BraceScript& interpreter)
@@ -11290,6 +11319,8 @@ inline void BraceScriptManager::InitBraceScript(Brace::BraceScript*& pBraceScrip
                               new Brace::BraceApiFactory<UnmapMemoryExp>());
     pBraceScript->RegisterApi("findunmappedmemory", "findunmappedmemory(addr,size,expect_size[,pid])",
                               new Brace::BraceApiFactory<FindUnmappedMemoryExp>());
+    pBraceScript->RegisterApi("isgamestarted", "isgamestarted(), check if game is started",
+                              new Brace::BraceApiFactory<IsGameStartedExp>());
 
     pBraceScript->RegisterApi("addloginst", "addloginst(mask, value), all type is int32",
                               new Brace::BraceApiFactory<AddLogInstructionExp>());

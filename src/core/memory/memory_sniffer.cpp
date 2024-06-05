@@ -1974,21 +1974,19 @@ bool MemorySniffer::MapMemory(Kernel::KProcess& process, uint64_t addr, uint64_t
     }
     bool canMap = process.GetPageTable().Contains(addr, size);
     if (canMap) {
-        auto* curThread = system.Kernel().GetCurrentEmuThread();
+        auto* curThread = Kernel::GetCurrentThreadPointer(system.Kernel());
         if (curThread) {
-            curThread->TrySuspend();
-        }
-        for (u32 i = 0; i < Core::Hardware::NUM_CPU_CORES; ++i) {
-            auto* runningThread = process.GetRunningThread(i);
-            if (nullptr != runningThread) {
-                Kernel::SetCurrentThread(system.Kernel(), runningThread);
-                break;
+            system.Pause();
+            for (u32 i = 0; i < Core::Hardware::NUM_CPU_CORES; ++i) {
+                auto* runningThread = process.GetRunningThread(i);
+                if (nullptr != runningThread) {
+                    Kernel::SetCurrentThread(system.Kernel(), runningThread);
+                    break;
+                }
             }
-        }
-        auto&& result = process.GetPageTable().MapPhysicalMemory(addr, size);
-        succ = result.IsSuccess();
-        if (curThread) {
-            curThread->Resume(Kernel::SuspendType::Thread);
+            auto&& result = process.GetPageTable().MapPhysicalMemory(addr, size);
+            succ = result.IsSuccess();
+            system.Run();
             Kernel::SetCurrentThread(system.Kernel(), curThread);
         }
     }
@@ -2004,23 +2002,21 @@ bool MemorySniffer::UnmapMemory(Kernel::KProcess& process, uint64_t addr, uint64
         if (mod > 0) {
             size += SUYU_PAGESIZE - mod;
         }
-        auto* curThread = system.Kernel().GetCurrentEmuThread();
+        auto* curThread = Kernel::GetCurrentThreadPointer(system.Kernel());
         if (curThread) {
-            curThread->TrySuspend();
-        }
-        for (u32 i = 0; i < Core::Hardware::NUM_CPU_CORES; ++i) {
-            auto* runningThread = process.GetRunningThread(i);
-            if (nullptr != runningThread) {
-                Kernel::SetCurrentThread(system.Kernel(), runningThread);
-                break;
+            system.Pause();
+            for (u32 i = 0; i < Core::Hardware::NUM_CPU_CORES; ++i) {
+                auto* runningThread = process.GetRunningThread(i);
+                if (nullptr != runningThread) {
+                    Kernel::SetCurrentThread(system.Kernel(), runningThread);
+                    break;
+                }
             }
-        }
-        auto&& result = process.GetPageTable().UnmapPhysicalMemory(addr, size);
-        if (curThread) {
-            curThread->Resume(Kernel::SuspendType::Thread);
+            auto&& result = process.GetPageTable().UnmapPhysicalMemory(addr, size);
+            succ = result.IsSuccess();
+            system.Run();
             Kernel::SetCurrentThread(system.Kernel(), curThread);
         }
-        succ = result.IsSuccess();
     }
     return succ;
 }

@@ -3212,7 +3212,7 @@ void GMainWindow::OnMenuLoadFolder() {
         BootGame(dir.path() + QDir::separator() + matching_main[0], ApplicationAppletParameters());
     } else {
         QMessageBox::warning(this, tr("Invalid Directory Selected"),
-                             tr("The directory you have selected does not contain a 'main' file."));
+                             tr("The Extracted ROM directory you have selected does not contain a 'main' file. Or you should use 'Add New Game Directory' in the game list window to add XCI/NSP to the game list. count main:") + QString::number(matching_main.size()));
     }
 }
 

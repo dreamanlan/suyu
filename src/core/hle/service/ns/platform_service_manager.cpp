@@ -147,6 +147,7 @@ IPlatformServiceManager::IPlatformServiceManager(Core::System& system_, const ch
         {104, nullptr, "RequestApplicationFunctionAuthorizationByProgramId"},
         {105, nullptr, "GetFunctionBlackListSystemVersionToAuthorize"},
         {106, nullptr, "GetFunctionBlackListVersion"},
+        {107, nullptr, "RequestApplicationFunctionAuthorizationByApplicationIdAndProgramId"}, // 17.0.0+
         {1000, nullptr, "LoadNgWordDataForPlatformRegionChina"},
         {1001, nullptr, "GetNgWordDataSizeForPlatformRegionChina"},
     };

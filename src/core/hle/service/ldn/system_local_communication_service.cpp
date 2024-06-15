@@ -21,6 +21,7 @@ ISystemLocalCommunicationService::ISystemLocalCommunicationService(Core::System&
             {102, nullptr, "Scan"},
             {103, nullptr, "ScanPrivate"},
             {104, nullptr, "SetWirelessControllerRestriction"},
+            {106, nullptr, "Unknown106"}, // 18.0.0+
             {200, nullptr, "OpenAccessPoint"},
             {201, nullptr, "CloseAccessPoint"},
             {202, nullptr, "CreateNetwork"},

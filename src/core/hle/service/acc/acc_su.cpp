@@ -50,11 +50,20 @@ ACC_SU::ACC_SU(std::shared_ptr<Module> module_, std::shared_ptr<ProfileManager> 
         {210, nullptr, "CreateFloatingRegistrationRequest"},
         {211, nullptr, "CreateProcedureToRegisterUserWithNintendoAccount"},
         {212, nullptr, "ResumeProcedureToRegisterUserWithNintendoAccount"},
+        {213, nullptr, "CreateProcedureToCreateUserWithNintendoAccount"}, // 17.0.0+
+        {214, nullptr, "ResumeProcedureToCreateUserWithNintendoAccount"}, // 17.0.0+
+        {215, nullptr, "ResumeProcedureToCreateUserWithNintendoAccountAfterApplyResponse"}, // 17.0.0+
         {230, nullptr, "AuthenticateServiceAsync"},
         {250, nullptr, "GetBaasAccountAdministrator"},
         {290, nullptr, "ProxyProcedureForGuestLoginWithNintendoAccount"},
         {291, nullptr, "ProxyProcedureForFloatingRegistrationWithNintendoAccount"},
         {299, nullptr, "SuspendBackgroundDaemon"},
+        {400, nullptr, "SetPinCode"}, // 18.0.0+
+        {401, nullptr, "GetPinCodeLength"}, // 18.0.0+
+        {402, nullptr, "GetPinCode"}, // 18.0.0+
+        {410, nullptr, "GetPinCodeErrorCount"}, // 18.0.0+
+        {411, nullptr, "ResetPinCodeErrorCount"}, // 18.0.0+
+        {412, nullptr, "IncrementPinCodeErrorCount"}, // 18.0.0+
         {900, nullptr, "SetUserUnqualifiedForDebug"},
         {901, nullptr, "UnsetUserUnqualifiedForDebug"},
         {902, nullptr, "ListUsersUnqualifiedForDebug"},

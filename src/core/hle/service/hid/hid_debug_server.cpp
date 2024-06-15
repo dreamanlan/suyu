@@ -32,6 +32,7 @@ IHidDebugServer::IHidDebugServer(Core::System& system_, std::shared_ptr<Resource
         {15, C<&IHidDebugServer::ForceStopTouchScreenManagement>, "ForceStopTouchScreenManagement"},
         {16, C<&IHidDebugServer::ForceRestartTouchScreenManagement>, "ForceRestartTouchScreenManagement"},
         {17, C<&IHidDebugServer::IsTouchScreenManaged>, "IsTouchScreenManaged"},
+        {18, nullptr, "SetTouchScreenAutoPilotStateWithAruid"}, // 18.0.0+
         {20, nullptr, "DeactivateMouse"},
         {21, nullptr, "SetMouseAutoPilotState"},
         {22, nullptr, "UnsetMouseAutoPilotState"},
@@ -88,6 +89,7 @@ IHidDebugServer::IHidDebugServer(Core::System& system_, std::shared_ptr<Resource
         {211, nullptr, "StartFirmwareUpdateIndividual"},
         {215, nullptr, "SetUsbFirmwareForceUpdateEnabled"},
         {216, nullptr, "SetAllKuinaDevicesToFirmwareUpdateMode"},
+        {217, nullptr, "StartFirmwareUpdateFromImageSet"}, // 17.0.0+
         {221, nullptr, "UpdateControllerColor"},
         {222, nullptr, "ConnectUsbPadsAsync"},
         {223, nullptr, "DisconnectUsbPadsAsync"},
@@ -135,6 +137,8 @@ IHidDebugServer::IHidDebugServer(Core::System& system_, std::shared_ptr<Resource
         {331, nullptr, "DetachHdlsVirtualDevice"},
         {332, nullptr, "SetHdlsState"},
         {350, nullptr, "AddRegisteredDevice"},
+        {351, nullptr, "GetRegisteredDevicesCountDebug"}, // 17.0.0+
+        {352, nullptr, "DeleteRegisteredDevicesDebug"}, // 17.0.0+
         {400, nullptr, "DisableExternalMcuOnNxDevice"},
         {401, nullptr, "DisableRailDeviceFiltering"},
         {402, nullptr, "EnableWiredPairing"},
@@ -146,6 +150,22 @@ IHidDebugServer::IHidDebugServer(Core::System& system_, std::shared_ptr<Resource
         {551, nullptr, "GetAnalogStickModelData"},
         {552, nullptr, "ResetAnalogStickModelData"},
         {600, nullptr, "ConvertPadState"},
+        {601, nullptr, "IsButtonConfigSupported"}, // 18.0.0+
+        {602, nullptr, "IsButtonConfigEmbeddedSupported"}, // 18.0.0+
+        {603, nullptr, "DeleteButtonConfig"}, // 18.0.0+
+        {604, nullptr, "DeleteButtonConfigEmbedded"}, // 18.0.0+
+        {605, nullptr, "SetButtonConfigEnabled"}, // 18.0.0+
+        {606, nullptr, "SetButtonConfigEmbeddedEnabled"}, // 18.0.0+
+        {607, nullptr, "IsButtonConfigEnabled"}, // 18.0.0+
+        {608, nullptr, "IsButtonConfigEmbeddedEnabled"}, // 18.0.0+
+        {609, nullptr, "SetButtonConfigEmbedded"}, // 18.0.0+
+        {610, nullptr, "SetButtonConfigFull"}, // 18.0.0+
+        {611, nullptr, "SetButtonConfigLeft"}, // 18.0.0+
+        {612, nullptr, "SetButtonConfigRight"}, // 18.0.0+
+        {613, nullptr, "GetButtonConfigEmbedded"}, // 18.0.0+
+        {614, nullptr, "GetButtonConfigFull"}, // 18.0.0+
+        {615, nullptr, "GetButtonConfigLeft"}, // 18.0.0+
+        {616, nullptr, "GetButtonConfigRight"}, // 18.0.0+
         {650, nullptr, "AddButtonPlayData"},
         {651, nullptr, "StartButtonPlayData"},
         {652, nullptr, "StopButtonPlayData"},

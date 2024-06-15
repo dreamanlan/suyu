@@ -25,7 +25,7 @@ public:
             {5, C<&INpnsSystem::GetReceiveEvent>, "GetReceiveEvent"},
             {6, nullptr, "ListenUndelivered"},
             {7, nullptr, "GetStateChangeEvent"},
-            {8, nullptr, "ListenToByName"}, // 18.0.0+
+            {8, C<&INpnsSystem::ListenToByName>, "ListenToByName"}, // 18.0.0+
             {11, nullptr, "SubscribeTopic"},
             {12, nullptr, "UnsubscribeTopic"},
             {13, nullptr, "QueryIsTopicExist"},
@@ -57,11 +57,11 @@ public:
             {51, nullptr, "DeleteDigitalTwinKeyValue"}, // 18.0.0+
             {101, nullptr, "Suspend"},
             {102, nullptr, "Resume"},
-            {103, nullptr, "GetState"},
+            {103, C<&INpnsSystem::GetState>, "GetState"},
             {104, nullptr, "GetStatistics"},
             {105, nullptr, "GetPlayReportRequestEvent"},
-            {106, nullptr, "GetLastNotifiedTime"},
-            {107, nullptr, "SetLastNotifiedTime"},
+            {106, C<&INpnsSystem::GetLastNotifiedTime>, "GetLastNotifiedTime"}, // 18.0.0+
+            {107, nullptr, "SetLastNotifiedTime"}, // 18.0.0+
             {111, nullptr, "GetJid"},
             {112, nullptr, "CreateJid"},
             {113, nullptr, "DestroyJid"},
@@ -106,6 +106,21 @@ private:
         LOG_WARNING(Service_AM, "(STUBBED) called");
 
         *out_event = &get_receive_event->GetReadableEvent();
+        R_SUCCEED();
+    }
+
+    Result ListenToByName() {
+        LOG_WARNING(Service_AM, "(STUBBED) called");
+        R_SUCCEED();
+    }
+
+    Result GetState() {
+        LOG_WARNING(Service_AM, "(STUBBED) called");
+        R_SUCCEED();
+    }
+
+    Result GetLastNotifiedTime() {
+        LOG_WARNING(Service_AM, "(STUBBED) called");
         R_SUCCEED();
     }
 

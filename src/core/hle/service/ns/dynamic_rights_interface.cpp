@@ -34,6 +34,7 @@ IDynamicRightsInterface::IDynamicRightsInterface(Core::System& system_)
         {23, nullptr, "GetLimitedApplicationLicenseUpgradableEvent"},
         {24, nullptr, "NotifyLimitedApplicationLicenseUpgradableEventForDebug"},
         {25, nullptr, "RequestProceedDynamicRightsState"},
+        {26, nullptr, "HasAccountRestrictedRightsInRunningApplications"} // 18.0.0+
     };
     // clang-format on
 

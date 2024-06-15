@@ -17,6 +17,7 @@ public:
             {1, nullptr, "OpenContinuousRecorder"},
             {2, nullptr, "OpenGameMovieTrimmer"},
             {3, nullptr, "OpenOffscreenRecorder"},
+            {10, nullptr, "Unknown10"}, // 18.0.0+
             {101, nullptr, "CreateMovieMaker"},
             {9903, nullptr, "SetOffscreenRecordingMarker"}
         };

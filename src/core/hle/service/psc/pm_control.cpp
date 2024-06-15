@@ -15,6 +15,7 @@ IPmControl::IPmControl(Core::System& system_) : ServiceFramework{system_, "psc:c
         {4, nullptr, "Cancel"},
         {5, nullptr, "PrintModuleInformation"},
         {6, nullptr, "GetModuleInformation"},
+        {7, nullptr, "SetRandomDelay"}, // 17.0.0+
         {10, nullptr, "AcquireStateLock"},
         {11, nullptr, "HasStateLock"},
     };

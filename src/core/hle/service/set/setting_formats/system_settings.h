@@ -327,6 +327,8 @@ struct SystemSettings {
 
     // nn::settings::system::NxControllerSettings
     std::array<std::array<u8, 0x800>, 10> nx_controller_settings_data_from_offset_30;
+
+    RebootlessSystemUpdateVersion rebootless_system_version;
 };
 
 static_assert(offsetof(SystemSettings, language_code) == 0x10);
@@ -384,7 +386,7 @@ static_assert(offsetof(SystemSettings, device_nick_name) == 0x2A950);
 static_assert(offsetof(SystemSettings, bluetooth_device_settings_last_14) == 0x2AAA0);
 static_assert(offsetof(SystemSettings, nx_controller_settings_data_from_offset_30) == 0x2E6A0);
 
-static_assert(sizeof(SystemSettings) == 0x336A0, "SystemSettings has the wrong size!");
+static_assert(sizeof(SystemSettings) == 0x336E0, "SystemSettings has the wrong size!");
 
 SystemSettings DefaultSystemSettings();
 

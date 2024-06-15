@@ -70,6 +70,8 @@ public:
             {9, nullptr, "SetMinVClockRate"},
             {10, nullptr, "GetPossibleClockRates"},
             {11, nullptr, "GetDvfsTable"},
+            {14, nullptr, "Unknown14"}, // 18.0.0+
+            {15, nullptr, "Unknown15"} // 18.0.0+
         };
         // clang-format on
         RegisterHandlers(functions);

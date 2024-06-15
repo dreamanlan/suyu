@@ -57,6 +57,14 @@ public:
             {38, nullptr, "OwnTicket3"},
             {39, nullptr, "DeleteAllInactivePersonalizedTicket"},
             {40, nullptr, "DeletePrepurchaseRecordByNintendoAccountId"},
+            {101, nullptr, "Unknown101"}, // 18.0.0+
+            {102, nullptr, "Unknown102"}, // 18.0.0+
+            {103, nullptr, "Unknown103"}, // 18.0.0+
+            {104, nullptr, "Unknown104"}, // 18.0.0+
+            {201, nullptr, "Unknown201"}, // 18.0.0+
+            {202, nullptr, "Unknown202"}, // 18.0.0+
+            {203, nullptr, "Unknown203"}, // 18.0.0+
+            {204, nullptr, "Unknown204"}, // 18.0.0+
             {501, nullptr, "Unknown501"},
             {502, nullptr, "Unknown502"},
             {503, nullptr, "GetTitleKey"},
@@ -85,6 +93,12 @@ public:
             {1019, nullptr, "Unknown1019"},
             {1020, nullptr, "Unknown1020"},
             {1021, nullptr, "Unknown1021"},
+            {1023, nullptr, "Unknown1023"}, // 17.0.0+
+            {1024, nullptr, "Unknown1024"}, // 17.0.0+
+            {1025, nullptr, "Unknown1025"}, // 17.0.0+
+            {1026, nullptr, "Unknown1026"}, // 17.0.0+
+            {1027, nullptr, "Unknown1027"}, // 17.0.0+
+            {1028, nullptr, "Unknown1028"}, // 18.0.0+
             {1501, nullptr, "Unknown1501"},
             {1502, nullptr, "Unknown1502"},
             {1503, nullptr, "Unknown1503"},

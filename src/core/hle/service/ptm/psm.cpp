@@ -137,6 +137,8 @@ PSM::PSM(Core::System& system_) : ServiceFramework{system_, "psm"} {
         {16, nullptr, "GetBatteryChargeInfoEvent"},
         {17, nullptr, "GetBatteryChargeInfoFields"},
         {18, nullptr, "GetBatteryChargeCalibratedEvent"},
+        {19, nullptr, "Unknown19"}, // 18.0.0+
+        {20, nullptr, "Unknown20"} // 18.0.0+
     };
     // clang-format on
 

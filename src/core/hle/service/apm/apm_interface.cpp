@@ -109,6 +109,7 @@ APM_Sys::APM_Sys(Core::System& system_, Controller& controller_)
         {5, nullptr, "LoadAndApplySettings"},
         {6, &APM_Sys::SetCpuBoostMode, "SetCpuBoostMode"},
         {7, &APM_Sys::GetCurrentPerformanceConfiguration, "GetCurrentPerformanceConfiguration"},
+        {8, nullptr, "GetCurrentPerformanceMode"} // 17.0.0+
     };
     // clang-format on
 

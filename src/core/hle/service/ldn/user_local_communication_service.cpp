@@ -36,6 +36,7 @@ IUserLocalCommunicationService::IUserLocalCommunicationService(Core::System& sys
             {102, C<&IUserLocalCommunicationService::Scan>, "Scan"},
             {103, C<&IUserLocalCommunicationService::ScanPrivate>, "ScanPrivate"},
             {104, C<&IUserLocalCommunicationService::SetWirelessControllerRestriction>, "SetWirelessControllerRestriction"},
+            {106, nullptr, "Unknown106"}, // 18.0.0+
             {200, C<&IUserLocalCommunicationService::OpenAccessPoint>, "OpenAccessPoint"},
             {201, C<&IUserLocalCommunicationService::CloseAccessPoint>, "CloseAccessPoint"},
             {202, C<&IUserLocalCommunicationService::CreateNetwork>, "CreateNetwork"},
@@ -54,13 +55,13 @@ IUserLocalCommunicationService::IUserLocalCommunicationService(Core::System& sys
             {400, C<&IUserLocalCommunicationService::Initialize>, "Initialize"},
             {401, C<&IUserLocalCommunicationService::Finalize>, "Finalize"},
             {402, C<&IUserLocalCommunicationService::Initialize2>, "Initialize2"}, // 7.0.0+
-            {500, nullptr, "EnableActionFrame"}, // 18.0.0+
-            {501, nullptr, "DisableActionFrame"}, // 18.0.0+
-            {502, nullptr, "SendActionFrame"}, // 18.0.0+
-            {503, nullptr, "RecvActionFrame"}, // 18.0.0+
-            {505, nullptr, "SetHomeChannel"}, // 18.0.0+
-            {600, nullptr, "SetTxPower"}, // 18.0.0+
-            {601, nullptr, "ResetTxPower"} // 18.0.0+
+            {500, nullptr, "Unknown500"}, // 18.0.0+
+            {501, nullptr, "Unknown501"}, // 18.0.0+
+            {502, nullptr, "Unknown502"}, // 18.0.0+
+            {503, nullptr, "Unknown503"}, // 18.0.0+
+            {505, nullptr, "Unknown505"}, // 18.0.0+
+            {600, nullptr, "Unknown600"}, // 18.0.0+
+            {601, nullptr, "Unknown601"}, // 18.0.0+
         };
     // clang-format on
 

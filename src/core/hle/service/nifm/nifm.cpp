@@ -419,6 +419,14 @@ void IGeneralService::GetCurrentNetworkProfile(HLERequestContext& ctx) {
     rb.Push(ResultSuccess);
 }
 
+void IGeneralService::EnumerateNetworkInterfaces(HLERequestContext& ctx) {
+    for (const auto& interface : Network::GetAvailableNetworkInterfaces())
+        LOG_WARNING(Service_NIFM, "(STUBBED) called, interface={}", interface.name);
+
+    IPC::ResponseBuilder rb{ctx, 2};
+    rb.Push(ResultSuccess);
+}
+
 void IGeneralService::RemoveNetworkProfile(HLERequestContext& ctx) {
     LOG_WARNING(Service_NIFM, "(STUBBED) called");
 
@@ -507,7 +515,7 @@ void IGeneralService::GetCurrentIpConfigInfo(HLERequestContext& ctx) {
 }
 
 void IGeneralService::IsWirelessCommunicationEnabled(HLERequestContext& ctx) {
-    LOG_WARNING(Service_NIFM, "called");
+    LOG_WARNING(Service_NIFM, "(STUBBED) called");
 
     IPC::ResponseBuilder rb{ctx, 3};
     rb.Push(ResultSuccess);
@@ -565,6 +573,15 @@ void IGeneralService::IsAnyForegroundRequestAccepted(HLERequestContext& ctx) {
     rb.Push<u8>(is_accepted);
 }
 
+void IGeneralService::GetSsidListVersion(HLERequestContext& ctx) {
+    const u32 ssid = 1;
+    LOG_WARNING(Service_NIFM, "(STUBBED) called");
+
+    IPC::ResponseBuilder rb{ctx, 3};
+    rb.Push(ResultSuccess);
+    rb.Push<u64>(ssid);
+}
+
 IGeneralService::IGeneralService(Core::System& system_)
     : ServiceFramework{system_, "IGeneralService"}, network{system_.GetRoomNetwork()} {
     // clang-format off
@@ -573,7 +590,7 @@ IGeneralService::IGeneralService(Core::System& system_)
         {2, &IGeneralService::CreateScanRequest, "CreateScanRequest"},
         {4, &IGeneralService::CreateRequest, "CreateRequest"},
         {5, &IGeneralService::GetCurrentNetworkProfile, "GetCurrentNetworkProfile"},
-        {6, nullptr, "EnumerateNetworkInterfaces"},
+        {6, &IGeneralService::EnumerateNetworkInterfaces, "EnumerateNetworkInterfaces"},
         {7, nullptr, "EnumerateNetworkProfiles"},
         {8, nullptr, "GetNetworkProfile"},
         {9, nullptr, "SetNetworkProfile"},
@@ -592,7 +609,7 @@ IGeneralService::IGeneralService(Core::System& system_)
         {22, &IGeneralService::IsAnyForegroundRequestAccepted, "IsAnyForegroundRequestAccepted"},
         {23, nullptr, "PutToSleep"},
         {24, nullptr, "WakeUp"},
-        {25, nullptr, "GetSsidListVersion"},
+        {25, &IGeneralService::GetSsidListVersion, "GetSsidListVersion"},
         {26, nullptr, "SetExclusiveClient"},
         {27, nullptr, "GetDefaultIpSetting"},
         {28, nullptr, "SetDefaultIpSetting"},
@@ -611,6 +628,13 @@ IGeneralService::IGeneralService(Core::System& system_)
         {41, nullptr, "GetAcceptableNetworkTypeFlag"},
         {42, nullptr, "NotifyConnectionStateChanged"},
         {43, nullptr, "SetWowlDelayedWakeTime"},
+        {44, nullptr, "IsWiredConnectionAvailable"}, // 18.0.0+
+        {45, nullptr, "IsNetworkEmulationFeatureEnabled"}, // 18.0.0+
+        {46, nullptr, "SelectActiveNetworkEmulationProfileIdForDebug"}, // 18.0.0+
+        {49, nullptr, "GetActiveNetworkEmulationProfileId"}, // 18.0.0+
+        {50, nullptr, "IsRewriteFeatureEnabled"}, // 18.0.0+
+        {51, nullptr, "CreateRewriteRule"}, // 18.0.0+
+        {52, nullptr, "DestroyRewriteRule"} // 18.0.0+
     };
     // clang-format on
 

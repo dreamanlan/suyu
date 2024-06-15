@@ -3,10 +3,12 @@
 
 #include <memory>
 
+#include "core/hle/service/cmif_types.h"
 #include "core/hle/service/fgm/fgm.h"
 #include "core/hle/service/ipc_helpers.h"
 #include "core/hle/service/server_manager.h"
 #include "core/hle/service/service.h"
+#include "core/hle/service/set/system_settings_server.h"
 #include "core/hle/service/sm/sm.h"
 
 namespace Service::FGM {
@@ -70,7 +72,13 @@ void LoopProcess(Core::System& system) {
     server_manager->RegisterNamedService("fgm", std::make_shared<FGM>(system, "fgm"));
     server_manager->RegisterNamedService("fgm:0", std::make_shared<FGM>(system, "fgm:0"));
     server_manager->RegisterNamedService("fgm:9", std::make_shared<FGM>(system, "fgm:9"));
-    server_manager->RegisterNamedService("fgm:dbg", std::make_shared<FGM_DBG>(system));
+
+    Service::Set::FirmwareVersionFormat firmware_version{};
+    Service::Set::GetFirmwareVersionImpl(firmware_version, system,
+                                         Service::Set::GetFirmwareVersionType::Version2);
+    if (firmware_version.major < 17) // Removed in 17.0.0
+        server_manager->RegisterNamedService("fgm:dbg", std::make_shared<FGM_DBG>(system));
+
     ServerManager::RunServer(std::move(server_manager));
 }
 

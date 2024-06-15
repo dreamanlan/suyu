@@ -1006,7 +1006,8 @@ BSD::BSD(Core::System& system_, const char* name)
         {30, nullptr, "SendMMsg"},
         {31, &BSD::EventFd, "EventFd"},
         {32, nullptr, "RegisterResourceStatisticsName"},
-        {33, nullptr, "Initialize2"},
+        {33, nullptr, "RegisterClientShared"},
+        {35, nullptr, "NifIoctl"} // 17.0.0+
     };
     // clang-format on
 
@@ -1050,6 +1051,24 @@ BSDCFG::BSDCFG(Core::System& system_) : ServiceFramework{system_, "bsdcfg"} {
         {13, nullptr, "Unknown13"},
         {14, nullptr, "Unknown14"},
         {15, nullptr, "Unknown15"},
+        {16, nullptr, "Unknown16"}, // 17.0.0+
+        {17, nullptr, "Unknown17"}, // 17.0.0+
+        {18, nullptr, "Unknown18"}, // 17.0.0+
+        {19, nullptr, "Unknown19"}, // 17.0.0+
+        {20, nullptr, "Unknown20"}, // 17.0.0+
+        {21, nullptr, "Unknown21"}, // 17.0.0+
+        {22, nullptr, "Unknown22"}, // 17.0.0+
+        {23, nullptr, "Unknown23"}, // 17.0.0+
+        {50, nullptr, "Unknown50"}, // 17.0.0+
+        {51, nullptr, "Unknown51"}, // 17.0.0+
+        {52, nullptr, "Unknown52"}, // 17.0.0+
+        {53, nullptr, "Unknown53"}, // 17.0.0+
+        {54, nullptr, "Unknown54"}, // 17.0.0+
+        {55, nullptr, "Unknown55"}, // 17.0.0+
+        {56, nullptr, "Unknown56"}, // 17.0.0+
+        {57, nullptr, "Unknown57"}, // 17.0.0+
+        {58, nullptr, "Unknown58"}, // 17.0.0+
+        {100, nullptr, "Unknown100"} // 17.0.0+
     };
     // clang-format on
 

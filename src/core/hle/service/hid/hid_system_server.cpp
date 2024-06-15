@@ -113,6 +113,7 @@ IHidSystemServer::IHidSystemServer(Core::System& system_, std::shared_ptr<Resour
         {810, nullptr, "GetUniquePadControllerNumber"},
         {811, nullptr, "GetSixAxisSensorUserCalibrationStage"},
         {812, nullptr, "GetConsoleUniqueSixAxisSensorHandle"},
+        {813, nullptr, "GetDeviceType"}, // 18.0.0+
         {821, nullptr, "StartAnalogStickManualCalibration"},
         {822, nullptr, "RetryCurrentAnalogStickManualCalibrationStage"},
         {823, nullptr, "CancelAnalogStickManualCalibration"},
@@ -221,6 +222,11 @@ IHidSystemServer::IHidSystemServer(Core::System& system_, std::shared_ptr<Resour
         {1289, nullptr, "SetButtonConfigStorageFull"},
         {1290, nullptr, "DeleteButtonConfigStorageRight"},
         {1291, nullptr, "DeleteButtonConfigStorageRight"},
+        {1308, nullptr, "SetButtonConfigVisible"}, // 18.0.0+
+        {1309, nullptr, "IsButtonConfigVisible"}, // 18.0.0+
+        {1320, nullptr, "WakeTouchScreenUp"}, // 17.0.0+
+        {1321, nullptr, "PutTouchScreenToSleep"}, // 17.0.0+
+        {12010, nullptr, "SetButtonConfigLeft"} // 11.0.0-17.0.1
     };
     // clang-format on
 

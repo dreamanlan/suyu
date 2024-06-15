@@ -23,6 +23,7 @@ public:
             {1010, nullptr, "Unknown1010"},
             {1100, nullptr, "Unknown1100"},
             {1101, nullptr, "Unknown1101"},
+            {1110, nullptr, "Unknown1110"}, // 17.0.0+
             {1200, nullptr, "Unknown1200"},
             {1201, nullptr, "Unknown1201"}
         };

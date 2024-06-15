@@ -136,6 +136,7 @@ SPL_ES::SPL_ES(Core::System& system_, std::shared_ptr<Module> module_)
         {29, nullptr, "ModularExponentiateWithDrmDeviceCertKey"},
         {31, nullptr, "PrepareEsArchiveKey"},
         {32, nullptr, "LoadPreparedAesKey"},
+        {33, nullptr, "Unknown33"} // 18.0.0+
     };
     // clang-format on
 

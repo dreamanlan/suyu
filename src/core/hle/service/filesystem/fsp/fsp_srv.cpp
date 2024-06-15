@@ -138,6 +138,7 @@ FSP_SRV::FSP_SRV(Core::System& system_)
         {615, nullptr, "QuerySaveDataInternalStorageTotalSize"},
         {616, nullptr, "GetSaveDataCommitId"},
         {617, nullptr, "UnregisterExternalKey"},
+        {618, nullptr, "GetProgramId"}, // 17.0.0+
         {620, nullptr, "SetSdCardEncryptionSeed"},
         {630, nullptr, "SetSdCardAccessibility"},
         {631, nullptr, "IsSdCardAccessible"},
@@ -168,6 +169,7 @@ FSP_SRV::FSP_SRV(Core::System& system_)
         {1017, nullptr, "OutputApplicationInfoAccessLog"},
         {1018, nullptr, "SetDebugOption"},
         {1019, nullptr, "UnsetDebugOption"},
+        {1020, nullptr, "OpenMemoryStressor"}, // 18.0.0+
         {1100, nullptr, "OverrideSaveDataTransferTokenSignVerificationKey"},
         {1101, nullptr, "OverrideSaveDataTransferKeyForTest"}, // 18.0.0+
         {1110, nullptr, "CorruptSaveDataFileSystemBySaveDataSpaceId2"},

@@ -286,6 +286,7 @@ IApplicationManagerInterface::IApplicationManagerInterface(Core::System& system_
         {2520, nullptr, "IsQualificationTransitionSupportedByProcessId"},
         {2521, nullptr, "GetRightsUserChangedEvent"},
         {2522, nullptr, "IsRomRedirectionAvailable"},
+        {2523, nullptr, "GetProgramId"}, // 17.0.0+
         {2800, nullptr, "GetApplicationIdOfPreomia"},
         {3000, nullptr, "RegisterDeviceLockKey"},
         {3001, nullptr, "UnregisterDeviceLockKey"},
@@ -302,7 +303,15 @@ IApplicationManagerInterface::IApplicationManagerInterface(Core::System& system_
         {3012, nullptr, "IsApplicationTitleHidden"},
         {3013, nullptr, "IsGameCardEnabled"},
         {3014, nullptr, "IsLocalContentShareEnabled"},
+        {3015, nullptr, "GetNetworkUpdateRequiredByGameCardDetectionEvent"}, // 18.0.0+
         {3050, nullptr, "ListAssignELicenseTaskResult"},
+        {3100, nullptr, "GetSafeSystemVersionCheckInfo"}, // 17.0.0+
+        {3101, nullptr, "RequestUpdateSafeSystemVersionCheckInfo"}, // 17.0.0+
+        {3102, nullptr, "ResetSafeSystemVersionCheckInfo"}, // 17.0.0+
+        {3104, nullptr, "GetApplicationNintendoLogo"}, // 18.0.0+
+        {3105, nullptr, "GetApplicationStartupMovie"}, // 18.0.0+
+        {5000, nullptr, "Unknown5000"}, // 18.0.0+
+        {5001, nullptr, "Unknown5001"}, // 18.0.0+
         {9999, nullptr, "GetApplicationCertificate"},
     };
     // clang-format on

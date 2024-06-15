@@ -22,6 +22,9 @@ public:
             {0, nullptr, "GetTemperatureRange"},
             {2, nullptr, "SetMeasurementMode"},
             {4, &ISession::GetTemperature, "GetTemperature"},
+            {5, nullptr, "Unknown5"}, // 17.0.0+
+            {6, nullptr, "Unknown6"}, // 17.0.0+
+            {7, nullptr, "Unknown7"} // 17.0.0+
         };
         // clang-format on
 

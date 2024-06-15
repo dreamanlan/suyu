@@ -300,6 +300,10 @@ ISystemSettingsServer::ISystemSettingsServer(Core::System& system_)
         {208, nullptr, "SetHearingProtectionSafeguardFlag"},
         {209, nullptr, "GetHearingProtectionSafeguardRemainingTime"},
         {210, nullptr, "SetHearingProtectionSafeguardRemainingTime"},
+        {221, nullptr, "GetForceMonauralOutputFlag"}, // 17.0.0+
+        {222, nullptr, "SetForceMonauralOutputFlag"}, // 17.0.0+
+        {251, nullptr, "GetAccountIdentificationSettings"}, // 18.0.0+
+        {252, nullptr, "SetAccountIdentificationSettings"} // 18.0.0+
     };
     // clang-format on
 

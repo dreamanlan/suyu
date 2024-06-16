@@ -49,10 +49,10 @@ public:
                 while (!boost::this_thread::interruption_requested()) {
                     Task task;
                     {
-                        std::unique_lock lock{queue_mutex};
                         if (requests.empty()) {
                             wait_condition.notify_all();
                         }
+                        std::unique_lock lock{queue_mutex};
                         Common::CondvarWait(condition, lock, {},
                                             [this] { return !requests.empty(); });
                         if (boost::this_thread::interruption_requested()) {
@@ -146,10 +146,10 @@ public:
                 while (!stop_token.stop_requested()) {
                     Task task;
                     {
-                        std::unique_lock lock{queue_mutex};
                         if (requests.empty()) {
                             wait_condition.notify_all();
                         }
+                        std::unique_lock lock{queue_mutex};
                         Common::CondvarWait(condition, lock, stop_token,
                                             [this] { return !requests.empty(); });
                         if (stop_token.stop_requested()) {

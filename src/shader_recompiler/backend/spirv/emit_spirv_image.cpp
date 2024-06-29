@@ -39,7 +39,8 @@ public:
             if (offset.IsEmpty()) {
                 return;
             }
-            Add(spv::ImageOperandsMask::Offset, ctx.Def(offset));
+            auto id = ctx.OpSatConvertUToS(ctx.S32[1], ctx.Def(offset));
+            Add(spv::ImageOperandsMask::Offset, id);
             return;
         }
         const std::array values{offset.InstRecursive(), offset2.InstRecursive()};
@@ -164,7 +165,8 @@ private:
             }
         }
         if (runtime_offset_allowed) {
-            Add(spv::ImageOperandsMask::Offset, ctx.Def(offset));
+            auto id = ctx.OpSatConvertUToS(ctx.S32[1], ctx.Def(offset));
+            Add(spv::ImageOperandsMask::Offset, id);
         }
     }
 

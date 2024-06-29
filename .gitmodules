@@ -18,7 +18,8 @@
 	url = https://github.com/KhronosGroup/Vulkan-Headers.git
 [submodule "sirit"]
 	path = externals/sirit
-	url = https://git.suyu.dev/suyu/sirit.git
+	url = https://github.com/dreamanlan/sirit.git
+	branch = dev
 [submodule "mbedtls"]
 	path = externals/mbedtls
 	url = https://git.suyu.dev/suyu/mbedtls.git

@@ -19,7 +19,7 @@ public:
     explicit DescriptorTable(Tegra::MemoryManager& gpu_memory_) : gpu_memory{gpu_memory_} {}
 
     [[nodiscard]] bool Synchronize(GPUVAddr gpu_addr, u32 limit) {
-        [[likely]] if (current_gpu_addr == gpu_addr && current_limit == limit) { return false; }
+        [[likely]] if (current_gpu_addr == gpu_addr && current_limit == static_cast<int>(limit)) { return false; }
         Refresh(gpu_addr, limit);
         return true;
     }
@@ -29,7 +29,7 @@ public:
     }
 
     [[nodiscard]] std::pair<Descriptor, bool> Read(u32 index) {
-        DEBUG_ASSERT(index <= current_limit);
+        DEBUG_ASSERT(static_cast<int>(index) <= current_limit);
         const GPUVAddr gpu_addr = current_gpu_addr + index * sizeof(Descriptor);
         std::pair<Descriptor, bool> result;
         gpu_memory.ReadBlockUnsafe(gpu_addr, &result.first, sizeof(Descriptor));
@@ -45,7 +45,7 @@ public:
         return result;
     }
 
-    [[nodiscard]] u32 Limit() const noexcept {
+    [[nodiscard]] int Limit() const noexcept {
         return current_limit;
     }
 
@@ -70,7 +70,7 @@ private:
 
     Tegra::MemoryManager& gpu_memory;
     GPUVAddr current_gpu_addr{};
-    u32 current_limit{};
+    int current_limit{-1};
     std::vector<u64> read_descriptors;
     std::vector<Descriptor> descriptors;
 };

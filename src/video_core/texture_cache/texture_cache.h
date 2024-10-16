@@ -254,7 +254,7 @@ typename P::Sampler* TextureCache<P>::GetComputeSampler(u32 index) {
 
 template <class P>
 SamplerId TextureCache<P>::GetGraphicsSamplerId(u32 index) {
-    if (index > channel_state->graphics_sampler_table.Limit()) {
+    if (static_cast<int>(index) > channel_state->graphics_sampler_table.Limit() || index >= channel_state->graphics_sampler_ids.size()) {
         LOG_DEBUG(HW_GPU, "Invalid sampler index={}", index);
         return NULL_SAMPLER_ID;
     }
@@ -268,7 +268,7 @@ SamplerId TextureCache<P>::GetGraphicsSamplerId(u32 index) {
 
 template <class P>
 SamplerId TextureCache<P>::GetComputeSamplerId(u32 index) {
-    if (index > channel_state->compute_sampler_table.Limit()) {
+    if (static_cast<int>(index) > channel_state->compute_sampler_table.Limit() || index >= channel_state->compute_sampler_ids.size()) {
         LOG_DEBUG(HW_GPU, "Invalid sampler index={}", index);
         return NULL_SAMPLER_ID;
     }
@@ -498,7 +498,7 @@ template <class P>
 ImageViewId TextureCache<P>::VisitImageView(DescriptorTable<TICEntry>& table,
                                             std::span<ImageViewId> cached_image_view_ids,
                                             u32 index) {
-    if (index > table.Limit()) {
+    if (static_cast<int>(index) > table.Limit()) {
         LOG_DEBUG(HW_GPU, "Invalid image view index={}", index);
         return NULL_IMAGE_VIEW_ID;
     }

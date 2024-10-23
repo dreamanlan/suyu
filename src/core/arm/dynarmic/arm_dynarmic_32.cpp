@@ -198,7 +198,8 @@ std::shared_ptr<Dynarmic::A32::Jit> ArmDynarmic32::MakeJit(Common::PageTable* pa
         config.detect_misaligned_access_via_page_table = 16 | 32 | 64 | 128;
         config.only_detect_misalignment_via_page_table_on_page_boundary = true;
 
-        config.fastmem_pointer = reinterpret_cast<uintptr_t>(page_table->fastmem_arena);
+        if (page_table->fastmem_arena)
+            config.fastmem_pointer = reinterpret_cast<uintptr_t>(page_table->fastmem_arena);
 
         config.fastmem_exclusive_access = config.fastmem_pointer.has_value();
         config.recompile_on_exclusive_fastmem_failure = true;

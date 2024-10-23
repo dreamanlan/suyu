@@ -247,6 +247,7 @@ std::shared_ptr<Dynarmic::A64::Jit> ArmDynarmic64::MakeJit(Common::PageTable* pa
 
         if (page_table->fastmem_arena)
             config.fastmem_pointer = reinterpret_cast<uintptr_t>(page_table->fastmem_arena);
+
         config.fastmem_address_space_bits = address_space_bits;
         config.silently_mirror_fastmem = false;
 

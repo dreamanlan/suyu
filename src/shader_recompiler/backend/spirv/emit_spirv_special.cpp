@@ -130,7 +130,8 @@ void EmitEmitVertex(EmitContext& ctx, const IR::Value& stream) {
         ConvertDepthMode(ctx);
     }
     if (!ctx.profile.support_geometry_streams) {
-        throw NotImplementedException("Geometry streams");
+        //throw NotImplementedException("Geometry streams");
+        LOG_WARNING(Shader_SPIRV, "Geometry streams is not implemented");
     } else if (stream.IsImmediate()) {
         ctx.OpEmitStreamVertex(ctx.Def(stream));
     } else {

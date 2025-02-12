@@ -286,7 +286,7 @@ private:
         if (!m_ScriptTxt.empty()) {
             ClearMessagesImpl();
 
-            auto* pDslFile = LoadDslFile(m_ScriptTxt.c_str(), true, false);
+            auto* pDslFile = LoadDslFile(m_ScriptTxt, true, false);
             if (pDslFile) {
                 int nextPos = m_pBraceScript->GetGlobalCodeNum();
                 m_pBraceScript->LoadScript(*pDslFile);

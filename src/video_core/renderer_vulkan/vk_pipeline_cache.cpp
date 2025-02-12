@@ -711,14 +711,6 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
         if (key.unique_hashes[index] == 0 && !is_emulated_stage) {
             continue;
         }
-#if __APPLE__
-        // Currently, Apple's Metal does not support geometry shader.
-        // [See MoltenVK]: The current plan for geometry shaders is to use Apple's new Shader Converter tech.
-        // As for more info, we've got this identified in th MoltenVK roadmap.
-        if (index == static_cast<u32>(Maxwell::ShaderType::Geometry)) {
-            continue;
-        }
-#endif
         UNIMPLEMENTED_IF(index == 0);
 
         Shader::IR::Program& program{programs[index]};
@@ -766,6 +758,14 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
         const std::vector<u32> code{EmitSPIRV(profile, runtime_info, program, binding)};
         device.SaveShader(code);
         VideoCommon::DumpSpirvShader(hash, key.unique_hashes[index], Shader::StageFromIndex(stage_index), code);
+#if __APPLE__
+        // Currently, Apple's Metal does not support geometry shader.
+        // [See MoltenVK]: The current plan for geometry shaders is to use Apple's new Shader Converter tech.
+        // As for more info, we've got this identified in the MoltenVK roadmap.
+        if (index == static_cast<u32>(Maxwell::ShaderType::Geometry)) {
+            continue;
+        }
+#endif
         modules[stage_index] = BuildShader(device, code);
         if (device.HasDebuggingToolAttached()) {
             const std::string name{fmt::format("Shader {:016x}", key.unique_hashes[index])};

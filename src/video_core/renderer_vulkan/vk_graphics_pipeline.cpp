@@ -240,11 +240,11 @@ GraphicsPipeline::GraphicsPipeline(
     vk::PipelineCache& pipeline_cache_, VideoCore::ShaderNotify* shader_notify,
     const Device& device_, DescriptorPool& descriptor_pool,
     GuestDescriptorQueue& guest_descriptor_queue_, Common::ThreadWorker* worker_thread,
-    PipelineStatistics* pipeline_statistics, RenderPassCache& render_pass_cache,
+    PipelineStatistics* pipeline_statistics, RenderPassCache& render_pass_cache_,
     const GraphicsPipelineCacheKey& key_, std::array<vk::ShaderModule, NUM_STAGES> stages,
     const std::array<const Shader::Info*, NUM_STAGES>& infos)
     : key{key_}, device{device_}, texture_cache{texture_cache_}, buffer_cache{buffer_cache_},
-      pipeline_cache(pipeline_cache_), scheduler{scheduler_},
+      render_pass_cache{render_pass_cache_}, pipeline_cache{pipeline_cache_}, scheduler{scheduler_},
       guest_descriptor_queue{guest_descriptor_queue_}, spv_modules{std::move(stages)} {
     if (shader_notify) {
         shader_notify->MarkShaderBuilding();
@@ -259,7 +259,7 @@ GraphicsPipeline::GraphicsPipeline(
         std::ranges::copy(info->constant_buffer_used_sizes, uniform_buffer_sizes[stage].begin());
         num_textures += Shader::NumDescriptors(info->texture_descriptors);
     }
-    auto func{[this, shader_notify, &render_pass_cache, &descriptor_pool, pipeline_statistics] {
+    auto func{[this, shader_notify, &descriptor_pool, pipeline_statistics] {
         DescriptorLayoutBuilder builder{MakeBuilder(device, stage_infos)};
         uses_push_descriptor = builder.CanUsePushDescriptor();
         descriptor_set_layout = builder.CreateDescriptorSetLayout(uses_push_descriptor);
@@ -323,6 +323,10 @@ void GraphicsPipeline::ReplaceShader(Shader::Stage stage, const std::vector<uint
     default:
         break;
     }
+
+    const VkRenderPass render_pass{render_pass_cache.Get(MakeRenderPassKey(key.state))};
+    Validate();
+    MakePipeline(render_pass);
 }
 
 void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {

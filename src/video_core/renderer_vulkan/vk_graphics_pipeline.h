@@ -136,6 +136,7 @@ private:
     const Device& device;
     TextureCache& texture_cache;
     BufferCache& buffer_cache;
+    RenderPassCache& render_pass_cache;
     vk::PipelineCache& pipeline_cache;
     Scheduler& scheduler;
     GuestDescriptorQueue& guest_descriptor_queue;

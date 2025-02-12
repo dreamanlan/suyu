@@ -24,6 +24,8 @@
 #include "core/memory.h"
 #include "core/memory/memory_sniffer.h"
 #include "core/memory/brace_script/brace_script_interpreter.h"
+#include "core/hle/service/acc/profile_manager.h"
+#include "core/file_sys/savedata_factory.h"
 #include "video_core/gpu.h"
 #include "video_core/rasterizer_interface.h"
 #include "video_core/renderer_base.h"
@@ -33,6 +35,8 @@
 #include "input_common/drivers/virtual_gamepad.h"
 #include "input_common/main.h"
 #include "common/hex_util.h"
+#include "common/fs/path_util.h"
+#include "common/fs/fs.h"
 #include "main.h"
 
 #include <QFileDialog>
@@ -751,6 +755,7 @@ DataAnalystWidget::DataAnalystWidget(Core::System& system_, std::shared_ptr<Inpu
 
     enableCheckBox = new QCheckBox(tr("Sniffing"));
     QPushButton* runButton = new QPushButton(tr("Run Script"));
+    QPushButton* runInitButton = new QPushButton(tr("Run Init"));
     QPushButton* clearAllButton = new QPushButton(tr("ClearAll"));
     QPushButton* addSniffingButton = new QPushButton(tr("AddSniffing"));
     QPushButton* keepUnchangedButton = new QPushButton(tr("Keep Unchanged"));
@@ -790,9 +795,11 @@ DataAnalystWidget::DataAnalystWidget(Core::System& system_, std::shared_ptr<Inpu
     stepAddrEdit->setFixedWidth(20);
     pidEdit->setFixedWidth(80);
     runButton->setFixedWidth(80);
+    runInitButton->setFixedWidth(80);
     clearAllButton->setFixedWidth(80);
 
     buttonLayout1->addWidget(runButton);
+    buttonLayout1->addWidget(runInitButton);
     buttonLayout1->addWidget(enableCheckBox);
     buttonLayout1->addWidget(curValueLabel);
     buttonLayout1->addWidget(curValueEdit);
@@ -866,6 +873,7 @@ DataAnalystWidget::DataAnalystWidget(Core::System& system_, std::shared_ptr<Inpu
     using namespace std::placeholders;
     QObject::connect(enableCheckBox, &QCheckBox::stateChanged, std::bind(&DataAnalystWidget::OnEnableStateChanged, this, _1));
     QObject::connect(runButton, &QPushButton::pressed, std::bind(&DataAnalystWidget::OnRunScript, this));
+    QObject::connect(runInitButton, &QPushButton::pressed, std::bind(&DataAnalystWidget::OnRunInit, this));
     QObject::connect(clearAllButton, &QPushButton::pressed, std::bind(&DataAnalystWidget::OnClearAll, this));
     QObject::connect(addSniffingButton, &QPushButton::pressed, std::bind(&DataAnalystWidget::OnAddSniffing, this));
     QObject::connect(keepUnchangedButton, &QPushButton::pressed, std::bind(&DataAnalystWidget::OnKeepUnchanged, this));
@@ -943,6 +951,43 @@ void DataAnalystWidget::OnRunScript() {
     }
     auto&& strFileName = fileName.toStdString();
     BraceScriptInterpreter::Exec(("load " + strFileName).c_str());
+    FocusRenderWindow();
+}
+
+void DataAnalystWidget::OnRunInit() {
+    if (!system.ApplicationProcess())
+        return;
+
+    auto vfs = system.GetFilesystem();
+    u64 program_id = system.GetApplicationProcessProgramID();
+    const auto nand_dir = Common::FS::GetSuyuPath(Common::FS::SuyuPath::NANDDir);
+    auto vfs_nand_dir = vfs->OpenDirectory(Common::FS::PathToUTF8String(nand_dir), FileSys::OpenMode::Read);
+
+    const auto user_id = system.GetProfileManager().GetUser(static_cast<std::size_t>(0));
+
+    std::filesystem::path path;
+    if (user_id->IsValid()) {
+        const auto user_save_data_path = FileSys::SaveDataFactory::GetFullPath(
+            {}, vfs_nand_dir, FileSys::SaveDataSpaceId::User, FileSys::SaveDataType::Account,
+            program_id, user_id->AsU128(), 0);
+        path = Common::FS::ConcatPathSafe(nand_dir, user_save_data_path);
+    }
+    else {
+        const auto device_save_data_path = FileSys::SaveDataFactory::GetFullPath(
+            {}, vfs_nand_dir, FileSys::SaveDataSpaceId::User, FileSys::SaveDataType::Account,
+            program_id, {}, 0);
+        path = Common::FS::ConcatPathSafe(nand_dir, device_save_data_path);
+    }
+
+    const auto scp_file_path =
+        Common::FS::ConcatPathSafe(path, std::filesystem::path("init_scp.txt"));
+    if (Common::FS::Exists(scp_file_path)) {
+        if (!updateTimer.isActive()) {
+            updateTimer.start();
+        }
+        BraceScriptInterpreter::Exec(
+            ("load " + Common::FS::PathToUTF8String(scp_file_path)).c_str());
+    }
     FocusRenderWindow();
 }
 

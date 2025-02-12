@@ -45,6 +45,7 @@ public:
 public slots:
     void OnUpdate();
     void OnRunScript();
+    void OnRunInit();
     void OnExecCmd();
     void OnEnableStateChanged(int);
     void OnClearAll();

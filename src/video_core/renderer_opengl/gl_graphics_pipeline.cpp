@@ -285,7 +285,7 @@ void GraphicsPipeline::DumpInfo(std::ostream& os, const GraphicsPipelineKey& gke
     os << " ";
     os << program_manager.GetPipeline().handle;
     os << " ";
-    for (int ix = 0; ix < ProgramManager::NUM_STAGES; ++ix) {
+    for (int ix = 0; ix < static_cast<int>(ProgramManager::NUM_STAGES); ++ix) {
         os << fmt::format("{:016x}", gkey.unique_hashes[ix + 1]);
         os << " ";
         os << source_programs[ix].handle;

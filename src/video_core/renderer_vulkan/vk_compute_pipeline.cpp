@@ -29,11 +29,11 @@ ComputePipeline::ComputePipeline(const Device& device_, vk::PipelineCache& pipel
                                  DescriptorPool& descriptor_pool,
                                  GuestDescriptorQueue& guest_descriptor_queue_,
                                  Common::ThreadWorker* thread_worker,
-                                 PipelineStatistics* pipeline_statistics,
-                                 VideoCore::ShaderNotify* shader_notify, const ComputePipelineCacheKey& key, const Shader::Info& info_,
+                                 PipelineStatistics* pipeline_statistics_,
+                                 VideoCore::ShaderNotify* shader_notify, const ComputePipelineCacheKey& key_, const Shader::Info& info_,
                                  vk::ShaderModule spv_module_)
-    : device{device_},
-      pipeline_cache(pipeline_cache_), guest_descriptor_queue{guest_descriptor_queue_}, info{info_},
+    : key{key_}, device{device_}, pipeline_statistics{pipeline_statistics_},
+      pipeline_cache{pipeline_cache_}, guest_descriptor_queue{guest_descriptor_queue_}, info{info_},
       spv_module(std::move(spv_module_)) {
     if (shader_notify) {
         shader_notify->MarkShaderBuilding();
@@ -41,7 +41,7 @@ ComputePipeline::ComputePipeline(const Device& device_, vk::PipelineCache& pipel
     std::copy_n(info.constant_buffer_used_sizes.begin(), uniform_buffer_sizes.size(),
                 uniform_buffer_sizes.begin());
 
-    auto func{[this, &descriptor_pool, shader_notify, key, pipeline_statistics] {
+    auto func{[this, &descriptor_pool, shader_notify] {
         DescriptorLayoutBuilder builder{device};
         builder.Add(info, VK_SHADER_STAGE_COMPUTE_BIT);
 
@@ -50,43 +50,9 @@ ComputePipeline::ComputePipeline(const Device& device_, vk::PipelineCache& pipel
         descriptor_update_template =
             builder.CreateTemplate(*descriptor_set_layout, *pipeline_layout, false);
         descriptor_allocator = descriptor_pool.Allocator(*descriptor_set_layout, info);
-        const VkPipelineShaderStageRequiredSubgroupSizeCreateInfoEXT subgroup_size_ci{
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO_EXT,
-            .pNext = nullptr,
-            .requiredSubgroupSize = GuestWarpSize,
-        };
-        VkPipelineCreateFlags flags{};
-        if (device.IsKhrPipelineExecutablePropertiesEnabled()) {
-            flags |= VK_PIPELINE_CREATE_CAPTURE_STATISTICS_BIT_KHR;
-        }
-        pipeline = device.GetLogical().CreateComputePipeline(
-            {
-                .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-                .pNext = nullptr,
-                .flags = flags,
-                .stage{
-                    .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-                    .pNext =
-                        device.IsExtSubgroupSizeControlSupported() ? &subgroup_size_ci : nullptr,
-                    .flags = 0,
-                    .stage = VK_SHADER_STAGE_COMPUTE_BIT,
-                    .module = *spv_module,
-                    .pName = "main",
-                    .pSpecializationInfo = nullptr,
-                },
-                .layout = *pipeline_layout,
-                .basePipelineHandle = 0,
-                .basePipelineIndex = 0,
-            },
-            *pipeline_cache);
-        if (device.HasDebuggingToolAttached()) {
-            std::string label = fmt::format("Pipeline {:016x}", key.unique_hash);
-            pipeline.SetObjectNameEXT(label.c_str());
-        }
 
-        if (pipeline_statistics) {
-            pipeline_statistics->Collect(*pipeline);
-        }
+        MakePipeline();
+
         std::scoped_lock lock{build_mutex};
         is_built = true;
         build_condvar.notify_one();
@@ -98,6 +64,45 @@ ComputePipeline::ComputePipeline(const Device& device_, vk::PipelineCache& pipel
         thread_worker->QueueWork(std::move(func));
     } else {
         func();
+    }
+}
+
+void ComputePipeline::MakePipeline() {
+    const VkPipelineShaderStageRequiredSubgroupSizeCreateInfoEXT subgroup_size_ci{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO_EXT,
+        .pNext = nullptr,
+        .requiredSubgroupSize = GuestWarpSize,
+    };
+    VkPipelineCreateFlags flags{};
+    if (device.IsKhrPipelineExecutablePropertiesEnabled()) {
+        flags |= VK_PIPELINE_CREATE_CAPTURE_STATISTICS_BIT_KHR;
+    }
+    pipeline = device.GetLogical().CreateComputePipeline(
+        {
+            .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = flags,
+            .stage{
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                .pNext = device.IsExtSubgroupSizeControlSupported() ? &subgroup_size_ci : nullptr,
+                .flags = 0,
+                .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                .module = *spv_module,
+                .pName = "main",
+                .pSpecializationInfo = nullptr,
+            },
+            .layout = *pipeline_layout,
+            .basePipelineHandle = 0,
+            .basePipelineIndex = 0,
+        },
+        *pipeline_cache);
+    if (device.HasDebuggingToolAttached()) {
+        std::string label = fmt::format("Pipeline {:016x}", key.unique_hash);
+        pipeline.SetObjectNameEXT(label.c_str());
+    }
+
+    if (pipeline_statistics) {
+        pipeline_statistics->Collect(*pipeline);
     }
 }
 
@@ -115,6 +120,8 @@ void ComputePipeline::DumpInfo(std::ostream& os, const ComputePipelineCacheKey& 
 void ComputePipeline::ReplaceShader(const std::vector<uint32_t>& code) {
     auto&& cprog = Vulkan::BuildShader(device, code);
     spv_module = std::move(cprog);
+
+    MakePipeline();
 }
 
 void ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,

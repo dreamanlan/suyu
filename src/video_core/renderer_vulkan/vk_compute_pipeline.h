@@ -51,7 +51,12 @@ public:
                    Scheduler& scheduler, BufferCache& buffer_cache, TextureCache& texture_cache);
 
 private:
+    void MakePipeline();
+
+private:
+    const ComputePipelineCacheKey key;
     const Device& device;
+    PipelineStatistics* pipeline_statistics;
     vk::PipelineCache& pipeline_cache;
     GuestDescriptorQueue& guest_descriptor_queue;
     Shader::Info info;

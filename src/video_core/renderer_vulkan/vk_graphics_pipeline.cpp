@@ -240,11 +240,12 @@ GraphicsPipeline::GraphicsPipeline(
     vk::PipelineCache& pipeline_cache_, VideoCore::ShaderNotify* shader_notify,
     const Device& device_, DescriptorPool& descriptor_pool,
     GuestDescriptorQueue& guest_descriptor_queue_, Common::ThreadWorker* worker_thread,
-    PipelineStatistics* pipeline_statistics, RenderPassCache& render_pass_cache_,
+    PipelineStatistics* pipeline_statistics_, RenderPassCache& render_pass_cache_,
     const GraphicsPipelineCacheKey& key_, std::array<vk::ShaderModule, NUM_STAGES> stages,
     const std::array<const Shader::Info*, NUM_STAGES>& infos)
     : key{key_}, device{device_}, texture_cache{texture_cache_}, buffer_cache{buffer_cache_},
-      render_pass_cache{render_pass_cache_}, pipeline_cache{pipeline_cache_}, scheduler{scheduler_},
+      render_pass_cache{render_pass_cache_}, pipeline_statistics{pipeline_statistics_},
+      pipeline_cache{pipeline_cache_}, scheduler{scheduler_},
       guest_descriptor_queue{guest_descriptor_queue_}, spv_modules{std::move(stages)} {
     if (shader_notify) {
         shader_notify->MarkShaderBuilding();
@@ -259,7 +260,7 @@ GraphicsPipeline::GraphicsPipeline(
         std::ranges::copy(info->constant_buffer_used_sizes, uniform_buffer_sizes[stage].begin());
         num_textures += Shader::NumDescriptors(info->texture_descriptors);
     }
-    auto func{[this, shader_notify, &descriptor_pool, pipeline_statistics] {
+    auto func{[this, shader_notify, &descriptor_pool] {
         DescriptorLayoutBuilder builder{MakeBuilder(device, stage_infos)};
         uses_push_descriptor = builder.CanUsePushDescriptor();
         descriptor_set_layout = builder.CreateDescriptorSetLayout(uses_push_descriptor);
@@ -274,12 +275,6 @@ GraphicsPipeline::GraphicsPipeline(
         const VkRenderPass render_pass{render_pass_cache.Get(MakeRenderPassKey(key.state))};
         Validate();
         MakePipeline(render_pass);
-        if (pipeline_statistics) {
-            pipeline_statistics->Collect(*pipeline);
-            if (VideoCore::g_IsPolygonModeLine) {
-                pipeline_statistics->Collect(*line_mode_pipeline);
-            }
-        }
 
         std::scoped_lock lock{build_mutex};
         is_built = true;
@@ -993,6 +988,12 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
         std::string label = fmt::format("Pipeline vs:{:016x} ps:{:016x}", key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1], key.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1]);
         pipeline.SetObjectNameEXT(label.c_str());
         line_mode_pipeline.SetObjectNameEXT(label.c_str());
+    }
+    if (pipeline_statistics) {
+        pipeline_statistics->Collect(*pipeline);
+        if (VideoCore::g_IsPolygonModeLine) {
+            pipeline_statistics->Collect(*line_mode_pipeline);
+        }
     }
 }
 

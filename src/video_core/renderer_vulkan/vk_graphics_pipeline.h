@@ -137,6 +137,7 @@ private:
     TextureCache& texture_cache;
     BufferCache& buffer_cache;
     RenderPassCache& render_pass_cache;
+    PipelineStatistics* pipeline_statistics;
     vk::PipelineCache& pipeline_cache;
     Scheduler& scheduler;
     GuestDescriptorQueue& guest_descriptor_queue;

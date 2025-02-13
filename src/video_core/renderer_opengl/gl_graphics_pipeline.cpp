@@ -295,7 +295,8 @@ void GraphicsPipeline::DumpInfo(std::ostream& os, const GraphicsPipelineKey& gke
     }
 }
 
-void GraphicsPipeline::ReplaceShader(Shader::Stage stage, const std::string& code) {
+void GraphicsPipeline::ReplaceShader(Shader::Stage stage, const std::string& code,
+                                     const GraphicsPipelineKey& gkey) {
     switch (stage) {
     case Shader::Stage::VertexB: {
         auto&& vprog = OpenGL::CreateProgram(std::string_view(code.c_str()), GL_VERTEX_SHADER);
@@ -310,7 +311,8 @@ void GraphicsPipeline::ReplaceShader(Shader::Stage stage, const std::string& cod
     }
 }
 
-void GraphicsPipeline::ReplaceShader(Shader::Stage stage, const std::vector<uint32_t>& code) {
+void GraphicsPipeline::ReplaceShader(Shader::Stage stage, const std::vector<uint32_t>& code,
+                                     const GraphicsPipelineKey& gkey) {
     switch (stage) {
     case Shader::Stage::VertexB: {
         auto&& vprog = OpenGL::CreateProgram(code, GL_VERTEX_SHADER);

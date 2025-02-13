@@ -364,7 +364,7 @@ int ShaderCache::ReplaceShader(uint64_t hash, Shader::Stage stage, const std::st
             auto&& key = pair.first;
             auto&& pipeline = pair.second;
             if (key.unique_hash == hash) {
-                pipeline->ReplaceShader(code);
+                pipeline->ReplaceShader(code, key);
                 ++ct;
             }
         }
@@ -374,7 +374,7 @@ int ShaderCache::ReplaceShader(uint64_t hash, Shader::Stage stage, const std::st
             auto&& key = pair.first;
             auto&& pipeline = pair.second;
             if (key.unique_hashes[static_cast<int>(stage) + 1] == hash) {
-                pipeline->ReplaceShader(stage, code);
+                pipeline->ReplaceShader(stage, code, key);
                 ++ct;
             }
         }
@@ -389,7 +389,7 @@ int ShaderCache::ReplaceShader(uint64_t hash, Shader::Stage stage, const std::ve
             auto&& key = pair.first;
             auto&& pipeline = pair.second;
             if (key.unique_hash == hash) {
-                pipeline->ReplaceShader(code);
+                pipeline->ReplaceShader(code, key);
                 ++ct;
             }
         }
@@ -399,7 +399,7 @@ int ShaderCache::ReplaceShader(uint64_t hash, Shader::Stage stage, const std::ve
             auto&& key = pair.first;
             auto&& pipeline = pair.second;
             if (key.unique_hashes[static_cast<int>(stage) + 1] == hash) {
-                pipeline->ReplaceShader(stage, code);
+                pipeline->ReplaceShader(stage, code, key);
                 ++ct;
             }
         }

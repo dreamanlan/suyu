@@ -55,9 +55,9 @@ public:
 
     void DumpInfo(std::ostream& os, const ComputePipelineKey& key)const;
 
-    void ReplaceShader(const std::string& code);
+    void ReplaceShader(const std::string& code, const ComputePipelineKey& key);
 
-    void ReplaceShader(const std::vector<uint32_t>& code);
+    void ReplaceShader(const std::vector<uint32_t>& code, const ComputePipelineKey& key);
 
     void Configure();
 

@@ -94,12 +94,13 @@ void ComputePipeline::DumpInfo(std::ostream& os, const ComputePipelineKey& key)c
     os << "|";
 }
 
-void ComputePipeline::ReplaceShader(const std::string& code) {
+void ComputePipeline::ReplaceShader(const std::string& code, const ComputePipelineKey& key) {
     auto&& cprog = OpenGL::CreateProgram(std::string_view(code.c_str()), GL_COMPUTE_SHADER);
     source_program = std::move(cprog);
 }
 
-void ComputePipeline::ReplaceShader(const std::vector<uint32_t>& code) {
+void ComputePipeline::ReplaceShader(const std::vector<uint32_t>& code,
+                                    const ComputePipelineKey& key) {
     auto&& cprog = OpenGL::CreateProgram(code, GL_COMPUTE_SHADER);
     source_program = std::move(cprog);
 }

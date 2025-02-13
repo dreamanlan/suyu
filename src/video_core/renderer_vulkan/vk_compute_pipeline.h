@@ -45,16 +45,15 @@ public:
 
     void DumpInfo(std::ostream& os, const ComputePipelineCacheKey& key)const;
 
-    void ReplaceShader(const std::vector<uint32_t>& code);
+    void ReplaceShader(const std::vector<uint32_t>& code, const ComputePipelineCacheKey& key);
 
     void Configure(Tegra::Engines::KeplerCompute& kepler_compute, Tegra::MemoryManager& gpu_memory,
                    Scheduler& scheduler, BufferCache& buffer_cache, TextureCache& texture_cache);
 
 private:
-    void MakePipeline();
+    void MakePipeline(const ComputePipelineCacheKey& key);
 
 private:
-    const ComputePipelineCacheKey key;
     const Device& device;
     PipelineStatistics* pipeline_statistics;
     vk::PipelineCache& pipeline_cache;

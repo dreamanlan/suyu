@@ -305,7 +305,8 @@ void GraphicsPipeline::DumpInfo(std::ostream& os, const GraphicsPipelineCacheKey
     }
 }
 
-void GraphicsPipeline::ReplaceShader(Shader::Stage stage, const std::vector<uint32_t>& code) {
+void GraphicsPipeline::ReplaceShader(Shader::Stage stage, const std::vector<uint32_t>& code,
+                                     const GraphicsPipelineCacheKey& gkey) {
     switch (stage) {
     case Shader::Stage::VertexB: {
         auto&& vprog = Vulkan::BuildShader(device, code);

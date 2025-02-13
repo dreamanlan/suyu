@@ -30,9 +30,9 @@ ComputePipeline::ComputePipeline(const Device& device_, vk::PipelineCache& pipel
                                  GuestDescriptorQueue& guest_descriptor_queue_,
                                  Common::ThreadWorker* thread_worker,
                                  PipelineStatistics* pipeline_statistics_,
-                                 VideoCore::ShaderNotify* shader_notify, const ComputePipelineCacheKey& key_, const Shader::Info& info_,
+                                 VideoCore::ShaderNotify* shader_notify, const ComputePipelineCacheKey& key, const Shader::Info& info_,
                                  vk::ShaderModule spv_module_)
-    : key{key_}, device{device_}, pipeline_statistics{pipeline_statistics_},
+    : device{device_}, pipeline_statistics{pipeline_statistics_},
       pipeline_cache{pipeline_cache_}, guest_descriptor_queue{guest_descriptor_queue_}, info{info_},
       spv_module(std::move(spv_module_)) {
     if (shader_notify) {
@@ -41,7 +41,7 @@ ComputePipeline::ComputePipeline(const Device& device_, vk::PipelineCache& pipel
     std::copy_n(info.constant_buffer_used_sizes.begin(), uniform_buffer_sizes.size(),
                 uniform_buffer_sizes.begin());
 
-    auto func{[this, &descriptor_pool, shader_notify] {
+    auto func{[this, &descriptor_pool, shader_notify, key] {
         DescriptorLayoutBuilder builder{device};
         builder.Add(info, VK_SHADER_STAGE_COMPUTE_BIT);
 
@@ -51,7 +51,7 @@ ComputePipeline::ComputePipeline(const Device& device_, vk::PipelineCache& pipel
             builder.CreateTemplate(*descriptor_set_layout, *pipeline_layout, false);
         descriptor_allocator = descriptor_pool.Allocator(*descriptor_set_layout, info);
 
-        MakePipeline();
+        MakePipeline(key);
 
         std::scoped_lock lock{build_mutex};
         is_built = true;
@@ -67,7 +67,7 @@ ComputePipeline::ComputePipeline(const Device& device_, vk::PipelineCache& pipel
     }
 }
 
-void ComputePipeline::MakePipeline() {
+void ComputePipeline::MakePipeline(const ComputePipelineCacheKey& key) {
     const VkPipelineShaderStageRequiredSubgroupSizeCreateInfoEXT subgroup_size_ci{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO_EXT,
         .pNext = nullptr,
@@ -106,22 +106,23 @@ void ComputePipeline::MakePipeline() {
     }
 }
 
-void ComputePipeline::DumpInfo(std::ostream& os, const ComputePipelineCacheKey& key)const {
+void ComputePipeline::DumpInfo(std::ostream& os, const ComputePipelineCacheKey& key_)const {
     os << "vk_compute";
     os << " ";
     os << reinterpret_cast<u64>(*pipeline);
     os << " ";
-    os << fmt::format("{:016x}", key.unique_hash);
+    os << fmt::format("{:016x}", key_.unique_hash);
     os << " ";
     os << reinterpret_cast<u64>(*spv_module);
     os << "|";
 }
 
-void ComputePipeline::ReplaceShader(const std::vector<uint32_t>& code) {
+void ComputePipeline::ReplaceShader(const std::vector<uint32_t>& code,
+                                    const ComputePipelineCacheKey& key) {
     auto&& cprog = Vulkan::BuildShader(device, code);
     spv_module = std::move(cprog);
 
-    MakePipeline();
+    MakePipeline(key);
 }
 
 void ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,

@@ -88,7 +88,8 @@ public:
 
     void DumpInfo(std::ostream& os, const GraphicsPipelineCacheKey& gkey)const;
 
-    void ReplaceShader(Shader::Stage stage, const std::vector<uint32_t>& code);
+    void ReplaceShader(Shader::Stage stage, const std::vector<uint32_t>& code,
+                       const GraphicsPipelineCacheKey& gkey);
 
     void Configure(bool is_indexed, bool line_mode) {
         configure_func(this, is_indexed, line_mode);

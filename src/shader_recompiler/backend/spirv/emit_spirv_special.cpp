@@ -144,7 +144,8 @@ void EmitEmitVertex(EmitContext& ctx, const IR::Value& stream) {
 
 void EmitEndPrimitive(EmitContext& ctx, const IR::Value& stream) {
     if (!ctx.profile.support_geometry_streams) {
-        throw NotImplementedException("Geometry streams");
+        //throw NotImplementedException("Geometry streams");
+        LOG_WARNING(Shader_SPIRV, "Geometry streams is not implemented");
     } else if (stream.IsImmediate()) {
         ctx.OpEndStreamPrimitive(ctx.Def(stream));
     } else {

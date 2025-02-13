@@ -20,6 +20,7 @@
 #include <QTimer>
 #include <QImage>
 #include "common/common_types.h"
+#include "common/fs/path_util.h"
 
 namespace Core {
     class System;
@@ -110,6 +111,9 @@ public:
     void SetStickPosition(std::size_t player_index, int axis_id, float x_value, float y_value);
     void SetMotionState(std::size_t player_index, u64 delta_timestamp, float gyro_x, float gyro_y,
         float gyro_z, float accel_x, float accel_y, float accel_z);
+    std::filesystem::path GetSuyuPath()const;
+    std::filesystem::path GetModLoadPath()const;
+    std::filesystem::path GetGameSavePath(int user_index)const;
 protected:
     virtual void showEvent(QShowEvent* ev) override;
     virtual void hideEvent(QHideEvent* ev) override;

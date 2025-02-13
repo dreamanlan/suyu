@@ -457,6 +457,15 @@ public:
         auto&& system = m_Widget.GetSystem();
         return system;
     }
+    virtual std::filesystem::path GetSuyuPath()const override {
+        return m_Widget.GetSuyuPath();
+    }
+    virtual std::filesystem::path GetModLoadPath()const override {
+        return m_Widget.GetModLoadPath();
+    }
+    virtual std::filesystem::path GetGameSavePath(int user_index)const override {
+        return m_Widget.GetGameSavePath(user_index);
+    }
     virtual void ShowUI(int index, int flags)const override {
         switch (index) {
         case 0:
@@ -958,29 +967,11 @@ void DataAnalystWidget::OnRunInit() {
     if (!system.ApplicationProcess())
         return;
 
-    auto vfs = system.GetFilesystem();
-    u64 program_id = system.GetApplicationProcessProgramID();
-    const auto nand_dir = Common::FS::GetSuyuPath(Common::FS::SuyuPath::NANDDir);
-    auto vfs_nand_dir = vfs->OpenDirectory(Common::FS::PathToUTF8String(nand_dir), FileSys::OpenMode::Read);
 
-    const auto user_id = system.GetProfileManager().GetUser(static_cast<std::size_t>(0));
-
-    std::filesystem::path path;
-    if (user_id->IsValid()) {
-        const auto user_save_data_path = FileSys::SaveDataFactory::GetFullPath(
-            {}, vfs_nand_dir, FileSys::SaveDataSpaceId::User, FileSys::SaveDataType::Account,
-            program_id, user_id->AsU128(), 0);
-        path = Common::FS::ConcatPathSafe(nand_dir, user_save_data_path);
-    }
-    else {
-        const auto device_save_data_path = FileSys::SaveDataFactory::GetFullPath(
-            {}, vfs_nand_dir, FileSys::SaveDataSpaceId::User, FileSys::SaveDataType::Account,
-            program_id, {}, 0);
-        path = Common::FS::ConcatPathSafe(nand_dir, device_save_data_path);
-    }
+    const auto path = GetModLoadPath();
 
     const auto scp_file_path =
-        Common::FS::ConcatPathSafe(path, std::filesystem::path("init_scp.txt"));
+        Common::FS::ConcatPathSafe(path, std::filesystem::path("scripts/init.txt"));
     if (Common::FS::Exists(scp_file_path)) {
         if (!updateTimer.isActive()) {
             updateTimer.start();
@@ -1924,4 +1915,40 @@ void DataAnalystWidget::SetMotionState(std::size_t player_index, u64 delta_times
     float gyro_z, float accel_x, float accel_y, float accel_z) {
     FocusRenderWindow();
     inputSubSystem->GetVirtualGamepad()->SetMotionState(player_index, delta_timestamp, gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z);
+}
+
+std::filesystem::path DataAnalystWidget::GetSuyuPath()const {
+    std::filesystem::path path = Common::FS::GetSuyuPath(Common::FS::SuyuPath::SuyuDir);
+
+    return path;
+}
+std::filesystem::path DataAnalystWidget::GetModLoadPath()const {
+    u64 program_id = system.GetApplicationProcessProgramID();
+    std::filesystem::path path = Common::FS::GetSuyuPath(Common::FS::SuyuPath::LoadDir) / fmt::format("{:016X}", program_id);
+
+    return path;
+}
+std::filesystem::path DataAnalystWidget::GetGameSavePath(int user_index)const {
+    auto vfs = system.GetFilesystem();
+    u64 program_id = system.GetApplicationProcessProgramID();
+    const auto nand_dir = Common::FS::GetSuyuPath(Common::FS::SuyuPath::NANDDir);
+    auto vfs_nand_dir = vfs->OpenDirectory(Common::FS::PathToUTF8String(nand_dir), FileSys::OpenMode::Read);
+
+    const auto user_id = system.GetProfileManager().GetUser(static_cast<std::size_t>(user_index));
+
+    std::filesystem::path path;
+    if (user_id->IsValid()) {
+        const auto user_save_data_path = FileSys::SaveDataFactory::GetFullPath(
+            {}, vfs_nand_dir, FileSys::SaveDataSpaceId::User, FileSys::SaveDataType::Account,
+            program_id, user_id->AsU128(), 0);
+        path = Common::FS::ConcatPathSafe(nand_dir, user_save_data_path);
+    }
+    else {
+        const auto device_save_data_path = FileSys::SaveDataFactory::GetFullPath(
+            {}, vfs_nand_dir, FileSys::SaveDataSpaceId::User, FileSys::SaveDataType::Account,
+            program_id, {}, 0);
+        path = Common::FS::ConcatPathSafe(nand_dir, device_save_data_path);
+    }
+
+    return path;
 }

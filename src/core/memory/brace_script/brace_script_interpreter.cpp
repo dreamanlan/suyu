@@ -6166,6 +6166,99 @@ protected:
     }
 };
 
+class GetSuyuPathExp final : public Brace::SimpleBraceApiBase {
+public:
+    GetSuyuPathExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        resultInfo.Type = Brace::BRACE_DATA_TYPE_STRING;
+        resultInfo.Name = GenTempVarName();
+        resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+        resultInfo.VarIndex =
+            AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+        return true;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+
+        auto&& system = g_pApiProvider->GetSystem();
+        if (nullptr != system.ApplicationProcess()) {
+            const auto path = g_pApiProvider->GetSuyuPath();
+
+            Brace::VarSetString(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, path.string());
+        }
+    }
+};
+class GetModLoadPathExp final : public Brace::SimpleBraceApiBase {
+public:
+    GetModLoadPathExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        resultInfo.Type = Brace::BRACE_DATA_TYPE_STRING;
+        resultInfo.Name = GenTempVarName();
+        resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+        resultInfo.VarIndex =
+            AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+        return true;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+
+        auto&& system = g_pApiProvider->GetSystem();
+        if (nullptr != system.ApplicationProcess()) {
+            const auto path = g_pApiProvider->GetModLoadPath();
+
+            Brace::VarSetString(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, path.string());
+        }
+    }
+};
+class GetGameSavePathExp final : public Brace::SimpleBraceApiBase {
+public:
+    GetGameSavePathExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        if (argInfos.size() > 1 || argInfos[0].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+            argInfos[0].Type > Brace::BRACE_DATA_TYPE_UINT64) {
+            // error
+            std::stringstream ss;
+            ss << "expected getgamesavepath([index])," << data.GetId() << " line " << data.GetLine();
+            LogError(ss.str());
+            return false;
+        }
+        resultInfo.Type = Brace::BRACE_DATA_TYPE_STRING;
+        resultInfo.Name = GenTempVarName();
+        resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+        resultInfo.VarIndex =
+            AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+        return true;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        int ix = 0;
+        if (argInfos.size() > 0) {
+            auto&& argInfo = argInfos[0];
+            ix = static_cast<int>(Brace::VarGetI64(argInfo.IsGlobal ? gvars : lvars, argInfo.Type, argInfo.VarIndex));
+        }
+        auto&& system = g_pApiProvider->GetSystem();
+        if (nullptr != system.ApplicationProcess()) {
+            const auto path = g_pApiProvider->GetGameSavePath(ix);
+
+            Brace::VarSetString(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, path.string());
+        }
+    }
+};
 class GetTitleIdExp final : public Brace::SimpleBraceApiBase {
 public:
     GetTitleIdExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
@@ -11253,6 +11346,12 @@ inline void BraceScriptManager::InitBraceScript(Brace::BraceScript*& pBraceScrip
     pBraceScript->RegisterApi("addtolast", "addtolast(addr[,val_size,pid]) api",
                               new Brace::BraceApiFactory<AddToLastExp>());
 
+    pBraceScript->RegisterApi("getsuyupath", "getsuyupath() api",
+                              new Brace::BraceApiFactory<GetSuyuPathExp>());
+    pBraceScript->RegisterApi("getmodloadpath", "getmodloadpath() api",
+                              new Brace::BraceApiFactory<GetModLoadPathExp>());
+    pBraceScript->RegisterApi("getgamesavepath", "getgamesavepath([user_index]) api",
+                              new Brace::BraceApiFactory<GetGameSavePathExp>());
     pBraceScript->RegisterApi("gettitleid", "gettitleid() api",
                               new Brace::BraceApiFactory<GetTitleIdExp>());
     pBraceScript->RegisterApi("getpid", "getpid() api",

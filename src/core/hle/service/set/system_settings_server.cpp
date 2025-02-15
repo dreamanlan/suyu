@@ -846,6 +846,16 @@ Result ISystemSettingsServer::SetQuestFlag(QuestFlag quest_flag) {
     R_SUCCEED();
 }
 
+Result ISystemSettingsServer::GetRebootlessSystemUpdateVersion(
+    Out<RebootlessSystemUpdateVersion> out_rebootless_system_update) {
+    LOG_INFO(Service_SET, "(STUBBED) called");
+
+    out_rebootless_system_update->version = 0;
+    strcpy(out_rebootless_system_update->display_version, "0.0.0");
+
+    R_SUCCEED();
+}
+
 Result ISystemSettingsServer::GetDeviceTimeZoneLocationName(
     Out<Service::PSC::Time::LocationName> out_name) {
     LOG_INFO(Service_SET, "called");
@@ -936,14 +946,14 @@ Result ISystemSettingsServer::SetPrimaryAlbumStorage(PrimaryAlbumStorage primary
 Result ISystemSettingsServer::GetBatteryLot(Out<BatteryLot> out_battery_lot) {
     LOG_INFO(Service_SET, "called");
 
-    *out_battery_lot = {"SUYU0EMULATOR14022024"};
+    *out_battery_lot = BatteryLot{"YUZU0EMULATOR14022024"};
     R_SUCCEED();
 }
 
 Result ISystemSettingsServer::GetSerialNumber(Out<SerialNumber> out_console_serial) {
     LOG_INFO(Service_SET, "called");
 
-    *out_console_serial = SerialNumber("SUY10000000001");
+    *out_console_serial = SerialNumber{"YUZ10000000001"};
     R_SUCCEED();
 }
 
@@ -1198,16 +1208,6 @@ Result ISystemSettingsServer::SetKeyboardLayout(KeyboardLayout keyboard_layout) 
     R_SUCCEED();
 }
 
-Result ISystemSettingsServer::GetRebootlessSystemUpdateVersion(
-    Out<RebootlessSystemUpdateVersion> out_rebootless_system_update) {
-    LOG_INFO(Service_SET, "(STUBBED) called");
-
-    out_rebootless_system_update->version = 0;
-    strcpy(out_rebootless_system_update->display_version, "0.0.0");
-
-    R_SUCCEED();
-}
-
 Result ISystemSettingsServer::GetDeviceTimeZoneLocationUpdatedTime(
     Out<Service::PSC::Time::SteadyClockTimePoint> out_time_point) {
     LOG_INFO(Service_SET, "called");
@@ -1322,25 +1322,25 @@ Result ISystemSettingsServer::SetPanelCrcMode(s32 panel_crc_mode) {
 
 void ISystemSettingsServer::SetupSettings() {
     auto system_dir =
-        Common::FS::GetSuyuPath(Common::FS::SuyuPath::NANDDir) / "system/save/8000000000000050";
+        Common::FS::GetYuzuPath(Common::FS::YuzuPath::NANDDir) / "system/save/8000000000000050";
     if (!LoadSettingsFile(system_dir, []() { return DefaultSystemSettings(); })) {
         ASSERT(false);
     }
 
     auto private_dir =
-        Common::FS::GetSuyuPath(Common::FS::SuyuPath::NANDDir) / "system/save/8000000000000052";
+        Common::FS::GetYuzuPath(Common::FS::YuzuPath::NANDDir) / "system/save/8000000000000052";
     if (!LoadSettingsFile(private_dir, []() { return DefaultPrivateSettings(); })) {
         ASSERT(false);
     }
 
     auto device_dir =
-        Common::FS::GetSuyuPath(Common::FS::SuyuPath::NANDDir) / "system/save/8000000000000053";
+        Common::FS::GetYuzuPath(Common::FS::YuzuPath::NANDDir) / "system/save/8000000000000053";
     if (!LoadSettingsFile(device_dir, []() { return DefaultDeviceSettings(); })) {
         ASSERT(false);
     }
 
     auto appln_dir =
-        Common::FS::GetSuyuPath(Common::FS::SuyuPath::NANDDir) / "system/save/8000000000000054";
+        Common::FS::GetYuzuPath(Common::FS::YuzuPath::NANDDir) / "system/save/8000000000000054";
     if (!LoadSettingsFile(appln_dir, []() { return DefaultApplnSettings(); })) {
         ASSERT(false);
     }
@@ -1348,25 +1348,25 @@ void ISystemSettingsServer::SetupSettings() {
 
 void ISystemSettingsServer::StoreSettings() {
     auto system_dir =
-        Common::FS::GetSuyuPath(Common::FS::SuyuPath::NANDDir) / "system/save/8000000000000050";
+        Common::FS::GetYuzuPath(Common::FS::YuzuPath::NANDDir) / "system/save/8000000000000050";
     if (!StoreSettingsFile(system_dir, m_system_settings)) {
         LOG_ERROR(Service_SET, "Failed to store System settings");
     }
 
     auto private_dir =
-        Common::FS::GetSuyuPath(Common::FS::SuyuPath::NANDDir) / "system/save/8000000000000052";
+        Common::FS::GetYuzuPath(Common::FS::YuzuPath::NANDDir) / "system/save/8000000000000052";
     if (!StoreSettingsFile(private_dir, m_private_settings)) {
         LOG_ERROR(Service_SET, "Failed to store Private settings");
     }
 
     auto device_dir =
-        Common::FS::GetSuyuPath(Common::FS::SuyuPath::NANDDir) / "system/save/8000000000000053";
+        Common::FS::GetYuzuPath(Common::FS::YuzuPath::NANDDir) / "system/save/8000000000000053";
     if (!StoreSettingsFile(device_dir, m_device_settings)) {
         LOG_ERROR(Service_SET, "Failed to store Device settings");
     }
 
     auto appln_dir =
-        Common::FS::GetSuyuPath(Common::FS::SuyuPath::NANDDir) / "system/save/8000000000000054";
+        Common::FS::GetYuzuPath(Common::FS::YuzuPath::NANDDir) / "system/save/8000000000000054";
     if (!StoreSettingsFile(appln_dir, m_appln_settings)) {
         LOG_ERROR(Service_SET, "Failed to store ApplLn settings");
     }

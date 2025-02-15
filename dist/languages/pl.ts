@@ -3,13 +3,13 @@
     <name>AboutDialog</name>
     <message>
         <location filename="../../src/aboutdialog.ui" line="14"/>
-        <source>About suyu</source>
-        <translation>O suyu</translation>
+        <source>About yuzu</source>
+        <translation>O yuzu</translation>
     </message>
     <message>
         <location filename="../../src/aboutdialog.ui" line="72"/>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:28pt;&quot;&gt;suyu&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:28pt;&quot;&gt;suyu&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:28pt;&quot;&gt;yuzu&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:28pt;&quot;&gt;yuzu&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="../../src/aboutdialog.ui" line="85"/>
@@ -22,26 +22,26 @@
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Ubuntu'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'MS Shell Dlg 2'; font-size:12pt;&quot;&gt;suyu is an experimental open-source emulator for the Nintendo Switch licensed under GPLv3.0+.&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'MS Shell Dlg 2'; font-size:12pt;&quot;&gt;yuzu is an experimental open-source emulator for the Nintendo Switch licensed under GPLv3.0+.&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:&apos;MS Shell Dlg 2&apos;; font-size:12pt;&quot;&gt;This software should not be used to play games you have not legally obtained.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:&apos;Ubuntu&apos;; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:&apos;MS Shell Dlg 2&apos;; font-size:12pt;&quot;&gt;suyu jest eksperymentalnym emulatorem konsoli Nintendo Switch z otwartym kodem źródłowym, na licencji GPLv3.0+&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:&apos;MS Shell Dlg 2&apos;; font-size:12pt;&quot;&gt;yuzu jest eksperymentalnym emulatorem konsoli Nintendo Switch z otwartym kodem źródłowym, na licencji GPLv3.0+&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:&apos;MS Shell Dlg 2&apos;; font-size:8pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:&apos;MS Shell Dlg 2&apos;; font-size:12pt;&quot;&gt;Nie należy używać tego programu żeby grać w gry uzyskane nielegalnie.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="../../src/aboutdialog.ui" line="130"/>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;a href=&quot;https://suyu.dev/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Website&lt;/span&gt;&lt;/a&gt; | &lt;a href=&quot;https://git.suyu.dev/suyu&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Source Code&lt;/span&gt;&lt;/a&gt; | &lt;a href=&quot;https://gitlab.com/suyu-emu/graphs/contributors&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Contributors&lt;/span&gt;&lt;/a&gt; | &lt;a href=&quot;https://gitlab.com/suyu-emu/blob/master/LICENSE.txt&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;License&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;a href=&quot;https://suyu.dev/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Strona&lt;/span&gt;&lt;/a&gt;I&lt;a href=&quot;https://git.suyu.dev/suyu&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Kod Źródłowy&lt;/span&gt;&lt;/a&gt;I&lt;a href=&quot;https://gitlab.com/suyu-emu/graphs/contributors&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Kontrybutorzy&lt;/span&gt;&lt;/a&gt;I&lt;a href=&quot;https://gitlab.com/suyu-emu/blob/master/LICENSE.txt&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Licencja&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;a href=&quot;https://yuzu.dev/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Website&lt;/span&gt;&lt;/a&gt; | &lt;a href=&quot;https://git.yuzu.dev/yuzu&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Source Code&lt;/span&gt;&lt;/a&gt; | &lt;a href=&quot;https://gitlab.com/yuzu-emu/graphs/contributors&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Contributors&lt;/span&gt;&lt;/a&gt; | &lt;a href=&quot;https://gitlab.com/yuzu-emu/blob/master/LICENSE.txt&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;License&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;a href=&quot;https://yuzu.dev/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Strona&lt;/span&gt;&lt;/a&gt;I&lt;a href=&quot;https://git.yuzu.dev/yuzu&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Kod Źródłowy&lt;/span&gt;&lt;/a&gt;I&lt;a href=&quot;https://gitlab.com/yuzu-emu/graphs/contributors&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Kontrybutorzy&lt;/span&gt;&lt;/a&gt;I&lt;a href=&quot;https://gitlab.com/yuzu-emu/blob/master/LICENSE.txt&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Licencja&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="../../src/aboutdialog.ui" line="146"/>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:7pt;&quot;&gt;&amp;quot;Nintendo Switch&amp;quot; is a trademark of Nintendo. suyu is not affiliated with Nintendo in any way.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:7pt;&quot;&gt;&amp;quot;Nintendo Switch&amp;quot; jest znakiem towarowym Nintendo. suyu nie jest stowarzyszony w żaden sposób z Nintendo.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:7pt;&quot;&gt;&amp;quot;Nintendo Switch&amp;quot; is a trademark of Nintendo. yuzu is not affiliated with Nintendo in any way.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:7pt;&quot;&gt;&amp;quot;Nintendo Switch&amp;quot; jest znakiem towarowym Nintendo. yuzu nie jest stowarzyszony w żaden sposób z Nintendo.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
 </context>
 <context>
@@ -236,8 +236,8 @@ To zbanuje jego/jej nick na forum, oraz jego/jej adres IP.</translation>
     </message>
     <message>
         <location filename="../../src/compatdb.ui" line="36"/>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Should you choose to submit a test case to the &lt;/span&gt;&lt;a href=&quot;https://suyu.dev/game/&quot;&gt;&lt;span style=&quot; font-size:10pt; text-decoration: underline; color:#0000ff;&quot;&gt;suyu Compatibility List&lt;/span&gt;&lt;/a&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;, The following information will be collected and displayed on the site:&lt;/span&gt;&lt;/p&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;&quot;&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Hardware Information (CPU / GPU / Operating System)&lt;/li&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Which version of suyu you are running&lt;/li&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;The connected suyu account&lt;/li&gt;&lt;/ul&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Jeśli postanowisz wysłać wyniki testu na &lt;/span&gt;&lt;a href=&quot;https://suyu.dev/game/&quot;&gt;&lt;span style=&quot; font-size:10pt; text-decoration: underline; color:#0000ff;&quot;&gt;listę kompatybilności suyu&lt;/span&gt;&lt;/a&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;, następujące informacja zostaną zebrane i wyświetlone na stronie:&lt;/span&gt;&lt;/p&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;&quot;&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Informacja o sprzęcie komputerowym (procesor / karta graficzna / system operacyjny)&lt;/li&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Wersja suyu, której używasz&lt;/li&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Połączone konto suyu&lt;/li&gt;&lt;/ul&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Should you choose to submit a test case to the &lt;/span&gt;&lt;a href=&quot;https://yuzu.dev/game/&quot;&gt;&lt;span style=&quot; font-size:10pt; text-decoration: underline; color:#0000ff;&quot;&gt;yuzu Compatibility List&lt;/span&gt;&lt;/a&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;, The following information will be collected and displayed on the site:&lt;/span&gt;&lt;/p&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;&quot;&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Hardware Information (CPU / GPU / Operating System)&lt;/li&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Which version of yuzu you are running&lt;/li&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;The connected yuzu account&lt;/li&gt;&lt;/ul&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Jeśli postanowisz wysłać wyniki testu na &lt;/span&gt;&lt;a href=&quot;https://yuzu.dev/game/&quot;&gt;&lt;span style=&quot; font-size:10pt; text-decoration: underline; color:#0000ff;&quot;&gt;listę kompatybilności yuzu&lt;/span&gt;&lt;/a&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;, następujące informacja zostaną zebrane i wyświetlone na stronie:&lt;/span&gt;&lt;/p&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;&quot;&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Informacja o sprzęcie komputerowym (procesor / karta graficzna / system operacyjny)&lt;/li&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Wersja yuzu, której używasz&lt;/li&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Połączone konto yuzu&lt;/li&gt;&lt;/ul&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="../../src/compatdb.ui" line="77"/>
@@ -475,7 +475,7 @@ To zbanuje jego/jej nick na forum, oraz jego/jej adres IP.</translation>
     <message>
         <location filename="../../src/configuration/shared_translation.cpp" line="53"/>
         <source>Mute audio when in background</source>
-        <translation>Wyciszaj audio gdy suyu działa w tle</translation>
+        <translation>Wyciszaj audio gdy yuzu działa w tle</translation>
     </message>
     <message>
         <location filename="../../src/configuration/shared_translation.cpp" line="58"/>
@@ -976,7 +976,7 @@ Setting to Handheld can help improve performance for low end systems.</source>
     </message>
     <message>
         <location filename="../../src/configuration/shared_translation.cpp" line="267"/>
-        <source>Ask to select a user profile on each boot, useful if multiple people use suyu on the same PC.</source>
+        <source>Ask to select a user profile on each boot, useful if multiple people use yuzu on the same PC.</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -986,7 +986,7 @@ Setting to Handheld can help improve performance for low end systems.</source>
     </message>
     <message>
         <location filename="../../src/configuration/shared_translation.cpp" line="270"/>
-        <source>This setting pauses suyu when focusing other windows.</source>
+        <source>This setting pauses yuzu when focusing other windows.</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -2204,8 +2204,8 @@ Gdy ta opcja jest włączona, niedopasowanie jest uruchamiane tylko wtedy, gdy d
     </message>
     <message>
         <location filename="../../src/configuration/configure_debug.ui" line="374"/>
-        <source>When checked, suyu will log statistics about the compiled pipeline cache</source>
-        <translation>Po zaznaczeniu, suyu będzie rejestrować statystyki dotyczące skompilowanej pamięci podręcznej.</translation>
+        <source>When checked, yuzu will log statistics about the compiled pipeline cache</source>
+        <translation>Po zaznaczeniu, yuzu będzie rejestrować statystyki dotyczące skompilowanej pamięci podręcznej.</translation>
     </message>
     <message>
         <location filename="../../src/configuration/configure_debug.ui" line="377"/>
@@ -2229,8 +2229,8 @@ Gdy ta opcja jest włączona, niedopasowanie jest uruchamiane tylko wtedy, gdy d
     </message>
     <message>
         <location filename="../../src/configuration/configure_debug.ui" line="403"/>
-        <source>Enables suyu to check for a working Vulkan environment when the program starts up. Disable this if this is causing issues with external programs seeing suyu.</source>
-        <translation>Umożliwia suyu sprawdzanie działającego środowiska Vulkan podczas uruchamiania programu. Wyłącz to, jeśli powoduje to problemy z zewnętrznymi programami widzącymi suyu.</translation>
+        <source>Enables yuzu to check for a working Vulkan environment when the program starts up. Disable this if this is causing issues with external programs seeing yuzu.</source>
+        <translation>Umożliwia yuzu sprawdzanie działającego środowiska Vulkan podczas uruchamiania programu. Wyłącz to, jeśli powoduje to problemy z zewnętrznymi programami widzącymi yuzu.</translation>
     </message>
     <message>
         <location filename="../../src/configuration/configure_debug.ui" line="406"/>
@@ -2294,8 +2294,8 @@ Gdy ta opcja jest włączona, niedopasowanie jest uruchamiane tylko wtedy, gdy d
     </message>
     <message>
         <location filename="../../src/configuration/configure_debug.ui" line="549"/>
-        <source>**This will be reset automatically when suyu closes.</source>
-        <translation>**To zresetuje się automatycznie po wyłączeniu suyu.</translation>
+        <source>**This will be reset automatically when yuzu closes.</source>
+        <translation>**To zresetuje się automatycznie po wyłączeniu yuzu.</translation>
     </message>
     <message>
         <location filename="../../src/configuration/configure_debug.cpp" line="82"/>
@@ -2344,8 +2344,8 @@ Gdy ta opcja jest włączona, niedopasowanie jest uruchamiane tylko wtedy, gdy d
     <name>ConfigureDialog</name>
     <message>
         <location filename="../../src/configuration/configure.ui" line="20"/>
-        <source>suyu Configuration</source>
-        <translation>Ustawienia suyu</translation>
+        <source>yuzu Configuration</source>
+        <translation>Ustawienia yuzu</translation>
     </message>
     <message>
         <location filename="../../src/configuration/configure.ui" line="67"/>
@@ -2599,8 +2599,8 @@ Gdy ta opcja jest włączona, niedopasowanie jest uruchamiane tylko wtedy, gdy d
     </message>
     <message>
         <location filename="../../src/configuration/configure_general.cpp" line="99"/>
-        <source>suyu</source>
-        <translation>suyu</translation>
+        <source>yuzu</source>
+        <translation>yuzu</translation>
     </message>
     <message>
         <location filename="../../src/configuration/configure_general.cpp" line="100"/>
@@ -3101,8 +3101,8 @@ Gdy ta opcja jest włączona, niedopasowanie jest uruchamiane tylko wtedy, gdy d
         <location filename="../../src/configuration/configure_input_advanced.ui" line="2659"/>
         <location filename="../../src/configuration/configure_input_advanced.ui" line="2701"/>
         <location filename="../../src/configuration/configure_input_advanced.ui" line="2717"/>
-        <source>Requires restarting suyu</source>
-        <translation>Należy zrestartować suyu</translation>
+        <source>Requires restarting yuzu</source>
+        <translation>Należy zrestartować yuzu</translation>
     </message>
     <message>
         <location filename="../../src/configuration/configure_input_advanced.ui" line="2668"/>
@@ -3813,8 +3813,8 @@ Aby odwrócić osie, najpierw przesuń joystick pionowo, a następnie poziomo.</
     </message>
     <message>
         <location filename="../../src/configuration/configure_motion_touch.cpp" line="87"/>
-        <source>&lt;a href=&apos;https://suyu.dev/wiki/using-a-controller-or-android-phone-for-motion-or-touch-input&apos;&gt;&lt;span style=&quot;text-decoration: underline; color:#039be5;&quot;&gt;Learn More&lt;/span&gt;&lt;/a&gt;</source>
-        <translation>&lt;a href=&apos;https://suyu.dev/wiki/using-a-controller-or-android-phone-for-motion-or-touch-input&apos;&gt;&lt;span style=&quot;text-decoration: underline; color:#039be5;&quot;&gt;Dowiedz się więcej&lt;/span&gt;&lt;/a&gt;</translation>
+        <source>&lt;a href=&apos;https://yuzu.dev/wiki/using-a-controller-or-android-phone-for-motion-or-touch-input&apos;&gt;&lt;span style=&quot;text-decoration: underline; color:#039be5;&quot;&gt;Learn More&lt;/span&gt;&lt;/a&gt;</source>
+        <translation>&lt;a href=&apos;https://yuzu.dev/wiki/using-a-controller-or-android-phone-for-motion-or-touch-input&apos;&gt;&lt;span style=&quot;text-decoration: underline; color:#039be5;&quot;&gt;Dowiedz się więcej&lt;/span&gt;&lt;/a&gt;</translation>
     </message>
     <message>
         <location filename="../../src/configuration/configure_motion_touch.cpp" line="168"/>
@@ -3828,8 +3828,8 @@ Aby odwrócić osie, najpierw przesuń joystick pionowo, a następnie poziomo.</
         <location filename="../../src/configuration/configure_motion_touch.cpp" line="187"/>
         <location filename="../../src/configuration/configure_motion_touch.cpp" line="193"/>
         <location filename="../../src/configuration/configure_motion_touch.cpp" line="287"/>
-        <source>suyu</source>
-        <translation>suyu</translation>
+        <source>yuzu</source>
+        <translation>yuzu</translation>
     </message>
     <message>
         <location filename="../../src/configuration/configure_motion_touch.cpp" line="173"/>
@@ -4461,8 +4461,8 @@ UUID: %2</translation>
     </message>
     <message>
         <location filename="../../src/configuration/configure_tas.ui" line="17"/>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Reads controller input from scripts in the same format as TAS-nx scripts.&lt;br/&gt;For a more detailed explanation, please consult the &lt;a href=&quot;https://suyu.dev/help/feature/tas/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;help page&lt;/span&gt;&lt;/a&gt; on the suyu website.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Odczytuje dane wejściowe kontrolera ze skryptów takiego samego formatu jak skrypty TAS-nx.&lt;br/&gt; Jeśli chcesz otrzymać bardziej szczegółowe wyjaśnienie, wejdź na &lt;a href=&quot;https://suyu.dev/help/feature/tas/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;stronę pomocy&lt;/span&gt;&lt;/a&gt; na stronie internetowej suyu.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Reads controller input from scripts in the same format as TAS-nx scripts.&lt;br/&gt;For a more detailed explanation, please consult the &lt;a href=&quot;https://yuzu.dev/help/feature/tas/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;help page&lt;/span&gt;&lt;/a&gt; on the yuzu website.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Odczytuje dane wejściowe kontrolera ze skryptów takiego samego formatu jak skrypty TAS-nx.&lt;br/&gt; Jeśli chcesz otrzymać bardziej szczegółowe wyjaśnienie, wejdź na &lt;a href=&quot;https://yuzu.dev/help/feature/tas/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;stronę pomocy&lt;/span&gt;&lt;/a&gt; na stronie internetowej yuzu.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="../../src/configuration/configure_tas.ui" line="27"/>
@@ -4624,8 +4624,8 @@ Przeciągnij punkty, aby zmienić pozycję, lub kliknij dwukrotnie komórki tabe
     </message>
     <message>
         <location filename="../../src/configuration/configure_touchscreen_advanced.ui" line="26"/>
-        <source>Warning: The settings in this page affect the inner workings of suyu&apos;s emulated touchscreen. Changing them may result in undesirable behavior, such as the touchscreen partially or not working. You should only use this page if you know what you are doing.</source>
-        <translation>Ostrzeżenie: Ustawienia na tej stronie mają wpływ na działanie emulowanego ekranu dotykowego suyu. ch zmiana może spowodować niepożądane zachowanie, takie jak  częściowo lub całkowicie nie działający ekran dotykowy. Powinieneś/naś używać tej strony tylko wtedy, gdy wiesz, co robisz.</translation>
+        <source>Warning: The settings in this page affect the inner workings of yuzu&apos;s emulated touchscreen. Changing them may result in undesirable behavior, such as the touchscreen partially or not working. You should only use this page if you know what you are doing.</source>
+        <translation>Ostrzeżenie: Ustawienia na tej stronie mają wpływ na działanie emulowanego ekranu dotykowego yuzu. ch zmiana może spowodować niepożądane zachowanie, takie jak  częściowo lub całkowicie nie działający ekran dotykowy. Powinieneś/naś używać tej strony tylko wtedy, gdy wiesz, co robisz.</translation>
     </message>
     <message>
         <location filename="../../src/configuration/configure_touchscreen_advanced.ui" line="52"/>
@@ -4946,13 +4946,13 @@ Przeciągnij punkty, aby zmienić pozycję, lub kliknij dwukrotnie komórki tabe
     </message>
     <message>
         <location filename="../../src/configuration/configure_web.ui" line="25"/>
-        <source>suyu Web Service</source>
-        <translation>Usługa internetowa suyu</translation>
+        <source>yuzu Web Service</source>
+        <translation>Usługa internetowa yuzu</translation>
     </message>
     <message>
         <location filename="../../src/configuration/configure_web.ui" line="31"/>
-        <source>By providing your username and token, you agree to allow suyu to collect additional usage data, which may include user identifying information.</source>
-        <translation>Podając swoją nazwę użytkownika i token, zgadzasz się na umożliwienie suyu zbierania dodatkowych danych o użytkowaniu, które mogą zawierać informacje umożliwiające identyfikację użytkownika.</translation>
+        <source>By providing your username and token, you agree to allow yuzu to collect additional usage data, which may include user identifying information.</source>
+        <translation>Podając swoją nazwę użytkownika i token, zgadzasz się na umożliwienie yuzu zbierania dodatkowych danych o użytkowaniu, które mogą zawierać informacje umożliwiające identyfikację użytkownika.</translation>
     </message>
     <message>
         <location filename="../../src/configuration/configure_web.ui" line="49"/>
@@ -4992,8 +4992,8 @@ Przeciągnij punkty, aby zmienić pozycję, lub kliknij dwukrotnie komórki tabe
     </message>
     <message>
         <location filename="../../src/configuration/configure_web.ui" line="134"/>
-        <source>Share anonymous usage data with the suyu team</source>
-        <translation>Udostępniaj anonimowe dane o użytkowaniu zespołowi suyu</translation>
+        <source>Share anonymous usage data with the yuzu team</source>
+        <translation>Udostępniaj anonimowe dane o użytkowaniu zespołowi yuzu</translation>
     </message>
     <message>
         <location filename="../../src/configuration/configure_web.ui" line="141"/>
@@ -5022,18 +5022,18 @@ Przeciągnij punkty, aby zmienić pozycję, lub kliknij dwukrotnie komórki tabe
     </message>
     <message>
         <location filename="../../src/configuration/configure_web.cpp" line="68"/>
-        <source>&lt;a href=&apos;https://suyu.dev/help/feature/telemetry/&apos;&gt;&lt;span style=&quot;text-decoration: underline; color:#039be5;&quot;&gt;Learn more&lt;/span&gt;&lt;/a&gt;</source>
-        <translation>&lt;a href=&apos;https://suyu.dev/help/feature/telemetry/&apos;&gt;&lt;span style=&quot;text-decoration: underline; color:#039be5;&quot;&gt;Dowiedz się więcej&lt;/span&gt;&lt;/a&gt;</translation>
+        <source>&lt;a href=&apos;https://yuzu.dev/help/feature/telemetry/&apos;&gt;&lt;span style=&quot;text-decoration: underline; color:#039be5;&quot;&gt;Learn more&lt;/span&gt;&lt;/a&gt;</source>
+        <translation>&lt;a href=&apos;https://yuzu.dev/help/feature/telemetry/&apos;&gt;&lt;span style=&quot;text-decoration: underline; color:#039be5;&quot;&gt;Dowiedz się więcej&lt;/span&gt;&lt;/a&gt;</translation>
     </message>
     <message>
         <location filename="../../src/configuration/configure_web.cpp" line="72"/>
-        <source>&lt;a href=&apos;https://profile.suyu.dev/&apos;&gt;&lt;span style=&quot;text-decoration: underline; color:#039be5;&quot;&gt;Sign up&lt;/span&gt;&lt;/a&gt;</source>
-        <translation>&lt;a href=&apos;https://profile.suyu.dev/&apos;&gt;&lt;span style=&quot;text-decoration: underline; color:#039be5;&quot;&gt;Zaloguj się&lt;/span&gt;&lt;/a&gt;</translation>
+        <source>&lt;a href=&apos;https://profile.yuzu.dev/&apos;&gt;&lt;span style=&quot;text-decoration: underline; color:#039be5;&quot;&gt;Sign up&lt;/span&gt;&lt;/a&gt;</source>
+        <translation>&lt;a href=&apos;https://profile.yuzu.dev/&apos;&gt;&lt;span style=&quot;text-decoration: underline; color:#039be5;&quot;&gt;Zaloguj się&lt;/span&gt;&lt;/a&gt;</translation>
     </message>
     <message>
         <location filename="../../src/configuration/configure_web.cpp" line="76"/>
-        <source>&lt;a href=&apos;https://suyu.dev/wiki/suyu-web-service/&apos;&gt;&lt;span style=&quot;text-decoration: underline; color:#039be5;&quot;&gt;What is my token?&lt;/span&gt;&lt;/a&gt;</source>
-        <translation>&lt;a href=&apos;https://suyu.dev/wiki/suyu-web-service/&apos;&gt;&lt;span style=&quot;text-decoration: underline; color:#039be5;&quot;&gt;Czym jest mój token?&lt;/span&gt;&lt;/a&gt;</translation>
+        <source>&lt;a href=&apos;https://yuzu.dev/wiki/yuzu-web-service/&apos;&gt;&lt;span style=&quot;text-decoration: underline; color:#039be5;&quot;&gt;What is my token?&lt;/span&gt;&lt;/a&gt;</source>
+        <translation>&lt;a href=&apos;https://yuzu.dev/wiki/yuzu-web-service/&apos;&gt;&lt;span style=&quot;text-decoration: underline; color:#039be5;&quot;&gt;Czym jest mój token?&lt;/span&gt;&lt;/a&gt;</translation>
     </message>
     <message>
         <location filename="../../src/configuration/configure_web.cpp" line="80"/>
@@ -5165,8 +5165,8 @@ Przeciągnij punkty, aby zmienić pozycję, lub kliknij dwukrotnie komórki tabe
     <name>GMainWindow</name>
     <message>
         <location filename="../../src/main.cpp" line="214"/>
-        <source>&lt;a href=&apos;https://suyu.dev/help/feature/telemetry/&apos;&gt;Anonymous data is collected&lt;/a&gt; to help improve suyu. &lt;br/&gt;&lt;br/&gt;Would you like to share your usage data with us?</source>
-        <translation>&lt;a href=&apos;https://suyu.dev/help/feature/telemetry/&apos;&gt;Dane anonimowe są gromadzone&lt;/a&gt; aby ulepszyć suyu. &lt;br/&gt;&lt;br/&gt;Czy chcesz udostępnić nam swoje dane o użytkowaniu?</translation>
+        <source>&lt;a href=&apos;https://yuzu.dev/help/feature/telemetry/&apos;&gt;Anonymous data is collected&lt;/a&gt; to help improve yuzu. &lt;br/&gt;&lt;br/&gt;Would you like to share your usage data with us?</source>
+        <translation>&lt;a href=&apos;https://yuzu.dev/help/feature/telemetry/&apos;&gt;Dane anonimowe są gromadzone&lt;/a&gt; aby ulepszyć yuzu. &lt;br/&gt;&lt;br/&gt;Czy chcesz udostępnić nam swoje dane o użytkowaniu?</translation>
     </message>
     <message>
         <location filename="../../src/main.cpp" line="217"/>
@@ -5180,13 +5180,13 @@ Przeciągnij punkty, aby zmienić pozycję, lub kliknij dwukrotnie komórki tabe
     </message>
     <message>
         <location filename="../../src/main.cpp" line="451"/>
-        <source>Vulkan initialization failed during boot.&lt;br&gt;&lt;br&gt;Click &lt;a href=&apos;https://suyu.dev/wiki/faq/#suyu-starts-with-the-error-broken-vulkan-installation-detected&apos;&gt;here for instructions to fix the issue&lt;/a&gt;.</source>
-        <translation>Inicjalizacja Vulkana nie powiodła się podczas uruchamiania.&lt;br&gt;&lt;br&gt;Kliknij&lt;a href=&apos;https://suyu.dev/wiki/faq/#suyu-starts-with-the-error-broken-vulkan-installation-detected&apos;&gt;tutaj aby uzyskać instrukcje dotyczące rozwiązania tego problemu&lt;/a&gt;.</translation>
+        <source>Vulkan initialization failed during boot.&lt;br&gt;&lt;br&gt;Click &lt;a href=&apos;https://yuzu.dev/wiki/faq/#yuzu-starts-with-the-error-broken-vulkan-installation-detected&apos;&gt;here for instructions to fix the issue&lt;/a&gt;.</source>
+        <translation>Inicjalizacja Vulkana nie powiodła się podczas uruchamiania.&lt;br&gt;&lt;br&gt;Kliknij&lt;a href=&apos;https://yuzu.dev/wiki/faq/#yuzu-starts-with-the-error-broken-vulkan-installation-detected&apos;&gt;tutaj aby uzyskać instrukcje dotyczące rozwiązania tego problemu&lt;/a&gt;.</translation>
     </message>
     <message>
         <location filename="../../src/main.cpp" line="476"/>
         <source>Running a game</source>
-        <extracomment>TRANSLATORS: This string is shown to the user to explain why suyu needs to prevent the computer from sleeping</extracomment>
+        <extracomment>TRANSLATORS: This string is shown to the user to explain why yuzu needs to prevent the computer from sleeping</extracomment>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -5269,8 +5269,8 @@ Przeciągnij punkty, aby zmienić pozycję, lub kliknij dwukrotnie komórki tabe
     </message>
     <message>
         <location filename="../../src/main.cpp" line="1818"/>
-        <source>You are using the deconstructed ROM directory format for this game, which is an outdated format that has been superseded by others such as NCA, NAX, XCI, or NSP. Deconstructed ROM directories lack icons, metadata, and update support.&lt;br&gt;&lt;br&gt;For an explanation of the various Switch formats suyu supports, &lt;a href=&apos;https://suyu.dev/wiki/overview-of-switch-game-formats&apos;&gt;check out our wiki&lt;/a&gt;. This message will not be shown again.</source>
-        <translation>Używasz zdekonstruowanego formatu katalogu ROM dla tej gry, który jest przestarzałym formatem, który został zastąpiony przez inne, takie jak NCA, NAX, XCI lub NSP. W zdekonstruowanych katalogach ROM brakuje ikon, metadanych i obsługi aktualizacji.&lt;br&gt;&lt;br&gt; Aby znaleźć wyjaśnienie różnych formatów Switch obsługiwanych przez suyu,&lt;a href=&apos;https://suyu.dev/wiki/overview-of-switch-game-formats&apos;&gt; sprawdź nasze wiki&lt;/a&gt;. Ta wiadomość nie pojawi się ponownie.</translation>
+        <source>You are using the deconstructed ROM directory format for this game, which is an outdated format that has been superseded by others such as NCA, NAX, XCI, or NSP. Deconstructed ROM directories lack icons, metadata, and update support.&lt;br&gt;&lt;br&gt;For an explanation of the various Switch formats yuzu supports, &lt;a href=&apos;https://yuzu.dev/wiki/overview-of-switch-game-formats&apos;&gt;check out our wiki&lt;/a&gt;. This message will not be shown again.</source>
+        <translation>Używasz zdekonstruowanego formatu katalogu ROM dla tej gry, który jest przestarzałym formatem, który został zastąpiony przez inne, takie jak NCA, NAX, XCI lub NSP. W zdekonstruowanych katalogach ROM brakuje ikon, metadanych i obsługi aktualizacji.&lt;br&gt;&lt;br&gt; Aby znaleźć wyjaśnienie różnych formatów Switch obsługiwanych przez yuzu,&lt;a href=&apos;https://yuzu.dev/wiki/overview-of-switch-game-formats&apos;&gt; sprawdź nasze wiki&lt;/a&gt;. Ta wiadomość nie pojawi się ponownie.</translation>
     </message>
     <message>
         <location filename="../../src/main.cpp" line="1830"/>
@@ -5290,8 +5290,8 @@ Przeciągnij punkty, aby zmienić pozycję, lub kliknij dwukrotnie komórki tabe
     </message>
     <message>
         <location filename="../../src/main.cpp" line="1836"/>
-        <source>suyu has encountered an error while running the video core. This is usually caused by outdated GPU drivers, including integrated ones. Please see the log for more details. For more information on accessing the log, please see the following page: &lt;a href=&apos;https://suyu.dev/help/reference/log-files/&apos;&gt;How to Upload the Log File&lt;/a&gt;. </source>
-        <translation>suyu napotkał błąd podczas uruchamiania rdzenia wideo. Jest to zwykle spowodowane przestarzałymi sterownikami GPU, w tym zintegrowanymi. Więcej szczegółów znajdziesz w pliku log. Więcej informacji na temat dostępu do log-u można znaleźć na następującej stronie: &lt;a href=&apos;https://suyu.dev/help/reference/log-files/&apos;&gt;Jak przesłać plik log&lt;/a&gt;.</translation>
+        <source>yuzu has encountered an error while running the video core. This is usually caused by outdated GPU drivers, including integrated ones. Please see the log for more details. For more information on accessing the log, please see the following page: &lt;a href=&apos;https://yuzu.dev/help/reference/log-files/&apos;&gt;How to Upload the Log File&lt;/a&gt;. </source>
+        <translation>yuzu napotkał błąd podczas uruchamiania rdzenia wideo. Jest to zwykle spowodowane przestarzałymi sterownikami GPU, w tym zintegrowanymi. Więcej szczegółów znajdziesz w pliku log. Więcej informacji na temat dostępu do log-u można znaleźć na następującej stronie: &lt;a href=&apos;https://yuzu.dev/help/reference/log-files/&apos;&gt;Jak przesłać plik log&lt;/a&gt;.</translation>
     </message>
     <message>
         <location filename="../../src/main.cpp" line="1851"/>
@@ -5301,9 +5301,9 @@ Przeciągnij punkty, aby zmienić pozycję, lub kliknij dwukrotnie komórki tabe
     </message>
     <message>
         <location filename="../../src/main.cpp" line="1854"/>
-        <source>%1&lt;br&gt;Please follow &lt;a href=&apos;https://suyu.dev/help/quickstart/&apos;&gt;the suyu quickstart guide&lt;/a&gt; to redump your files.&lt;br&gt;You can refer to the suyu wiki&lt;/a&gt; or the suyu Discord&lt;/a&gt; for help.</source>
+        <source>%1&lt;br&gt;Please follow &lt;a href=&apos;https://yuzu.dev/help/quickstart/&apos;&gt;the yuzu quickstart guide&lt;/a&gt; to redump your files.&lt;br&gt;You can refer to the yuzu wiki&lt;/a&gt; or the yuzu Discord&lt;/a&gt; for help.</source>
         <comment>%1 signifies an error string.</comment>
-        <translation>%1&lt;br&gt;Postępuj zgodnie z&lt;a href=&apos;https://suyu.dev/help/quickstart/&apos;&gt;suyu quickstart guide&lt;/a&gt; aby zrzucić ponownie swoje pliki.&lt;br&gt;Możesz odwołać się do wiki suyu&lt;/a&gt;lub discord suyu &lt;/a&gt; po pomoc.</translation>
+        <translation>%1&lt;br&gt;Postępuj zgodnie z&lt;a href=&apos;https://yuzu.dev/help/quickstart/&apos;&gt;yuzu quickstart guide&lt;/a&gt; aby zrzucić ponownie swoje pliki.&lt;br&gt;Możesz odwołać się do wiki yuzu&lt;/a&gt;lub discord yuzu &lt;/a&gt; po pomoc.</translation>
     </message>
     <message>
         <location filename="../../src/main.cpp" line="1865"/>
@@ -5877,13 +5877,13 @@ Proszę, używaj tej funkcji tylko do instalowania łatek i DLC.</translation>
     </message>
     <message>
         <location filename="../../src/main.cpp" line="3564"/>
-        <source>Missing suyu Account</source>
-        <translation>Brakuje konta suyu</translation>
+        <source>Missing yuzu Account</source>
+        <translation>Brakuje konta yuzu</translation>
     </message>
     <message>
         <location filename="../../src/main.cpp" line="3565"/>
-        <source>In order to submit a game compatibility test case, you must link your suyu account.&lt;br&gt;&lt;br/&gt;To link your suyu account, go to Emulation &amp;gt; Configuration &amp;gt; Web.</source>
-        <translation>Aby przesłać test zgodności gry, musisz połączyć swoje konto suyu.&lt;br&gt;&lt;br/&gt; Aby połączyć swoje konto suyu, przejdź do opcji Emulacja &amp;gt; Konfiguracja &amp;gt; Sieć.</translation>
+        <source>In order to submit a game compatibility test case, you must link your yuzu account.&lt;br&gt;&lt;br/&gt;To link your yuzu account, go to Emulation &amp;gt; Configuration &amp;gt; Web.</source>
+        <translation>Aby przesłać test zgodności gry, musisz połączyć swoje konto yuzu.&lt;br&gt;&lt;br/&gt; Aby połączyć swoje konto yuzu, przejdź do opcji Emulacja &amp;gt; Konfiguracja &amp;gt; Sieć.</translation>
     </message>
     <message>
         <location filename="../../src/main.cpp" line="3580"/>
@@ -5983,7 +5983,7 @@ Proszę, używaj tej funkcji tylko do instalowania łatek i DLC.</translation>
     </message>
     <message>
         <location filename="../../src/main.cpp" line="4170"/>
-        <source>Install decryption keys and restart suyu before attempting to install firmware.</source>
+        <source>Install decryption keys and restart yuzu before attempting to install firmware.</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -6016,7 +6016,7 @@ Proszę, używaj tej funkcji tylko do instalowania łatek i DLC.</translation>
     </message>
     <message>
         <location filename="../../src/main.cpp" line="4259"/>
-        <source>Firmware installation cancelled, firmware may be in bad state, restart suyu or re-install firmware.</source>
+        <source>Firmware installation cancelled, firmware may be in bad state, restart yuzu or re-install firmware.</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -6254,7 +6254,7 @@ Proszę, używaj tej funkcji tylko do instalowania łatek i DLC.</translation>
     </message>
     <message>
         <location filename="../../src/main.cpp" line="4795"/>
-        <source>Encryption keys are missing. &lt;br&gt;Please follow &lt;a href=&apos;https://suyu.dev/help/quickstart/&apos;&gt;the suyu quickstart guide&lt;/a&gt; to get all your keys, firmware and games.</source>
+        <source>Encryption keys are missing. &lt;br&gt;Please follow &lt;a href=&apos;https://yuzu.dev/help/quickstart/&apos;&gt;the yuzu quickstart guide&lt;/a&gt; to get all your keys, firmware and games.</source>
         <translation type="unfinished"/>
     </message>
     <message>
@@ -6269,15 +6269,15 @@ Proszę, używaj tej funkcji tylko do instalowania łatek i DLC.</translation>
     </message>
     <message>
         <location filename="../../src/main.cpp" line="4911"/>
-        <source>Are you sure you want to close suyu?</source>
-        <translation>Czy na pewno chcesz zamknąć suyu?</translation>
+        <source>Are you sure you want to close yuzu?</source>
+        <translation>Czy na pewno chcesz zamknąć yuzu?</translation>
     </message>
     <message>
         <location filename="../../src/main.cpp" line="4912"/>
         <location filename="../../src/main.cpp" line="4992"/>
         <location filename="../../src/main.cpp" line="5004"/>
-        <source>suyu</source>
-        <translation>suyu</translation>
+        <source>yuzu</source>
+        <translation>yuzu</translation>
     </message>
     <message>
         <location filename="../../src/main.cpp" line="4993"/>
@@ -6286,20 +6286,20 @@ Proszę, używaj tej funkcji tylko do instalowania łatek i DLC.</translation>
     </message>
     <message>
         <location filename="../../src/main.cpp" line="5001"/>
-        <source>The currently running application has requested suyu to not exit.
+        <source>The currently running application has requested yuzu to not exit.
 
 Would you like to bypass this and exit anyway?</source>
-        <translation>Aktualnie uruchomiona aplikacja zażądała od suyu, aby się nie zamykała.
+        <translation>Aktualnie uruchomiona aplikacja zażądała od yuzu, aby się nie zamykała.
 
 Czy chcesz to ominąć i mimo to wyjść?</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/main.cpp" line="1763"/>
+        <location filename="../../src/yuzu/main.cpp" line="1763"/>
         <source>Component Missing</source>
         <translation>Component Missing</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/main.cpp" line="1764"/>
+        <location filename="../../src/yuzu/main.cpp" line="1764"/>
         <source>Missing Firmware.</source>
         <translation>Missing Firmware.</translation>
     </message>
@@ -6414,8 +6414,8 @@ Czy chcesz to ominąć i mimo to wyjść?</translation>
     </message>
     <message>
         <location filename="../../src/bootmanager.cpp" line="1037"/>
-        <source>suyu has not been compiled with OpenGL support.</source>
-        <translation>suyu nie zostało skompilowane z obsługą OpenGL.</translation>
+        <source>yuzu has not been compiled with OpenGL support.</source>
+        <translation>yuzu nie zostało skompilowane z obsługą OpenGL.</translation>
     </message>
     <message>
         <location filename="../../src/bootmanager.cpp" line="1061"/>
@@ -6799,9 +6799,9 @@ Czy chcesz to ominąć i mimo to wyjść?</translation>
     </message>
     <message>
         <location filename="../../src/multiplayer/host_room.cpp" line="186"/>
-        <source>Failed to announce the room to the public lobby. In order to host a room publicly, you must have a valid suyu account configured in Emulation -&gt; Configure -&gt; Web. If you do not want to publish a room in the public lobby, then select Unlisted instead.
+        <source>Failed to announce the room to the public lobby. In order to host a room publicly, you must have a valid yuzu account configured in Emulation -&gt; Configure -&gt; Web. If you do not want to publish a room in the public lobby, then select Unlisted instead.
 Debug Message: </source>
-        <translation>Nie udało się ogłosić pokoju w publicznym lobby. Aby udostępnić pokój publicznie, musisz mieć ważne konto suyu skonfigurowane w Emulacja -&gt; Konfiguruj... -&gt; Sieć. Jeśli nie chcesz publikować pokoju w publicznym lobby, zamiast tego wybierz opcję Niepubliczny.
+        <translation>Nie udało się ogłosić pokoju w publicznym lobby. Aby udostępnić pokój publicznie, musisz mieć ważne konto yuzu skonfigurowane w Emulacja -&gt; Konfiguruj... -&gt; Sieć. Jeśli nie chcesz publikować pokoju w publicznym lobby, zamiast tego wybierz opcję Niepubliczny.
 Komunikat debugowania:</translation>
     </message>
 </context>
@@ -6886,8 +6886,8 @@ Komunikat debugowania:</translation>
     </message>
     <message>
         <location filename="../../src/uisettings.h" line="242"/>
-        <source>Exit suyu</source>
-        <translation>Wyjdź z suyu</translation>
+        <source>Exit yuzu</source>
+        <translation>Wyjdź z yuzu</translation>
     </message>
     <message>
         <location filename="../../src/uisettings.h" line="243"/>
@@ -7139,8 +7139,8 @@ Komunikat debugowania:</translation>
     <name>MainWindow</name>
     <message>
         <location filename="../../src/main.ui" line="14"/>
-        <source>suyu</source>
-        <translation>suyu</translation>
+        <source>yuzu</source>
+        <translation>yuzu</translation>
     </message>
     <message>
         <location filename="../../src/main.ui" line="53"/>
@@ -7264,8 +7264,8 @@ Komunikat debugowania:</translation>
     </message>
     <message>
         <location filename="../../src/main.ui" line="244"/>
-        <source>&amp;About suyu</source>
-        <translation>&amp;O suyu</translation>
+        <source>&amp;About yuzu</source>
+        <translation>&amp;O yuzu</translation>
     </message>
     <message>
         <location filename="../../src/main.ui" line="252"/>
@@ -7359,8 +7359,8 @@ Komunikat debugowania:</translation>
     </message>
     <message>
         <location filename="../../src/main.ui" line="379"/>
-        <source>Open &amp;suyu Folder</source>
-        <translation>Otwórz &amp;Folder suyu</translation>
+        <source>Open &amp;yuzu Folder</source>
+        <translation>Otwórz &amp;Folder yuzu</translation>
     </message>
     <message>
         <location filename="../../src/main.ui" line="387"/>
@@ -7584,8 +7584,8 @@ Komunikat debugowania:</translation>
     </message>
     <message>
         <location filename="../../src/multiplayer/message.cpp" line="32"/>
-        <source>Creating a room failed. Please retry. Restarting suyu might be necessary.</source>
-        <translation>Nie udało się utworzyć pokoju. Spróbuj ponownie. Możliwe, że należy zrestartować suyu.</translation>
+        <source>Creating a room failed. Please retry. Restarting yuzu might be necessary.</source>
+        <translation>Nie udało się utworzyć pokoju. Spróbuj ponownie. Możliwe, że należy zrestartować yuzu.</translation>
     </message>
     <message>
         <location filename="../../src/multiplayer/message.cpp" line="34"/>
@@ -7594,8 +7594,8 @@ Komunikat debugowania:</translation>
     </message>
     <message>
         <location filename="../../src/multiplayer/message.cpp" line="37"/>
-        <source>Version mismatch! Please update to the latest version of suyu. If the problem persists, contact the room host and ask them to update the server.</source>
-        <translation>Niezgodna wersja! Powinieneś zaktualizować suyu do najnowszej wersji. Jeśli ten problem nie zniknie, skontaktuj się z hostem.</translation>
+        <source>Version mismatch! Please update to the latest version of yuzu. If the problem persists, contact the room host and ask them to update the server.</source>
+        <translation>Niezgodna wersja! Powinieneś zaktualizować yuzu do najnowszej wersji. Jeśli ten problem nie zniknie, skontaktuj się z hostem.</translation>
     </message>
     <message>
         <location filename="../../src/multiplayer/message.cpp" line="39"/>

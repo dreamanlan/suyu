@@ -396,11 +396,11 @@ void IGeneralService::GetCurrentNetworkProfile(HLERequestContext& ctx) {
                 .mtu{1500},
             },
             .uuid{0xdeadbeef, 0xdeadbeef},
-            .network_name{"suyu Network"},
+            .network_name{"yuzu Network"},
             .wireless_setting_data{
                 .ssid_length{12},
-                .ssid{"suyu Network"},
-                .passphrase{"suyupassword"},
+                .ssid{"yuzu Network"},
+                .passphrase{"yuzupassword"},
             },
         };
     }();
@@ -631,7 +631,7 @@ IGeneralService::IGeneralService(Core::System& system_)
         {44, nullptr, "IsWiredConnectionAvailable"}, // 18.0.0+
         {45, nullptr, "IsNetworkEmulationFeatureEnabled"}, // 18.0.0+
         {46, nullptr, "SelectActiveNetworkEmulationProfileIdForDebug"}, // 18.0.0+
-        {49, nullptr, "GetActiveNetworkEmulationProfileId"}, // 18.0.0+
+        {47, nullptr, "GetActiveNetworkEmulationProfileId"}, // 18.0.0+
         {50, nullptr, "IsRewriteFeatureEnabled"}, // 18.0.0+
         {51, nullptr, "CreateRewriteRule"}, // 18.0.0+
         {52, nullptr, "DestroyRewriteRule"} // 18.0.0+

@@ -49,7 +49,7 @@ std::vector<u8> DecompressSegment(const std::vector<u8>& compressed_data,
 }
 
 constexpr u32 PageAlignSize(u32 size) {
-    return static_cast<u32>((size + Core::Memory::SUYU_PAGEMASK) & ~Core::Memory::SUYU_PAGEMASK);
+    return static_cast<u32>((size + Core::Memory::YUZU_PAGEMASK) & ~Core::Memory::YUZU_PAGEMASK);
 }
 } // Anonymous namespace
 

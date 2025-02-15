@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2023 Alexandre Bouvier <contact@amb.tf>
-# SPDX-FileCopyrightText: 2024 suyu Emulator Project
+# SPDX-FileCopyrightText: 2024 yuzu Emulator Project
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -20,7 +20,7 @@ if (LLVM_FOUND AND LLVM_Demangle_FOUND AND NOT TARGET LLVM::Demangle)
     target_include_directories(LLVM::Demangle INTERFACE ${LLVM_INCLUDE_DIRS})
     # prefer shared LLVM: https://github.com/llvm/llvm-project/issues/34593
     # but use ugly hack because llvm_config doesn't support interface library
-    add_library(_dummy_lib SHARED EXCLUDE_FROM_ALL src/suyu/main.cpp)
+    add_library(_dummy_lib SHARED EXCLUDE_FROM_ALL src/yuzu/main.cpp)
     llvm_config(_dummy_lib USE_SHARED demangle)
     get_target_property(LLVM_LIBRARIES _dummy_lib LINK_LIBRARIES)
     target_link_libraries(LLVM::Demangle INTERFACE ${LLVM_LIBRARIES})

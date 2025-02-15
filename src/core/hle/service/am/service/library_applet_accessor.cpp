@@ -1,5 +1,4 @@
 // SPDX-FileCopyrightText: Copyright 2024 yuzu Emulator Project
-// SPDX-FileCopyrightText: Copyright 2024 suyu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include "core/hle/service/am/applet_data_broker.h"
@@ -102,7 +101,7 @@ Result ILibraryAppletAccessor::PushInData(SharedPointer<IStorage> storage) {
 
 Result ILibraryAppletAccessor::PopOutData(Out<SharedPointer<IStorage>> out_storage) {
     LOG_DEBUG(Service_AM, "called");
-    // suyu todo: move library applet fix to another function
+    // yuzu todo: move library applet fix to another function
     // since this function is only called for applets that give a result,
     // applets that don't (e.g. info applets in 1st party games) simply freeze
     if (auto caller = m_applet->caller_applet.lock(); caller != nullptr) {

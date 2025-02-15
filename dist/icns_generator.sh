@@ -39,32 +39,32 @@ check_command "convert" "ImageMagick"
 check_command "iconutil" "macOS"
 
 # Create the iconset directory
-mkdir suyu.iconset || {
-    read -s -n 1 -p "Error: Unable to create suyu.iconset directory."
+mkdir yuzu.iconset || {
+    read -s -n 1 -p "Error: Unable to create yuzu.iconset directory."
     exit 1
 }
 
 # Convert images
-convert_image "$1" 16x16 suyu.iconset/icon_16x16.png
-convert_image "$1" 32x32 suyu.iconset/icon_16x16@2x.png
-convert_image "$1" 32x32 suyu.iconset/icon_32x32.png
-convert_image "$1" 64x64 suyu.iconset/icon_32x32@2x.png
-convert_image "$1" 128x128 suyu.iconset/icon_128x128.png
-convert_image "$1" 256x256 suyu.iconset/icon_256x256.png
-convert_image "$1" 256x256 suyu.iconset/icon_128x128@2x.png
-convert_image "$1" 512x512 suyu.iconset/icon_256x256@2x.png
-convert_image "$1" 512x512 suyu.iconset/icon_512x512.png
-convert_image "$1" 1024x1024 suyu.iconset/icon_512x512@2x.png
+convert_image "$1" 16x16 yuzu.iconset/icon_16x16.png
+convert_image "$1" 32x32 yuzu.iconset/icon_16x16@2x.png
+convert_image "$1" 32x32 yuzu.iconset/icon_32x32.png
+convert_image "$1" 64x64 yuzu.iconset/icon_32x32@2x.png
+convert_image "$1" 128x128 yuzu.iconset/icon_128x128.png
+convert_image "$1" 256x256 yuzu.iconset/icon_256x256.png
+convert_image "$1" 256x256 yuzu.iconset/icon_128x128@2x.png
+convert_image "$1" 512x512 yuzu.iconset/icon_256x256@2x.png
+convert_image "$1" 512x512 yuzu.iconset/icon_512x512.png
+convert_image "$1" 1024x1024 yuzu.iconset/icon_512x512@2x.png
 
 # Create the ICNS file
-iconutil -c icns suyu.iconset || {
+iconutil -c icns yuzu.iconset || {
     read -s -n 1 -p "Error: Failed to create ICNS file."
     exit 1
 }
 
 # Remove the temporary iconset directory
-rm -rf suyu.iconset || {
-    read -s -n 1 -p "Error: Unable to remove suyu.iconset directory."
+rm -rf yuzu.iconset || {
+    read -s -n 1 -p "Error: Unable to remove yuzu.iconset directory."
     exit 1
 }
 

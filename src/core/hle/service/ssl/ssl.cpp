@@ -38,7 +38,11 @@ enum class IoMode : u32 {
 };
 
 // This is nn::ssl::sf::OptionType
-enum class OptionType : u32 { DoNotCloseSocket = 0, GetServerCertChain = 1, EnableAlpn = 3 };
+enum class OptionType : u32 {
+    DoNotCloseSocket = 0,
+    GetServerCertChain = 1,
+    EnableAlpn = 3,
+};
 
 // This is nn::ssl::sf::SslVersion
 struct SslVersion {
@@ -380,7 +384,8 @@ private:
             get_server_cert_chain = static_cast<bool>(parameters.value);
             break;
         case OptionType::EnableAlpn:
-            LOG_ERROR(Service_SSL, "(STUBBED) called.");
+            LOG_ERROR(Service_SSL, "Called with option={}, value={} (STUBBED)", parameters.option,
+                      parameters.value);
             enable_alpn = static_cast<bool>(parameters.value);
             break;
         default:

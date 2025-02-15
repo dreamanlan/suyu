@@ -26,8 +26,8 @@ public:
     PhysicalCore(KernelCore& kernel, std::size_t core_index);
     ~PhysicalCore();
 
-    SUYU_NON_COPYABLE(PhysicalCore);
-    SUYU_NON_MOVEABLE(PhysicalCore);
+    YUZU_NON_COPYABLE(PhysicalCore);
+    YUZU_NON_MOVEABLE(PhysicalCore);
 
     void StartPcCount();
     void StopPcCount();

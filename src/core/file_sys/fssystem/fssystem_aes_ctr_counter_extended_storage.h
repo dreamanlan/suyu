@@ -14,8 +14,8 @@ namespace FileSys {
 using namespace Common::Literals;
 
 class AesCtrCounterExtendedStorage : public IReadOnlyStorage {
-    SUYU_NON_COPYABLE(AesCtrCounterExtendedStorage);
-    SUYU_NON_MOVEABLE(AesCtrCounterExtendedStorage);
+    YUZU_NON_COPYABLE(AesCtrCounterExtendedStorage);
+    YUZU_NON_MOVEABLE(AesCtrCounterExtendedStorage);
 
 public:
     static constexpr size_t BlockSize = 0x10;

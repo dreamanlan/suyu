@@ -21,8 +21,8 @@ namespace Kernel {
 class KernelCore;
 
 class KHandleTable {
-    SUYU_NON_COPYABLE(KHandleTable);
-    SUYU_NON_MOVEABLE(KHandleTable);
+    YUZU_NON_COPYABLE(KHandleTable);
+    YUZU_NON_MOVEABLE(KHandleTable);
 
 public:
     static constexpr size_t MaxTableSize = 1024;

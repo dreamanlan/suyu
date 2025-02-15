@@ -109,11 +109,11 @@ __declspec(dllimport) void __stdcall DebugBreak(void);
         return static_cast<T>(key) == 0;                                                           \
     }
 
-#define SUYU_NON_COPYABLE(cls)                                                                     \
+#define YUZU_NON_COPYABLE(cls)                                                                     \
     cls(const cls&) = delete;                                                                      \
     cls& operator=(const cls&) = delete
 
-#define SUYU_NON_MOVEABLE(cls)                                                                     \
+#define YUZU_NON_MOVEABLE(cls)                                                                     \
     cls(cls&&) = delete;                                                                           \
     cls& operator=(cls&&) = delete
 

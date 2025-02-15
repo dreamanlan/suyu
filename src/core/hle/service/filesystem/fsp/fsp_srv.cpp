@@ -238,14 +238,6 @@ Result FSP_SRV::CreateSaveDataFileSystem(FileSys::SaveDataCreationInfo save_crea
                                                   save_struct));
 }
 
-Result FSP_SRV::IsExFatSupported(Out<bool> out_is_supported) {
-    LOG_WARNING(Service_FS, "(STUBBED) called");
-
-    *out_is_supported = true;
-
-    R_SUCCEED();
-}
-
 Result FSP_SRV::CreateSaveDataFileSystemBySystemSaveDataId(
     FileSys::SaveDataAttribute save_struct, FileSys::SaveDataCreationInfo save_create_struct) {
     LOG_DEBUG(Service_FS, "called save_struct = {}", save_struct.DebugInfo());
@@ -253,6 +245,14 @@ Result FSP_SRV::CreateSaveDataFileSystemBySystemSaveDataId(
     FileSys::VirtualDir save_data_dir{};
     R_RETURN(save_data_controller->CreateSaveData(&save_data_dir, FileSys::SaveDataSpaceId::System,
                                                   save_struct));
+}
+
+Result FSP_SRV::IsExFatSupported(Out<bool> out_is_supported) {
+    LOG_WARNING(Service_FS, "(STUBBED) called");
+
+    *out_is_supported = true;
+
+    R_SUCCEED();
 }
 
 Result FSP_SRV::OpenSaveDataFileSystem(OutInterface<IFileSystem> out_interface,

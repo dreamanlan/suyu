@@ -185,16 +185,28 @@ enum class ErrorModule : u32 {
     Fst2 = 251,
     Nex = 306,
     NPLN = 321,
+    Libnx = 345,
+    HomebrewAbi = 346,
+    HomebrewLoader = 347,
+    LibnxNvidia = 348,
+    LibnxBinder = 349,
     TSPM = 499,
     DevMenu = 500,
     Nverpt = 520,
     Am_StuckMonitor = 521,
     Pia = 618,
     Eagle = 623,
+    LibAppletWeb = 800,
+    LibAppletAuth = 809,
+    LibAppletLns = 810,
+    LibAppletShop = 811,
+
+    // NOTE(EmulationEnjoyer): Keeping old applet entry names in the case there's some lookup by name happening somewhere
     GeneralWebApplet = 800,
     WifiWebAuthApplet = 809,
     WhitelistedApplet = 810,
     ShopN = 811,
+
     Coral = 815
 };
 
@@ -305,14 +317,31 @@ private:
     u32 description_end;
 };
 
+namespace ResultNs {
+
+    constexpr ResultRange InvalidSystemUpdateData{ErrorModule::NS, 101, 200};
+    constexpr ResultRange RebootlessSystemUpdateNotSupported{ErrorModule::NS, 201, 300};
+    constexpr ResultRange SystemUpdateNotFound{ErrorModule::NS, 301, 400};
+    constexpr ResultRange RebootlessSystemUpdateVersionMismatch{ErrorModule::NS, 401, 500};
+
+    constexpr ResultRange SystemUpdateInProgress{ErrorModule::NS, 501, 600};
+    constexpr ResultRange SystemUpdateInterrupted{ErrorModule::NS, 601, 700};
+    constexpr ResultRange InvalidRebootlessVersion{ErrorModule::NS, 701, 800};
+    constexpr ResultRange ContentVerificationFailed{ErrorModule::NS, 801, 900};
+    constexpr ResultRange UpdateApplicationBlackListed{ErrorModule::NS, 901, 1000};
+    constexpr ResultRange ContentActionTableError{ErrorModule::NS, 1001, 1100};
+    constexpr ResultRange SetupReceiveUpdateFailed{ErrorModule::NS, 1101, 1200};
+
+} // namespace ResultNs
+
 #define R_SUCCEEDED(res) (static_cast<Result>(res).IsSuccess())
 #define R_FAILED(res) (static_cast<Result>(res).IsFailure())
 
 namespace ResultImpl {
 template <auto EvaluateResult, class F>
 class ScopedResultGuard {
-    SUYU_NON_COPYABLE(ScopedResultGuard);
-    SUYU_NON_MOVEABLE(ScopedResultGuard);
+    YUZU_NON_COPYABLE(ScopedResultGuard);
+    YUZU_NON_MOVEABLE(ScopedResultGuard);
 
 private:
     Result& m_ref;

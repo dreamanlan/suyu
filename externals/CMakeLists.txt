@@ -63,11 +63,11 @@ if (ENABLE_LIBUSB AND NOT TARGET libusb::usb)
 endif()
 
 # SDL2
-if (SUYU_USE_EXTERNAL_SDL2)
+if (YUZU_USE_EXTERNAL_SDL2)
     if (NOT WIN32)
-        # Suyu itself needs: Atomic Audio Events Joystick Haptic Sensor Threads Timers
+        # Yuzu itself needs: Atomic Audio Events Joystick Haptic Sensor Threads Timers
         # Since 2.0.18 Atomic+Threads required for HIDAPI/libusb (see https://github.com/libsdl-org/SDL/issues/5095)
-        # Suyu-cmd also needs: Video (depends on Loadso/Dlopen)
+        # Yuzu-cmd also needs: Video (depends on Loadso/Dlopen)
         # CPUinfo also required for SDL Audio, at least until 2.28.0 (see https://github.com/libsdl-org/SDL/issues/7809)
         set(SDL_UNUSED_SUBSYSTEMS
             File Filesystem
@@ -142,7 +142,7 @@ if (NOT TARGET Opus::opus)
 endif()
 
 # FFMpeg
-if (SUYU_USE_BUNDLED_FFMPEG)
+if (YUZU_USE_BUNDLED_FFMPEG)
     add_subdirectory(ffmpeg)
     set(FFmpeg_PATH "${FFmpeg_PATH}" PARENT_SCOPE)
     set(FFmpeg_LDFLAGS "${FFmpeg_LDFLAGS}" PARENT_SCOPE)
@@ -151,12 +151,12 @@ if (SUYU_USE_BUNDLED_FFMPEG)
 endif()
 
 # Vulkan-Headers
-if (SUYU_USE_EXTERNAL_VULKAN_HEADERS)
+if (YUZU_USE_EXTERNAL_VULKAN_HEADERS)
     add_subdirectory(Vulkan-Headers)
 endif()
 
 # Vulkan-Utility-Libraries
-if (SUYU_USE_EXTERNAL_VULKAN_UTILITY_LIBRARIES)
+if (YUZU_USE_EXTERNAL_VULKAN_UTILITY_LIBRARIES)
     add_subdirectory(Vulkan-Utility-Libraries)
 endif()
 
@@ -165,7 +165,7 @@ add_subdirectory(nx_tzdb)
 
 # brace script
 add_library(libbrace STATIC IMPORTED GLOBAL)
-set_target_properties(libbrace PROPERTIES 
+set_target_properties(libbrace PROPERTIES
 	IMPORTED_LOCATION_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/brace/lib/x86_64/CppDsl_Debug.lib
 	IMPORTED_LOCATION_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/brace/lib/x86_64/CppDsl.lib)
 
@@ -233,7 +233,7 @@ endif()
 
 # Breakpad
 # https://github.com/microsoft/vcpkg/blob/master/ports/breakpad/CMakeLists.txt
-if (SUYU_CRASH_DUMPS AND NOT TARGET libbreakpad_client)
+if (YUZU_CRASH_DUMPS AND NOT TARGET libbreakpad_client)
     set(BREAKPAD_WIN32_DEFINES
         NOMINMAX
         UNICODE

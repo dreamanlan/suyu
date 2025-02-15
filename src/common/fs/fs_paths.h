@@ -3,12 +3,12 @@
 
 #pragma once
 
-// suyu data directories
+// yuzu data directories
 
-#define SUYU_DIR "suyu"
+#define YUZU_DIR "yuzu"
 #define PORTABLE_DIR "user"
 
-// Sub-directories contained within a suyu data directory
+// Sub-directories contained within a yuzu data directory
 
 #define AMIIBO_DIR "amiibo"
 #define CACHE_DIR "cache"
@@ -27,6 +27,6 @@
 #define TAS_DIR "tas"
 #define THEMES_DIR "qt_themes"
 
-// suyu-specific files
+// yuzu-specific files
 
-#define LOG_FILE "suyu_log.txt"
+#define LOG_FILE "yuzu_log.txt"

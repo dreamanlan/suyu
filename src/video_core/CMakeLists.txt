@@ -379,7 +379,7 @@ add_library(video_core STATIC ${sources})
 target_link_libraries(video_core PUBLIC common core)
 target_link_libraries(video_core PUBLIC glad shader_recompiler stb bc_decoder)
 
-if (SUYU_USE_BUNDLED_FFMPEG AND NOT (WIN32 OR ANDROID))
+if (YUZU_USE_BUNDLED_FFMPEG AND NOT (WIN32 OR ANDROID))
     add_dependencies(video_core ffmpeg-build)
 endif()
 
@@ -451,11 +451,11 @@ if (ARCHITECTURE_x86_64 OR ARCHITECTURE_arm64)
     target_link_libraries(video_core PRIVATE dynarmic::dynarmic)
 endif()
 
-if (SUYU_USE_PRECOMPILED_HEADERS)
+if (YUZU_USE_PRECOMPILED_HEADERS)
     target_precompile_headers(video_core PRIVATE precompiled_headers.h)
 endif()
 
-if (SUYU_ENABLE_LTO)
+if (YUZU_ENABLE_LTO)
   set_property(TARGET video_core PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 

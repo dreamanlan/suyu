@@ -6166,9 +6166,9 @@ protected:
     }
 };
 
-class GetSuyuPathExp final : public Brace::SimpleBraceApiBase {
+class GetYuzuPathExp final : public Brace::SimpleBraceApiBase {
 public:
-    GetSuyuPathExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+    GetYuzuPathExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
 
 protected:
     virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
@@ -6187,7 +6187,7 @@ protected:
 
         auto&& system = g_pApiProvider->GetSystem();
         if (nullptr != system.ApplicationProcess()) {
-            const auto path = g_pApiProvider->GetSuyuPath();
+            const auto path = g_pApiProvider->GetYuzuPath();
 
             Brace::VarSetString(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, path.string());
         }
@@ -11346,8 +11346,8 @@ inline void BraceScriptManager::InitBraceScript(Brace::BraceScript*& pBraceScrip
     pBraceScript->RegisterApi("addtolast", "addtolast(addr[,val_size,pid]) api",
                               new Brace::BraceApiFactory<AddToLastExp>());
 
-    pBraceScript->RegisterApi("getsuyupath", "getsuyupath() api",
-                              new Brace::BraceApiFactory<GetSuyuPathExp>());
+    pBraceScript->RegisterApi("getyuzupath", "getyuzupath() api",
+                              new Brace::BraceApiFactory<GetYuzuPathExp>());
     pBraceScript->RegisterApi("getmodloadpath", "getmodloadpath() api",
                               new Brace::BraceApiFactory<GetModLoadPathExp>());
     pBraceScript->RegisterApi("getgamesavepath", "getgamesavepath([user_index]) api",

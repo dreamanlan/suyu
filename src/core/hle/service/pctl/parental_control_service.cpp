@@ -123,7 +123,7 @@ IParentalControlService::IParentalControlService(Core::System& system_, Capabili
         {2015, nullptr, "FinishSynchronizeParentalControlSettingsWithLastUpdated"},
         {2016, nullptr, "RequestUpdateExemptionListAsync"},
         {145601, nullptr, "GetPlayTimerSettingsVer2"}, // 18.0.0+
-        {195101, nullptr, "SetPlayTimerSettingsForDebugVer2"}, // 18.0.0+
+        {195101, nullptr, "SetPlayTimerSettingsForDebugVer2"} // 18.0.0+
     };
     // clang-format on
     RegisterHandlers(functions);

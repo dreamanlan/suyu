@@ -18,8 +18,8 @@ class KernelCore;
 namespace impl {
 
 class KSlabHeapImpl {
-    SUYU_NON_COPYABLE(KSlabHeapImpl);
-    SUYU_NON_MOVEABLE(KSlabHeapImpl);
+    YUZU_NON_COPYABLE(KSlabHeapImpl);
+    YUZU_NON_MOVEABLE(KSlabHeapImpl);
 
 public:
     struct Node {
@@ -72,8 +72,8 @@ private:
 
 template <bool SupportDynamicExpansion>
 class KSlabHeapBase : protected impl::KSlabHeapImpl {
-    SUYU_NON_COPYABLE(KSlabHeapBase);
-    SUYU_NON_MOVEABLE(KSlabHeapBase);
+    YUZU_NON_COPYABLE(KSlabHeapBase);
+    YUZU_NON_MOVEABLE(KSlabHeapBase);
 
 private:
     size_t m_obj_size{};

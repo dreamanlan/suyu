@@ -261,7 +261,7 @@ struct CheatVmOpcode {
 
 class DmntCheatVm {
 public:
-    /// Helper Type for DmntCheatVm <=> suyu Interface
+    /// Helper Type for DmntCheatVm <=> yuzu Interface
     class Callbacks {
     public:
         virtual ~Callbacks();

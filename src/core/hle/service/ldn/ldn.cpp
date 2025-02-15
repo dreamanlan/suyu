@@ -63,7 +63,7 @@ public:
         // clang-format off
         static const FunctionInfo functions[] = {
             {0, C<&IUserServiceCreator::CreateUserLocalCommunicationService>, "CreateUserLocalCommunicationService"},
-            {1, nullptr, "CreateClientProcessMonitor"}, // 18.0.0+
+            {1, nullptr, "CreateClientProcessMonitor"} // 18.0.0+
         };
         // clang-format on
 

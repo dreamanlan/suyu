@@ -83,7 +83,7 @@ public:
             {303, nullptr, "GetNotificationHistories"}, // 18.0.0+
             {304, nullptr, "GetPersistentConnectionSummary"}, // 18.0.0+
             {305, nullptr, "GetDigitalTwinSummary"}, // 18.0.0+
-            {306, nullptr, "GetDigitalTwinValue"}, // 18.0.0+
+            {306, nullptr, "GetDigitalTwinValue"} // 18.0.0+
         };
         // clang-format on
 

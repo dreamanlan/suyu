@@ -81,8 +81,8 @@ public:
     explicit EmulatedDevices();
     ~EmulatedDevices();
 
-    SUYU_NON_COPYABLE(EmulatedDevices);
-    SUYU_NON_MOVEABLE(EmulatedDevices);
+    YUZU_NON_COPYABLE(EmulatedDevices);
+    YUZU_NON_MOVEABLE(EmulatedDevices);
 
     /// Removes all callbacks created from input devices
     void UnloadInput();

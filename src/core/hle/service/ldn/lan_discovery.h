@@ -109,7 +109,7 @@ protected:
     void SendPacket(const Network::LDNPacket& packet);
 
     static const LanEventFunc empty_func;
-    static constexpr Ssid fake_ssid{"SuyuFakeSsidForLdn"};
+    static constexpr Ssid fake_ssid{"YuzuFakeSsidForLdn"};
 
     bool inited{};
     std::mutex packet_mutex;

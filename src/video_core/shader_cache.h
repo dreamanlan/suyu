@@ -36,8 +36,8 @@ struct ShaderInfo {
 };
 
 class ShaderCache : public VideoCommon::ChannelSetupCaches<VideoCommon::ChannelInfo> {
-    static constexpr u64 SUYU_PAGEBITS = 14;
-    static constexpr u64 SUYU_PAGESIZE = u64(1) << SUYU_PAGEBITS;
+    static constexpr u64 YUZU_PAGEBITS = 14;
+    static constexpr u64 YUZU_PAGESIZE = u64(1) << YUZU_PAGEBITS;
 
     static constexpr size_t NUM_PROGRAMS = 6;
 

@@ -2,77 +2,77 @@
 <context>
     <name>AboutDialog</name>
     <message>
-        <location filename="../../src/suyu/aboutdialog.ui" line="14"/>
-        <source>About suyu</source>
-        <translation>Over suyu</translation>
+        <location filename="../../src/yuzu/aboutdialog.ui" line="14"/>
+        <source>About yuzu</source>
+        <translation>Over yuzu</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/aboutdialog.ui" line="72"/>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:28pt;&quot;&gt;suyu&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:28pt;&quot;&gt;suyu&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <location filename="../../src/yuzu/aboutdialog.ui" line="72"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:28pt;&quot;&gt;yuzu&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:28pt;&quot;&gt;yuzu&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/aboutdialog.ui" line="85"/>
+        <location filename="../../src/yuzu/aboutdialog.ui" line="85"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;%1 (%2)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;%1(%2)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/aboutdialog.ui" line="98"/>
+        <location filename="../../src/yuzu/aboutdialog.ui" line="98"/>
         <source>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Ubuntu'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'MS Shell Dlg 2'; font-size:12pt;&quot;&gt;suyu is an experimental open-source emulator for the Nintendo Switch licensed under GPLv3.0+.&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'MS Shell Dlg 2'; font-size:12pt;&quot;&gt;yuzu is an experimental open-source emulator for the Nintendo Switch licensed under GPLv3.0+.&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:&apos;MS Shell Dlg 2&apos;; font-size:12pt;&quot;&gt;This software should not be used to play games you have not legally obtained.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:&apos;Ubuntu&apos;; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:&apos;MS Shell Dlg 2&apos;; font-size:12pt;&quot;&gt;suyu is een experimentele open-source emulator voor de Nintendo Switch met een licentie onder GPLv3.0+.&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:&apos;MS Shell Dlg 2&apos;; font-size:12pt;&quot;&gt;yuzu is een experimentele open-source emulator voor de Nintendo Switch met een licentie onder GPLv3.0+.&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:&apos;MS Shell Dlg 2&apos;; font-size:8pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:&apos;MS Shell Dlg 2&apos;; font-size:12pt;&quot;&gt;Deze software mag niet worden gebruikt om spellen te spelen die je niet legaal hebt verkregen.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/aboutdialog.ui" line="130"/>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;a href=&quot;https://suyu.dev/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Website&lt;/span&gt;&lt;/a&gt; | &lt;a href=&quot;https://git.suyu.dev/suyu&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Source Code&lt;/span&gt;&lt;/a&gt; | &lt;a href=&quot;https://git.suyu.dev/suyu/suyu/activity&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Contributors&lt;/span&gt;&lt;/a&gt; | &lt;a href=&quot;https://gitlab.com/suyu-emu/suyu/blob/master/LICENSE.txt&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;License&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;a href=&quot;https://suyu.dev/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Website&lt;/span&gt;&lt;/a&gt; | &lt;a href=&quot;https://git.suyu.dev/suyu&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Broncode&lt;/span&gt;&lt;/a&gt; | &lt;a href=&quot;https://git.suyu.dev/suyu/suyu/activity&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Bijdragers&lt;/span&gt;&lt;/a&gt; | &lt;a href=&quot;https://gitlab.com/suyu-emu/suyu/blob/master/LICENSE.txt&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Licentie&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <location filename="../../src/yuzu/aboutdialog.ui" line="130"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;a href=&quot;https://yuzu.dev/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Website&lt;/span&gt;&lt;/a&gt; | &lt;a href=&quot;https://git.yuzu.dev/yuzu&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Source Code&lt;/span&gt;&lt;/a&gt; | &lt;a href=&quot;https://git.yuzu.dev/yuzu/yuzu/activity&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Contributors&lt;/span&gt;&lt;/a&gt; | &lt;a href=&quot;https://gitlab.com/yuzu-emu/yuzu/blob/master/LICENSE.txt&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;License&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;a href=&quot;https://yuzu.dev/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Website&lt;/span&gt;&lt;/a&gt; | &lt;a href=&quot;https://git.yuzu.dev/yuzu&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Broncode&lt;/span&gt;&lt;/a&gt; | &lt;a href=&quot;https://git.yuzu.dev/yuzu/yuzu/activity&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Bijdragers&lt;/span&gt;&lt;/a&gt; | &lt;a href=&quot;https://gitlab.com/yuzu-emu/yuzu/blob/master/LICENSE.txt&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#039be5;&quot;&gt;Licentie&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/aboutdialog.ui" line="146"/>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:7pt;&quot;&gt;&amp;quot;Nintendo Switch&amp;quot; is a trademark of Nintendo. suyu is not affiliated with Nintendo in any way.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:7pt;&quot;&gt;&amp;quot;Nintendo Switch&amp;quot; is een handelsmerk van Nintendo. suyu is op geen enkele manier met Nintendo verbonden.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <location filename="../../src/yuzu/aboutdialog.ui" line="146"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:7pt;&quot;&gt;&amp;quot;Nintendo Switch&amp;quot; is a trademark of Nintendo. yuzu is not affiliated with Nintendo in any way.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:7pt;&quot;&gt;&amp;quot;Nintendo Switch&amp;quot; is een handelsmerk van Nintendo. yuzu is op geen enkele manier met Nintendo verbonden.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
 </context>
 <context>
     <name>CalibrationConfigurationDialog</name>
     <message>
-        <location filename="../../src/suyu/configuration/configure_motion_touch.cpp" line="23"/>
+        <location filename="../../src/yuzu/configuration/configure_motion_touch.cpp" line="23"/>
         <source>Communicating with the server...</source>
         <translation>Communiceren met de server...</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/configure_motion_touch.cpp" line="24"/>
+        <location filename="../../src/yuzu/configuration/configure_motion_touch.cpp" line="24"/>
         <source>Cancel</source>
         <translation>Annuleer</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/configure_motion_touch.cpp" line="43"/>
+        <location filename="../../src/yuzu/configuration/configure_motion_touch.cpp" line="43"/>
         <source>Touch the top left corner &lt;br&gt;of your touchpad.</source>
         <translation>Raak de linkerbovenhoek &lt;br&gt; van je touchpad aan.</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/configure_motion_touch.cpp" line="46"/>
+        <location filename="../../src/yuzu/configuration/configure_motion_touch.cpp" line="46"/>
         <source>Now touch the bottom right corner &lt;br&gt;of your touchpad.</source>
         <translation>Raak nu de rechterbenedenhoek &lt;br&gt;van je touchpad aan.</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/configure_motion_touch.cpp" line="49"/>
+        <location filename="../../src/yuzu/configuration/configure_motion_touch.cpp" line="49"/>
         <source>Configuration completed!</source>
         <translation>Configuratie compleet!</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/configure_motion_touch.cpp" line="57"/>
+        <location filename="../../src/yuzu/configuration/configure_motion_touch.cpp" line="57"/>
         <source>OK</source>
         <translation>OK</translation>
     </message>
@@ -80,93 +80,93 @@ p, li { white-space: pre-wrap; }
 <context>
     <name>ChatRoom</name>
     <message>
-        <location filename="../../src/suyu/multiplayer/chat_room.ui" line="14"/>
+        <location filename="../../src/yuzu/multiplayer/chat_room.ui" line="14"/>
         <source>Room Window</source>
         <translation>Kamerraam</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/chat_room.ui" line="40"/>
+        <location filename="../../src/yuzu/multiplayer/chat_room.ui" line="40"/>
         <source>Send Chat Message</source>
         <translation>Verzend Chatbericht</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/chat_room.ui" line="47"/>
+        <location filename="../../src/yuzu/multiplayer/chat_room.ui" line="47"/>
         <source>Send Message</source>
         <translation>Verzend Bericht</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/chat_room.cpp" line="181"/>
+        <location filename="../../src/yuzu/multiplayer/chat_room.cpp" line="181"/>
         <source>Members</source>
         <translation>Leden</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/chat_room.cpp" line="318"/>
+        <location filename="../../src/yuzu/multiplayer/chat_room.cpp" line="318"/>
         <source>%1 has joined</source>
         <translation>%1 heeft deelgenomen</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/chat_room.cpp" line="321"/>
+        <location filename="../../src/yuzu/multiplayer/chat_room.cpp" line="321"/>
         <source>%1 has left</source>
         <translation>%1 is weggegaan</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/chat_room.cpp" line="324"/>
+        <location filename="../../src/yuzu/multiplayer/chat_room.cpp" line="324"/>
         <source>%1 has been kicked</source>
         <translation>%1 is kicked</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/chat_room.cpp" line="327"/>
+        <location filename="../../src/yuzu/multiplayer/chat_room.cpp" line="327"/>
         <source>%1 has been banned</source>
         <translation>%1 is verbannen</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/chat_room.cpp" line="330"/>
+        <location filename="../../src/yuzu/multiplayer/chat_room.cpp" line="330"/>
         <source>%1 has been unbanned</source>
         <translation>Ban van %1 is ongedaan gemaakt</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/chat_room.cpp" line="446"/>
+        <location filename="../../src/yuzu/multiplayer/chat_room.cpp" line="446"/>
         <source>View Profile</source>
         <translation>Bekijk Profiel</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/chat_room.cpp" line="459"/>
-        <location filename="../../src/suyu/multiplayer/chat_room.cpp" line="469"/>
+        <location filename="../../src/yuzu/multiplayer/chat_room.cpp" line="459"/>
+        <location filename="../../src/yuzu/multiplayer/chat_room.cpp" line="469"/>
         <source>Block Player</source>
         <translation>Blokkeer Speler</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/chat_room.cpp" line="470"/>
+        <location filename="../../src/yuzu/multiplayer/chat_room.cpp" line="470"/>
         <source>When you block a player, you will no longer receive chat messages from them.&lt;br&gt;&lt;br&gt;Are you sure you would like to block %1?</source>
         <translation>Als je een speler blokkeert, ontvang je geen chatberichten meer van ze.&lt;br&gt;&lt;br&gt;Weet je zeker dat je %1 wilt blokkeren?</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/chat_room.cpp" line="483"/>
+        <location filename="../../src/yuzu/multiplayer/chat_room.cpp" line="483"/>
         <source>Kick</source>
         <translation>Kick</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/chat_room.cpp" line="484"/>
+        <location filename="../../src/yuzu/multiplayer/chat_room.cpp" line="484"/>
         <source>Ban</source>
         <translation>Ban</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/chat_room.cpp" line="488"/>
+        <location filename="../../src/yuzu/multiplayer/chat_room.cpp" line="488"/>
         <source>Kick Player</source>
         <translation>Kick Speler</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/chat_room.cpp" line="489"/>
+        <location filename="../../src/yuzu/multiplayer/chat_room.cpp" line="489"/>
         <source>Are you sure you would like to &lt;b&gt;kick&lt;/b&gt; %1?</source>
         <translation>Weet je zeker dat je %1 wil &lt;b&gt;kicken&lt;/b&gt;?</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/chat_room.cpp" line="497"/>
+        <location filename="../../src/yuzu/multiplayer/chat_room.cpp" line="497"/>
         <source>Ban Player</source>
         <translation>Ban Speler</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/chat_room.cpp" line="498"/>
+        <location filename="../../src/yuzu/multiplayer/chat_room.cpp" line="498"/>
         <source>Are you sure you would like to &lt;b&gt;kick and ban&lt;/b&gt; %1?
 
 This would ban both their forum username and their IP address.</source>
@@ -178,22 +178,22 @@ Dit zou zowel hun forum gebruikersnaam als hun IP-adres verbannen.</translation>
 <context>
     <name>ClientRoom</name>
     <message>
-        <location filename="../../src/suyu/multiplayer/client_room.ui" line="14"/>
+        <location filename="../../src/yuzu/multiplayer/client_room.ui" line="14"/>
         <source>Room Window</source>
         <translation>Kamervenster</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/client_room.ui" line="27"/>
+        <location filename="../../src/yuzu/multiplayer/client_room.ui" line="27"/>
         <source>Room Description</source>
         <translation>Kamerbeschrijving</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/client_room.ui" line="47"/>
+        <location filename="../../src/yuzu/multiplayer/client_room.ui" line="47"/>
         <source>Moderation...</source>
         <translation>Moderatie...</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/client_room.ui" line="57"/>
+        <location filename="../../src/yuzu/multiplayer/client_room.ui" line="57"/>
         <source>Leave Room</source>
         <translation>Verlaat Kamer</translation>
     </message>
@@ -201,17 +201,17 @@ Dit zou zowel hun forum gebruikersnaam als hun IP-adres verbannen.</translation>
 <context>
     <name>ClientRoomWindow</name>
     <message>
-        <location filename="../../src/suyu/multiplayer/client_room.cpp" line="78"/>
+        <location filename="../../src/yuzu/multiplayer/client_room.cpp" line="78"/>
         <source>Connected</source>
         <translation>Verbonden</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/client_room.cpp" line="87"/>
+        <location filename="../../src/yuzu/multiplayer/client_room.cpp" line="87"/>
         <source>Disconnected</source>
         <translation>Verbinding verbroken</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/multiplayer/client_room.cpp" line="100"/>
+        <location filename="../../src/yuzu/multiplayer/client_room.cpp" line="100"/>
         <source>%1 - %2 (%3/%4 members) - connected</source>
         <translation>%1 - %2 (%3/%4 leden) - verbonden</translation>
     </message>
@@ -219,148 +219,148 @@ Dit zou zowel hun forum gebruikersnaam als hun IP-adres verbannen.</translation>
 <context>
     <name>CompatDB</name>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="20"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="20"/>
         <source>Report Compatibility</source>
         <translation>Rapporteer Compatibiliteit</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="27"/>
-        <location filename="../../src/suyu/compatdb.ui" line="63"/>
-        <location filename="../../src/suyu/compatdb.ui" line="115"/>
-        <location filename="../../src/suyu/compatdb.ui" line="167"/>
-        <location filename="../../src/suyu/compatdb.ui" line="219"/>
-        <location filename="../../src/suyu/compatdb.ui" line="271"/>
-        <location filename="../../src/suyu/compatdb.ui" line="330"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="27"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="63"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="115"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="167"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="219"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="271"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="330"/>
         <source>Report Game Compatibility</source>
         <translation>Rapporteer Spelcompatibiliteit</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="36"/>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Should you choose to submit a test case to the &lt;/span&gt;&lt;a href=&quot;https://suyu.dev/game/&quot;&gt;&lt;span style=&quot; font-size:10pt; text-decoration: underline; color:#0000ff;&quot;&gt;suyu Compatibility List&lt;/span&gt;&lt;/a&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;, The following information will be collected and displayed on the site:&lt;/span&gt;&lt;/p&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;&quot;&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Hardware Information (CPU / GPU / Operating System)&lt;/li&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Which version of suyu you are running&lt;/li&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;The connected suyu account&lt;/li&gt;&lt;/ul&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Als je kiest een test case op te sturen naar de &lt;/span&gt;&lt;a href=&quot;https://suyu.dev/game/&quot;&gt;&lt;span style=&quot; font-size:10pt; text-decoration: underline; color:#0000ff;&quot;&gt;suyu-compatibiliteitslijst&lt;/span&gt;&lt;/a&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;, zal de volgende informatie worden verzameld en getoond op de site:&lt;/span&gt;&lt;/p&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;&quot;&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Hardware-informatie (CPU / GPU / Besturingssysteem)&lt;/li&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Welke versie van suyu je draait&lt;/li&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Het verbonden suyu-account&lt;/li&gt;&lt;/ul&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <location filename="../../src/yuzu/compatdb.ui" line="36"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Should you choose to submit a test case to the &lt;/span&gt;&lt;a href=&quot;https://yuzu.dev/game/&quot;&gt;&lt;span style=&quot; font-size:10pt; text-decoration: underline; color:#0000ff;&quot;&gt;yuzu Compatibility List&lt;/span&gt;&lt;/a&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;, The following information will be collected and displayed on the site:&lt;/span&gt;&lt;/p&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;&quot;&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Hardware Information (CPU / GPU / Operating System)&lt;/li&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Which version of yuzu you are running&lt;/li&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;The connected yuzu account&lt;/li&gt;&lt;/ul&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Als je kiest een test case op te sturen naar de &lt;/span&gt;&lt;a href=&quot;https://yuzu.dev/game/&quot;&gt;&lt;span style=&quot; font-size:10pt; text-decoration: underline; color:#0000ff;&quot;&gt;yuzu-compatibiliteitslijst&lt;/span&gt;&lt;/a&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;, zal de volgende informatie worden verzameld en getoond op de site:&lt;/span&gt;&lt;/p&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;&quot;&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Hardware-informatie (CPU / GPU / Besturingssysteem)&lt;/li&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Welke versie van yuzu je draait&lt;/li&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Het verbonden yuzu-account&lt;/li&gt;&lt;/ul&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="77"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="77"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Does the game boot?&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Start het spel op?&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="100"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="100"/>
         <source>Yes   The game starts to output video or audio</source>
         <translation>Ja Het spel begint video of audio te produceren</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="107"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="107"/>
         <source>No    The game doesn&apos;t get past the &quot;Launching...&quot; screen</source>
         <translation>Nee Het spel komt niet voorbij het &quot;Starten...&quot; scherm</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="124"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="124"/>
         <source>Yes   The game gets past the intro/menu and into gameplay</source>
         <translation>Ja Het spel komt voorbij het intro/menu en begint met het spel</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="131"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="131"/>
         <source>No    The game crashes or freezes while loading or using the menu</source>
         <translation>Nee Het spel loopt vast tijdens het laden of gebruik van het menu</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="143"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="143"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Does the game reach gameplay?&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Bereikt het spel de gameplay?&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="176"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="176"/>
         <source>Yes   The game works without crashes</source>
         <translation>Ja Het spel werkt zonder crashes</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="183"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="183"/>
         <source>No    The game crashes or freezes during gameplay</source>
         <translation>Nee Het spel loopt vast of loopt vast tijdens het spelen</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="195"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="195"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Does the game work without crashing, freezing or locking up during gameplay?&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Werkt het spel zonder te crashen, te bevriezen of vast te lopen tijdens het spelen?&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="228"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="228"/>
         <source>Yes   The game can be finished without any workarounds</source>
         <translation>Ja Het spel kan zonder omwegen worden uitgespeeld</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="235"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="235"/>
         <source>No    The game can&apos;t progress past a certain area</source>
         <translation>Nee Het spel kan niet verder dan een bepaald gebied</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="247"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="247"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Is the game completely playable from start to finish?&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Is het spel volledig speelbaar van begin tot eind?&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="280"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="280"/>
         <source>Major   The game has major graphical errors</source>
         <translation>Major Het spel heeft aanzienlijke grafische fouten</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="287"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="287"/>
         <source>Minor   The game has minor graphical errors</source>
         <translation>Minor Het spel heeft lichte grafische fouten</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="294"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="294"/>
         <source>None     Everything is rendered as it looks on the Nintendo Switch</source>
         <translation>Geen Alles wordt weergegeven zoals het eruit ziet op de Nintendo Switch</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="306"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="306"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Does the game have any graphical glitches?&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Heeft het spel grafische glitches?&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="339"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="339"/>
         <source>Major   The game has major audio errors</source>
         <translation>Major Het spel heeft aanzienlijke audiofouten</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="346"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="346"/>
         <source>Minor   The game has minor audio errors</source>
         <translation>Minor Het spel heeft lichte audiofouten</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="353"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="353"/>
         <source>None     Audio is played perfectly</source>
         <translation>Geen Audio wordt perfect afgespeeld</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="365"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="365"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Does the game have any audio glitches / missing effects?&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Heeft het spel audio-glitches / ontbrekende effecten?&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.ui" line="389"/>
+        <location filename="../../src/yuzu/compatdb.ui" line="389"/>
         <source>Thank you for your submission!</source>
         <translation>Bedankt voor je inzending!</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.cpp" line="121"/>
+        <location filename="../../src/yuzu/compatdb.cpp" line="121"/>
         <source>Submitting</source>
         <translation>Inzenden</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.cpp" line="195"/>
+        <location filename="../../src/yuzu/compatdb.cpp" line="195"/>
         <source>Communication error</source>
         <translation>Communicatiefout</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.cpp" line="196"/>
+        <location filename="../../src/yuzu/compatdb.cpp" line="196"/>
         <source>An error occurred while sending the Testcase</source>
         <translation>Er is een fout gebeurd tijdens het versturen van de Testcase</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/compatdb.cpp" line="198"/>
+        <location filename="../../src/yuzu/compatdb.cpp" line="198"/>
         <source>Next</source>
         <translation>Volgende</translation>
     </message>
@@ -368,257 +368,257 @@ Dit zou zowel hun forum gebruikersnaam als hun IP-adres verbannen.</translation>
 <context>
     <name>ConfigurationShared</name>
     <message>
-        <location filename="../../src/suyu/configuration/shared_widget.cpp" line="63"/>
+        <location filename="../../src/yuzu/configuration/shared_widget.cpp" line="63"/>
         <source>%</source>
         <translation>%</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="30"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="30"/>
         <source>Amiibo editor</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="31"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="31"/>
         <source>Controller configuration</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="32"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="32"/>
         <source>Data erase</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="33"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="33"/>
         <source>Error</source>
         <translation>Fout</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="34"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="34"/>
         <source>Net connect</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="35"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="35"/>
         <source>Player select</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="36"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="36"/>
         <source>Software keyboard</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="37"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="37"/>
         <source>Mii Edit</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="38"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="38"/>
         <source>Online web</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="39"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="39"/>
         <source>Shop</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="40"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="40"/>
         <source>Photo viewer</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="41"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="41"/>
         <source>Offline web</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="42"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="42"/>
         <source>Login share</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="43"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="43"/>
         <source>Wifi web auth</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="44"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="44"/>
         <source>My page</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="47"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="47"/>
         <source>Output Engine:</source>
         <translation>Uitvoer-engine:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="48"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="48"/>
         <source>Output Device:</source>
         <translation>Uitvoerapparaat:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="49"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="49"/>
         <source>Input Device:</source>
         <translation>Invoerapparaat:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="50"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="50"/>
         <source>Mute audio</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="51"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="51"/>
         <source>Volume:</source>
         <translation>Volume:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="53"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="53"/>
         <source>Mute audio when in background</source>
         <translation>Demp audio op de achtergrond</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="58"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="58"/>
         <source>Multicore CPU Emulation</source>
         <translation>Multicore CPU-emulatie</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="59"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="59"/>
         <source>This option increases CPU emulation thread use from 1 to the Switch’s maximum of 4.
 This is mainly a debug option and shouldn’t be disabled.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="62"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="62"/>
         <source>Memory Layout</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="63"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="63"/>
         <source>Increases the amount of emulated RAM from the stock 4GB of the retail Switch to the developer kit's 8/6GB.
 It’s doesn’t improve stability or performance and is intended to let big texture mods fit in emulated RAM.
 Enabling it will increase memory use. It is not recommended to enable unless a specific game with a texture mod needs it.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="69"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="69"/>
         <source>Limit Speed Percent</source>
         <translation>Beperk Snelheidspercentage</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="70"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="70"/>
         <source>Controls the game's maximum rendering speed, but it’s up to each game if it runs faster or not.
 200% for a 30 FPS game is 60 FPS, and for a 60 FPS game it will be 120 FPS.
 Disabling it means unlocking the framerate to the maximum your PC can reach.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="76"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="76"/>
         <source>Accuracy:</source>
         <translation>Nauwkeurigheid:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="77"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="77"/>
         <source>This setting controls the accuracy of the emulated CPU.
 Don&apos;t change this unless you know what you are doing.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="79"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="79"/>
         <source>Backend:</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="86"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="86"/>
         <source>Unfuse FMA (improve performance on CPUs without FMA)</source>
         <translation>Ontbind FMA (verbeterd prestatie op CPU&apos;s zonder FMA)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="87"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="87"/>
         <source>This option improves speed by reducing accuracy of fused-multiply-add instructions on CPUs without native FMA support.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="90"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="90"/>
         <source>Faster FRSQRTE and FRECPE</source>
         <translation>Snellere FRSRTE en FRECPE</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="91"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="91"/>
         <source>This option improves the speed of some approximate floating-point functions by using less accurate native approximations.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="94"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="94"/>
         <source>Faster ASIMD instructions (32 bits only)</source>
         <translation>Snellere ASIMD-instructies (alleen 32-bits)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="95"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="95"/>
         <source>This option improves the speed of 32 bits ASIMD floating-point functions by running with incorrect rounding modes.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="97"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="97"/>
         <source>Inaccurate NaN handling</source>
         <translation>Onnauwkeurige NaN-verwerking</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="98"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="98"/>
         <source>This option improves speed by removing NaN checking.
 Please note this also reduces accuracy of certain floating-point instructions.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="100"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="100"/>
         <source>Disable address space checks</source>
         <translation>Schakel adresruimtecontroles uit</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="101"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="101"/>
         <source>This option improves speed by eliminating a safety check before every memory read/write in guest.
 Disabling it may allow a game to read/write the emulator&apos;s memory.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="105"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="105"/>
         <source>Ignore global monitor</source>
         <translation>Negeer globale monitor</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="106"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="106"/>
         <source>This option improves speed by relying only on the semantics of cmpxchg to ensure safety of exclusive access instructions.
 Please note this may result in deadlocks and other race conditions.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="112"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="112"/>
         <source>API:</source>
         <translation>API:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="113"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="113"/>
         <source>Switches between the available graphics APIs.
 Vulkan is recommended in most cases.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="114"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="114"/>
         <source>Device:</source>
         <translation>Apparaat:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="115"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="115"/>
         <source>This setting selects the GPU to use with the Vulkan backend.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="116"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="116"/>
         <source>Shader Backend:</source>
         <translation>Shader Backend:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="117"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="117"/>
         <source>The shader backend to use for the OpenGL renderer.
 GLSL is the fastest in performance and the best in rendering accuracy.
 GLASM is a deprecated NVIDIA-only backend that offers much better shader building performance at the cost of FPS and rendering accuracy.
@@ -626,109 +626,109 @@ SPIR-V compiles the fastest, but yields poor results on most GPU drivers.</sourc
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="122"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="122"/>
         <source>Resolution:</source>
         <translation>Resolutie:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="123"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="123"/>
         <source>Forces the game to render at a different resolution.
 Higher resolutions require much more VRAM and bandwidth.
 Options lower than 1X can cause rendering issues.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="126"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="126"/>
         <source>Window Adapting Filter:</source>
         <translation>Window Adapting Filter:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="127"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="127"/>
         <source>FSR Sharpness:</source>
         <translation>FSR-scherpte:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="128"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="128"/>
         <source>Determines how sharpened the image will look while using FSR’s dynamic contrast.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="129"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="129"/>
         <source>Anti-Aliasing Method:</source>
         <translation>Antialiasing-methode:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="130"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="130"/>
         <source>The anti-aliasing method to use.
 SMAA offers the best quality.
 FXAA has a lower performance impact and can produce a better and more stable picture under very low resolutions.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="133"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="133"/>
         <source>Fullscreen Mode:</source>
         <translation>Volledig scherm modus:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="134"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="134"/>
         <source>The method used to render the window in fullscreen.
 Borderless offers the best compatibility with the on-screen keyboard that some games request for input.
 Exclusive fullscreen may offer better performance and better Freesync/Gsync support.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="138"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="138"/>
         <source>Aspect Ratio:</source>
         <translation>Aspect Ratio:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="139"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="139"/>
         <source>Stretches the game to fit the specified aspect ratio.
 Switch games only support 16:9, so custom game mods are required to get other ratios.
 Also controls the aspect ratio of captured screenshots.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="142"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="142"/>
         <source>Use disk pipeline cache</source>
         <translation>Gebruik schijfpijplijn-cache</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="143"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="143"/>
         <source>Allows saving shaders to storage for faster loading on following game boots.
 Disabling it is only intended for debugging.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="147"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="147"/>
         <source>Use asynchronous GPU emulation</source>
         <translation>Gebruik asynchrone GPU-emulatie</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="148"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="148"/>
         <source>Uses an extra CPU thread for rendering.
 This option should always remain enabled.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="149"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="149"/>
         <source>NVDEC emulation:</source>
         <translation>NVDEC-emulatie:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="150"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="150"/>
         <source>Specifies how videos should be decoded.
 It can either use the CPU or the GPU for decoding, or perform no decoding at all (black screen on videos).
 In most cases, GPU decoding provides the best performance.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="153"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="153"/>
         <source>ASTC Decoding Method:</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="154"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="154"/>
         <source>This option controls how ASTC textures should be decoded.
 CPU: Use the CPU for decoding, slowest but safest method.
 GPU: Use the GPU's compute shaders to decode ASTC textures, recommended for most games and users.
@@ -737,33 +737,33 @@ stuttering at the cost of rendering issues while the texture is being decoded.</
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="162"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="162"/>
         <source>ASTC Recompression Method:</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="163"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="163"/>
         <source>Almost all desktop and laptop dedicated GPUs lack support for ASTC textures, forcing the emulator to decompress to an intermediate format any card supports, RGBA8.
 This option recompresses RGBA8 to either the BC1 or BC3 format, saving VRAM but negatively affecting image quality.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="167"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="167"/>
         <source>VRAM Usage Mode:</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="168"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="168"/>
         <source>Selects whether the emulator should prefer to conserve memory or make maximum usage of available video memory for performance. Has no effect on integrated graphics. Aggressive mode may severely impact the performance of other applications such as recording software.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="173"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="173"/>
         <source>VSync Mode:</source>
         <translation>VSync-modus:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="174"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="174"/>
         <source>FIFO (VSync) does not drop frames or exhibit tearing but is limited by the screen refresh rate.
 FIFO Relaxed is similar to FIFO but allows tearing as it recovers from a slow down.
 Mailbox can have lower latency than FIFO and does not tear but may drop frames.
@@ -774,43 +774,43 @@ Mailbox kan een lagere latentie hebben dan FIFO en scheurt niet, maar kan frames
 Immediate (geen synchronisatie) presenteert gewoon wat beschikbaar is en kan scheuren vertonen.</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="184"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="184"/>
         <source>Enable asynchronous presentation (Vulkan only)</source>
         <translation>Schakel asynchrone presentatie in (alleen Vulkan)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="185"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="185"/>
         <source>Slightly improves performance by moving presentation to a separate CPU thread.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="187"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="187"/>
         <source>Force maximum clocks (Vulkan only)</source>
         <translation>Forceer maximale klokken (alleen Vulkan)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="188"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="188"/>
         <source>Runs work in the background while waiting for graphics commands to keep the GPU from lowering its clock speed.</source>
         <translation>Werkt op de achtergrond terwijl er wordt gewacht op grafische opdrachten om te voorkomen dat de GPU zijn kloksnelheid verlaagt.</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="190"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="190"/>
         <source>Anisotropic Filtering:</source>
         <translation>Anisotrope Filtering:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="191"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="191"/>
         <source>Controls the quality of texture rendering at oblique angles.
 It’s a light setting and safe to set at 16x on most GPUs.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="193"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="193"/>
         <source>Accuracy Level:</source>
         <translation>Nauwkeurigheidsniveau:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="194"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="194"/>
         <source>GPU emulation accuracy.
 Most games render fine with Normal, but High is still required for some.
 Particles tend to only render correctly with High accuracy.
@@ -820,925 +820,925 @@ Some games may require booting on high to render properly.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="199"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="199"/>
         <source>Use asynchronous shader building (Hack)</source>
         <translation>Gebruik asynchrone shaderbouw (Hack)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="200"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="200"/>
         <source>Enables asynchronous shader compilation, which may reduce shader stutter.
 This feature is experimental.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="203"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="203"/>
         <source>Use Fast GPU Time (Hack)</source>
         <translation>Gebruik Snelle GPU-tijd (Hack)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="204"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="204"/>
         <source>Enables Fast GPU Time. This option will force most games to run at their highest native resolution.</source>
         <translation>Schakelt Snelle GPU-tijd in. Deze optie forceert de meeste games om op hun hoogste native resolutie te draaien.</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="206"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="206"/>
         <source>Use Vulkan pipeline cache</source>
         <translation>Gebruik Vulkan-pijplijn-cache</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="207"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="207"/>
         <source>Enables GPU vendor-specific pipeline cache.
 This option can improve shader loading time significantly in cases where the Vulkan driver does not store pipeline cache files internally.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="211"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="211"/>
         <source>Enable Compute Pipelines (Intel Vulkan Only)</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="212"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="212"/>
         <source>Enable compute pipelines, required by some games.
 This setting only exists for Intel proprietary drivers, and may crash if enabled.
 Compute pipelines are always enabled on all other drivers.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="216"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="216"/>
         <source>Enable Reactive Flushing</source>
         <translation>Schakel Reactive Flushing In</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="217"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="217"/>
         <source>Uses reactive flushing instead of predictive flushing, allowing more accurate memory syncing.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="219"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="219"/>
         <source>Sync to framerate of video playback</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="220"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="220"/>
         <source>Run the game at normal speed during video playback, even when the framerate is unlocked.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="222"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="222"/>
         <source>Barrier feedback loops</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="223"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="223"/>
         <source>Improves rendering of transparency effects in specific games.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="228"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="228"/>
         <source>RNG Seed</source>
         <translation>RNG Seed</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="229"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="229"/>
         <source>Controls the seed of the random number generator.
 Mainly used for speedrunning purposes.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="232"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="232"/>
         <source>Device Name</source>
         <translation>Apparaatnaam</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="232"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="232"/>
         <source>The name of the emulated Switch.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="233"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="233"/>
         <source>Custom RTC Date:</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="234"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="234"/>
         <source>This option allows to change the emulated clock of the Switch.
 Can be used to manipulate time in games.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="239"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="239"/>
         <source>Language:</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="240"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="240"/>
         <source>Note: this can be overridden when region setting is auto-select</source>
         <translation>Opmerking: dit kan worden overschreven wanneer de regio-instelling automatisch wordt geselecteerd</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="241"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="241"/>
         <source>Region:</source>
         <translation>Regio:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="241"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="241"/>
         <source>The region of the emulated Switch.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="242"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="242"/>
         <source>Time Zone:</source>
         <translation>Tijdzone:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="243"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="243"/>
         <source>The time zone of the emulated Switch.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="244"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="244"/>
         <source>Sound Output Mode:</source>
         <translation>Geluidsuitvoermodus:</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="245"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="245"/>
         <source>Console Mode:</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="246"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="246"/>
         <source>Selects if the console is emulated in Docked or Handheld mode.
 Games will change their resolution, details and supported controllers and depending on this setting.
 Setting to Handheld can help improve performance for low end systems.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="266"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="266"/>
         <source>Prompt for user on game boot</source>
         <translation>Vraag aan gebruiker bij opstarten van het spel</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="267"/>
-        <source>Ask to select a user profile on each boot, useful if multiple people use suyu on the same PC.</source>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="267"/>
+        <source>Ask to select a user profile on each boot, useful if multiple people use yuzu on the same PC.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="269"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="269"/>
         <source>Pause emulation when in background</source>
         <translation>Emulatie onderbreken op de achtergrond</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="270"/>
-        <source>This setting pauses suyu when focusing other windows.</source>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="270"/>
+        <source>This setting pauses yuzu when focusing other windows.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="271"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="271"/>
         <source>Confirm before stopping emulation</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="272"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="272"/>
         <source>This setting overrides game prompts asking to confirm stopping the game.
 Enabling it bypasses such prompts and directly exits the emulation.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="274"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="274"/>
         <source>Hide mouse on inactivity</source>
         <translation>Verberg muis wanneer inactief</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="275"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="275"/>
         <source>This setting hides the mouse after 2.5s of inactivity.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="276"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="276"/>
         <source>Disable controller applet</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="277"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="277"/>
         <source>Forcibly disables the use of the controller applet by guests.
 When a guest attempts to open the controller applet, it is immediately closed.</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="281"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="281"/>
         <source>Enable Gamemode</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="306"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="306"/>
         <source>Custom frontend</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="307"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="307"/>
         <source>Real applet</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="312"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="312"/>
         <source>CPU</source>
         <translation>CPU</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="313"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="313"/>
         <source>GPU</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="314"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="314"/>
         <source>CPU Asynchronous</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="319"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="319"/>
         <source>Uncompressed (Best quality)</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="320"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="320"/>
         <source>BC1 (Low quality)</source>
         <translation>BC1 (Lage Kwaliteit)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="321"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="321"/>
         <source>BC3 (Medium quality)</source>
         <translation>BC3 (Gemiddelde kwaliteit)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="325"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="325"/>
         <source>Conservative</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="326"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="326"/>
         <source>Aggressive</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="331"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="331"/>
         <source>OpenGL</source>
         <translation>OpenGL</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="333"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="333"/>
         <source>Vulkan</source>
         <translation>Vulkan</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="334"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="334"/>
         <source>Null</source>
         <translation>Null</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="339"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="339"/>
         <source>GLSL</source>
         <translation>GLSL</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="340"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="340"/>
         <source>GLASM (Assembly Shaders, NVIDIA Only)</source>
         <translation>GLASM (Assembly Shaders, alleen NVIDIA)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="341"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="341"/>
         <source>SPIR-V (Experimental, AMD/Mesa Only)</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="345"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="345"/>
         <source>Normal</source>
         <translation>Normaal</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="346"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="346"/>
         <source>High</source>
         <translation>Hoog</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="347"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="347"/>
         <source>Extreme</source>
         <translation>Extreme</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="352"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="352"/>
         <source>Auto</source>
         <translation>Auto</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="353"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="353"/>
         <source>Accurate</source>
         <translation>Accuraat </translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="354"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="354"/>
         <source>Unsafe</source>
         <translation>Onveilig</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="355"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="355"/>
         <source>Paranoid (disables most optimizations)</source>
         <translation>Paranoid (schakelt de meeste optimalisaties uit)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="359"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="359"/>
         <source>Dynarmic</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="360"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="360"/>
         <source>NCE</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="364"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="364"/>
         <source>Borderless Windowed</source>
         <translation>Randloos Venster</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="365"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="365"/>
         <source>Exclusive Fullscreen</source>
         <translation>Exclusief Volledig Scherm</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="369"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="369"/>
         <source>No Video Output</source>
         <translation>Geen Video-uitvoer</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="370"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="370"/>
         <source>CPU Video Decoding</source>
         <translation>CPU Videodecodering</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="371"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="371"/>
         <source>GPU Video Decoding (Default)</source>
         <translation>GPU Videodecodering (Standaard)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="376"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="376"/>
         <source>0.5X (360p/540p) [EXPERIMENTAL]</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="377"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="377"/>
         <source>0.75X (540p/810p) [EXPERIMENTAL]</source>
         <translation>0.75X (540p/810p) [EXPERIMENTEEL]</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="378"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="378"/>
         <source>1X (720p/1080p)</source>
         <translation>1X (720p/1080p)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="379"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="379"/>
         <source>1.5X (1080p/1620p) [EXPERIMENTAL]</source>
         <translation>1.5X (1080p/1620p) [EXPERIMENTEEL]</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="380"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="380"/>
         <source>2X (1440p/2160p)</source>
         <translation>2X (1440p/2160p)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="381"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="381"/>
         <source>3X (2160p/3240p)</source>
         <translation>3X (2160p/3240p)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="382"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="382"/>
         <source>4X (2880p/4320p)</source>
         <translation>4X (2880p/4320p)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="383"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="383"/>
         <source>5X (3600p/5400p)</source>
         <translation>5X (3600p/5400p)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="384"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="384"/>
         <source>6X (4320p/6480p)</source>
         <translation>6X (4320p/6480p)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="385"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="385"/>
         <source>7X (5040p/7560p)</source>
         <translation>7X (5040p/7560p)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="386"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="386"/>
         <source>8X (5760p/8640p)</source>
         <translation>8X (5760p/8640p)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="390"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="390"/>
         <source>Nearest Neighbor</source>
         <translation>Nearest Neighbor</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="391"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="391"/>
         <source>Bilinear</source>
         <translation>Bilinear</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="392"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="392"/>
         <source>Bicubic</source>
         <translation>Bicubic</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="393"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="393"/>
         <source>Gaussian</source>
         <translation>Gaussian</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="394"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="394"/>
         <source>ScaleForce</source>
         <translation>ScaleForce</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="395"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="395"/>
         <source>AMD FidelityFX™️ Super Resolution</source>
         <translation>AMD FidelityFX™️ Super Resolution</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="399"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="399"/>
         <source>None</source>
         <translation>Geen</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="400"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="400"/>
         <source>FXAA</source>
         <translation>FXAA</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="401"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="401"/>
         <source>SMAA</source>
         <translation>SMAA</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="405"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="405"/>
         <source>Default (16:9)</source>
         <translation>Standaart (16:9)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="406"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="406"/>
         <source>Force 4:3</source>
         <translation>Forceer 4:3</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="407"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="407"/>
         <source>Force 21:9</source>
         <translation>Forceer 21:9</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="408"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="408"/>
         <source>Force 16:10</source>
         <translation>Forceer 16:10</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="409"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="409"/>
         <source>Stretch to Window</source>
         <translation>Uitrekken naar Venster</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="413"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="413"/>
         <source>Automatic</source>
         <translation>Automatisch</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="414"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="414"/>
         <source>Default</source>
         <translation>Standaard</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="415"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="415"/>
         <source>2x</source>
         <translation>2x</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="416"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="416"/>
         <source>4x</source>
         <translation>4x</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="417"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="417"/>
         <source>8x</source>
         <translation>8x</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="418"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="418"/>
         <source>16x</source>
         <translation>16x</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="423"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="423"/>
         <source>Japanese (日本語)</source>
         <translation>Japans (日本語)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="424"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="424"/>
         <source>American English</source>
         <translation>Amerikaans-Engels</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="425"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="425"/>
         <source>French (français)</source>
         <translation>Frans (Français)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="426"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="426"/>
         <source>German (Deutsch)</source>
         <translation>Duits (Deutsch)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="427"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="427"/>
         <source>Italian (italiano)</source>
         <translation>Italiaans (italiano)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="428"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="428"/>
         <source>Spanish (español)</source>
         <translation>Spaans (Español)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="429"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="429"/>
         <source>Chinese</source>
         <translation>Chinees</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="430"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="430"/>
         <source>Korean (한국어)</source>
         <translation>Koreaans (한국어)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="431"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="431"/>
         <source>Dutch (Nederlands)</source>
         <translation>Nederlands (Nederlands)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="432"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="432"/>
         <source>Portuguese (português)</source>
         <translation>Portugees (português)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="433"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="433"/>
         <source>Russian (Русский)</source>
         <translation>Russisch (Русский)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="434"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="434"/>
         <source>Taiwanese</source>
         <translation>Taiwanese</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="435"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="435"/>
         <source>British English</source>
         <translation>Brits-Engels</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="436"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="436"/>
         <source>Canadian French</source>
         <translation>Canadees-Frans</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="437"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="437"/>
         <source>Latin American Spanish</source>
         <translation>Latijns-Amerikaans Spaans</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="438"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="438"/>
         <source>Simplified Chinese</source>
         <translation>Vereenvoudigd Chinees</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="439"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="439"/>
         <source>Traditional Chinese (正體中文)</source>
         <translation>Traditioneel Chinees (正體中文)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="440"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="440"/>
         <source>Brazilian Portuguese (português do Brasil)</source>
         <translation>Braziliaans-Portugees (português do Brasil)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="444"/>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="483"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="444"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="483"/>
         <source>Japan</source>
         <translation>Japan</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="445"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="445"/>
         <source>USA</source>
         <translation>USA</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="446"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="446"/>
         <source>Europe</source>
         <translation>Europa</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="447"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="447"/>
         <source>Australia</source>
         <translation>Australië</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="448"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="448"/>
         <source>China</source>
         <translation>China</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="449"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="449"/>
         <source>Korea</source>
         <translation>Korea</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="450"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="450"/>
         <source>Taiwan</source>
         <translation>Taiwan</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="456"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="456"/>
         <source>Auto (%1)</source>
         <comment>Auto select time zone</comment>
         <translation>Auto (%1)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="460"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="460"/>
         <source>Default (%1)</source>
         <comment>Default time zone</comment>
         <translation>Standaard (%1)</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="462"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="462"/>
         <source>CET</source>
         <translation>CET</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="463"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="463"/>
         <source>CST6CDT</source>
         <translation>CST6CDT</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="464"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="464"/>
         <source>Cuba</source>
         <translation>Cuba</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="465"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="465"/>
         <source>EET</source>
         <translation>EET</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="466"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="466"/>
         <source>Egypt</source>
         <translation>Egypte</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="467"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="467"/>
         <source>Eire</source>
         <translation>Eire</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="468"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="468"/>
         <source>EST</source>
         <translation>EST</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="469"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="469"/>
         <source>EST5EDT</source>
         <translation>EST5EDT</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="470"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="470"/>
         <source>GB</source>
         <translation>GB</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="471"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="471"/>
         <source>GB-Eire</source>
         <translation>GB-Eire</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="472"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="472"/>
         <source>GMT</source>
         <translation>GMT</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="473"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="473"/>
         <source>GMT+0</source>
         <translation>GMT+0</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="474"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="474"/>
         <source>GMT-0</source>
         <translation>GMT-0</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="475"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="475"/>
         <source>GMT0</source>
         <translation>GMT0</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="476"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="476"/>
         <source>Greenwich</source>
         <translation>Greenwich</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="477"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="477"/>
         <source>Hongkong</source>
         <translation>Hongkong</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="478"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="478"/>
         <source>HST</source>
         <translation>HST</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="479"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="479"/>
         <source>Iceland</source>
         <translation>Ijsland</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="480"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="480"/>
         <source>Iran</source>
         <translation>Iran</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="481"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="481"/>
         <source>Israel</source>
         <translation>Israel</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="482"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="482"/>
         <source>Jamaica</source>
         <translation>Jamaica</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="484"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="484"/>
         <source>Kwajalein</source>
         <translation>Kwajalein</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="485"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="485"/>
         <source>Libya</source>
         <translation>Libië</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="486"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="486"/>
         <source>MET</source>
         <translation>MET</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="487"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="487"/>
         <source>MST</source>
         <translation>MST</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="488"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="488"/>
         <source>MST7MDT</source>
         <translation>MST7MDT</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="489"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="489"/>
         <source>Navajo</source>
         <translation>Navajo</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="490"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="490"/>
         <source>NZ</source>
         <translation>NZ</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="491"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="491"/>
         <source>NZ-CHAT</source>
         <translation>NZ-CHAT</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="492"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="492"/>
         <source>Poland</source>
         <translation>Polen</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="493"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="493"/>
         <source>Portugal</source>
         <translation>Portugal</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="494"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="494"/>
         <source>PRC</source>
         <translation>PRC</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="495"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="495"/>
         <source>PST8PDT</source>
         <translation>PST8PDT</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="496"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="496"/>
         <source>ROC</source>
         <translation>ROC</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="497"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="497"/>
         <source>ROK</source>
         <translation>ROK</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="498"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="498"/>
         <source>Singapore</source>
         <translation>Singapore</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="499"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="499"/>
         <source>Turkey</source>
         <translation>Turkije</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="500"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="500"/>
         <source>UCT</source>
         <translation>UCT</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="501"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="501"/>
         <source>Universal</source>
         <translation>Universeel</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="502"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="502"/>
         <source>UTC</source>
         <translation>UTC</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="503"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="503"/>
         <source>W-SU</source>
         <translation>W-SU</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="504"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="504"/>
         <source>WET</source>
         <translation>WET</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="505"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="505"/>
         <source>Zulu</source>
         <translation>Zulu</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="509"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="509"/>
         <source>Mono</source>
         <translation>Mono</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="510"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="510"/>
         <source>Stereo</source>
         <translation>Stereo</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="511"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="511"/>
         <source>Surround</source>
         <translation>Surround</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="515"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="515"/>
         <source>4GB DRAM (Default)</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="516"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="516"/>
         <source>6GB DRAM (Unsafe)</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="517"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="517"/>
         <source>8GB DRAM (Unsafe)</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="521"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="521"/>
         <source>Docked</source>
         <translation>Docked</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="522"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="522"/>
         <source>Handheld</source>
         <translation>Handheld</translation>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="527"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="527"/>
         <source>Always ask (Default)</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="528"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="528"/>
         <source>Only if game specifies not to stop</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/suyu/configuration/shared_translation.cpp" line="529"/>
+        <location filename="../../src/yuzu/configuration/shared_translation.cpp" line="529"/>
         <source>Never ask</source>
         <translation type="unfinished"/>
     </message>
@@ -1746,7 +1746,7 @@ When a guest attempts to open the controller applet, it is immediately closed.</
 <context>
     <name>ConfigureApplets</name>
     <message>
-        <location filename="../../src/suyu/configuration/configure_applets.ui" line="14"/>
+        <location filename="../../src/yuzu/configuration/configure_applets.ui" line="14"/>
         <source>Form</source>
         <translation>Vorm</translation>
     </message>

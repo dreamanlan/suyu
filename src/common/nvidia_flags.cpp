@@ -14,7 +14,7 @@ namespace Common {
 void ConfigureNvidiaEnvironmentFlags() {
 #ifdef _WIN32
     const auto nvidia_shader_dir =
-        Common::FS::GetSuyuPath(Common::FS::SuyuPath::ShaderDir) / "nvidia";
+        Common::FS::GetYuzuPath(Common::FS::YuzuPath::ShaderDir) / "nvidia";
 
     if (!Common::FS::CreateDirs(nvidia_shader_dir)) {
         return;

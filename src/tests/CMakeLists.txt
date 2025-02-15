@@ -30,6 +30,6 @@ endif()
 
 add_test(NAME tests COMMAND tests)
 
-if (SUYU_USE_PRECOMPILED_HEADERS)
+if (YUZU_USE_PRECOMPILED_HEADERS)
     target_precompile_headers(tests PRIVATE precompiled_headers.h)
 endif()

@@ -1951,10 +1951,10 @@ bool MemorySniffer::ProtectMemory(Kernel::KProcess& process, uint64_t addr, uint
     auto&& memory = process.GetMemory();
     bool succ = false;
     if (memory.IsValidVirtualAddressRange(addr, size)) {
-        addr &= ~SUYU_PAGEMASK;
-        uint64_t mod = size % SUYU_PAGESIZE;
+        addr &= ~YUZU_PAGEMASK;
+        uint64_t mod = size % YUZU_PAGESIZE;
         if (mod > 0) {
-            size += SUYU_PAGESIZE - mod;
+            size += YUZU_PAGESIZE - mod;
         }
         memory.ProtectRegion(process.GetPageTable().GetImpl(), addr, size,
                              static_cast<Common::MemoryPermission>(flag));
@@ -1965,10 +1965,10 @@ bool MemorySniffer::ProtectMemory(Kernel::KProcess& process, uint64_t addr, uint
 
 bool MemorySniffer::MapMemory(Kernel::KProcess& process, uint64_t addr, uint64_t size) const {
     bool succ = false;
-    addr &= ~SUYU_PAGEMASK;
-    uint64_t mod = size % SUYU_PAGESIZE;
+    addr &= ~YUZU_PAGEMASK;
+    uint64_t mod = size % YUZU_PAGESIZE;
     if (mod > 0) {
-        size += SUYU_PAGESIZE - mod;
+        size += YUZU_PAGESIZE - mod;
     }
     bool canMap = process.GetPageTable().Contains(addr, size);
     if (canMap) {
@@ -1995,10 +1995,10 @@ bool MemorySniffer::UnmapMemory(Kernel::KProcess& process, uint64_t addr, uint64
     auto&& memory = process.GetMemory();
     bool succ = false;
     if (memory.IsValidVirtualAddressRange(addr, size)) {
-        addr &= ~SUYU_PAGEMASK;
-        uint64_t mod = size % SUYU_PAGESIZE;
+        addr &= ~YUZU_PAGEMASK;
+        uint64_t mod = size % YUZU_PAGESIZE;
         if (mod > 0) {
-            size += SUYU_PAGESIZE - mod;
+            size += YUZU_PAGESIZE - mod;
         }
         auto* curThread = Kernel::GetCurrentThreadPointer(system.Kernel());
         if (curThread) {
@@ -2022,13 +2022,13 @@ bool MemorySniffer::UnmapMemory(Kernel::KProcess& process, uint64_t addr, uint64
 uint64_t MemorySniffer::FindUnmapMemory(Kernel::KProcess& process, uint64_t addr,
                                         uint64_t size, uint64_t expect_size) const {
     auto&& memory = process.GetMemory();
-    addr &= ~SUYU_PAGEMASK;
-    uint64_t mod = size % SUYU_PAGESIZE;
+    addr &= ~YUZU_PAGEMASK;
+    uint64_t mod = size % YUZU_PAGESIZE;
     if (mod > 0) {
-        size += SUYU_PAGESIZE - mod;
+        size += YUZU_PAGESIZE - mod;
     }
     uint64_t raddr = 0;
-    for (u64 adr = addr; adr < addr + size; adr += SUYU_PAGESIZE) {
+    for (u64 adr = addr; adr < addr + size; adr += YUZU_PAGESIZE) {
         if (memory.IsValidVirtualAddress(adr)) {
             raddr = 0;
         } else if (raddr == 0) {

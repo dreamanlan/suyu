@@ -346,12 +346,12 @@ std::shared_ptr<SaveDataController> FileSystemController::OpenSaveDataController
 
 std::shared_ptr<FileSys::SaveDataFactory> FileSystemController::CreateSaveDataFactory(
     ProgramId program_id) {
-    using SuyuPath = Common::FS::SuyuPath;
+    using YuzuPath = Common::FS::YuzuPath;
     const auto rw_mode = FileSys::OpenMode::ReadWrite;
 
     auto vfs = system.GetFilesystem();
     const auto nand_directory =
-        vfs->OpenDirectory(Common::FS::GetSuyuPathString(SuyuPath::NANDDir), rw_mode);
+        vfs->OpenDirectory(Common::FS::GetYuzuPathString(YuzuPath::NANDDir), rw_mode);
     return std::make_shared<FileSys::SaveDataFactory>(system, program_id,
                                                       std::move(nand_directory));
 }
@@ -683,20 +683,20 @@ void FileSystemController::CreateFactories(FileSys::VfsFilesystem& vfs, bool ove
         sdmc_factory = nullptr;
     }
 
-    using SuyuPath = Common::FS::SuyuPath;
-    const auto sdmc_dir_path = Common::FS::GetSuyuPath(SuyuPath::SDMCDir);
+    using YuzuPath = Common::FS::YuzuPath;
+    const auto sdmc_dir_path = Common::FS::GetYuzuPath(YuzuPath::SDMCDir);
     const auto sdmc_load_dir_path = sdmc_dir_path / "atmosphere/contents";
     const auto rw_mode = FileSys::OpenMode::ReadWrite;
 
     auto nand_directory =
-        vfs.OpenDirectory(Common::FS::GetSuyuPathString(SuyuPath::NANDDir), rw_mode);
+        vfs.OpenDirectory(Common::FS::GetYuzuPathString(YuzuPath::NANDDir), rw_mode);
     auto sd_directory = vfs.OpenDirectory(Common::FS::PathToUTF8String(sdmc_dir_path), rw_mode);
-    auto load_directory = vfs.OpenDirectory(Common::FS::GetSuyuPathString(SuyuPath::LoadDir),
+    auto load_directory = vfs.OpenDirectory(Common::FS::GetYuzuPathString(YuzuPath::LoadDir),
                                             FileSys::OpenMode::Read);
     auto sd_load_directory = vfs.OpenDirectory(Common::FS::PathToUTF8String(sdmc_load_dir_path),
                                                FileSys::OpenMode::Read);
     auto dump_directory =
-        vfs.OpenDirectory(Common::FS::GetSuyuPathString(SuyuPath::DumpDir), rw_mode);
+        vfs.OpenDirectory(Common::FS::GetYuzuPathString(YuzuPath::DumpDir), rw_mode);
 
     if (bis_factory == nullptr) {
         bis_factory = std::make_unique<FileSys::BISFactory>(

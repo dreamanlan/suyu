@@ -13,15 +13,15 @@ Files: dist/english_plurals/*
        dist/qt_themes/*/icons.qrc
        dist/qt_themes/*/style.qrc
 Copyright: yuzu Emulator Project
-           suyu Emulator Project
+           yuzu Emulator Project
 License: GPL-2.0-or-later
 
-Files: dist/qt_themes/default/icons/256x256/suyu.png
-       dist/suyu.bmp
-       dist/suyu.icns
-       dist/suyu.ico
-       dist/suyu.svg
-Copyright: suyu Emulator Project
+Files: dist/qt_themes/default/icons/256x256/yuzu.png
+       dist/yuzu.bmp
+       dist/yuzu.icns
+       dist/yuzu.ico
+       dist/yuzu.svg
+Copyright: yuzu Emulator Project
 License: GPL-2.0-or-later
 
 Files: dist/qt_themes/qdarkstyle*/LICENSE.*
@@ -111,22 +111,22 @@ Files: externals/FidelityFX-FSR/*
 Copyright: 2021 Advanced Micro Devices, Inc.
 License: MIT
 
-Files: src/suyu/*.ui
+Files: src/yuzu/*.ui
 Copyright: 2018-2022 yuzu Emulator Project
 License: GPL-2.0-or-later
 
-Files: src/suyu/compatdb.ui
-       src/suyu/main.ui
+Files: src/yuzu/compatdb.ui
+       src/yuzu/main.ui
 Copyright: 2014-2017 Citra Emulator Project
 License: GPL-2.0-or-later
 
-Files: src/suyu/loading_screen.ui
+Files: src/yuzu/loading_screen.ui
 Copyright: 2019 James Rowe <jroweboy@gmail.com>
 License: GPL-2.0-or-later
 
-Files: src/suyu/applets/aboutdialog.ui
-       src/suyu/applets/qt_software_keyboard.ui
-       src/suyu/util/overlay_dialog.ui
+Files: src/yuzu/applets/aboutdialog.ui
+       src/yuzu/applets/qt_software_keyboard.ui
+       src/yuzu/util/overlay_dialog.ui
 Copyright: 2020-2021 Its-Rei <kupfel@gmail.com>
            2020-2021 yuzu Emulator Project
 License: GPL-2.0-or-later
@@ -168,21 +168,21 @@ Copyright: 2022 yuzu Emulator Project
 License: GPL-2.0-or-later
 
 Files: .forgejo/ISSUE_TEMPLATE/*
-Copyright: 2024 suyu Emulator Project
+Copyright: 2024 yuzu Emulator Project
 License: GPL-3.0-or-later
 
 Files: .gitea/ISSUE_TEMPLATE/*
-Copyright: 2024 suyu Emulator Project
+Copyright: 2024 yuzu Emulator Project
 License: GPL-3.0-or-later
 
 Files: .gitlab-ci.yml
-Copyright: 2024 suyu Emulator Project
+Copyright: 2024 yuzu Emulator Project
 License: GPL-3.0-or-later
 
 Files: dist/icns_generator.sh
-Copyright: 2024 suyu Emulator Project
+Copyright: 2024 yuzu Emulator Project
 License: GPL-3.0-or-later
 
 Files: img/*
-Copyright: 2024 suyu Emulator Project
+Copyright: 2024 yuzu Emulator Project
 License: CC0-1.0

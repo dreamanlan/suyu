@@ -9,7 +9,7 @@ IPowerStateInterface::IPowerStateInterface(Core::System& system_)
     : ServiceFramework{system_, "spsm"} {
     // clang-format off
     static const FunctionInfo functions[] = {
-        {0, nullptr, "GetCurrentState"},
+        {0, nullptr, "GetState"},
         {1, nullptr, "EnterSleep"},
         {2, nullptr, "GetLastWakeReason"},
         {3, nullptr, "Shutdown"},

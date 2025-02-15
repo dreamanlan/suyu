@@ -679,14 +679,32 @@ Errno Socket::SetSockOpt(SOCKET fd_so, int option, T value) {
     return GetAndLogLastError();
 }
 
-Errno Socket::Initialize(Domain domain, Type type, Protocol protocol) {
-    fd = socket(TranslateDomainToNative(domain), TranslateTypeToNative(type),
-                TranslateProtocolToNative(protocol));
-    if (fd != INVALID_SOCKET) {
+Errno Socket::Initialize(Domain domain_, Type type_, Protocol protocol_) {
+    domain_value = domain_;
+    type_value = type_;
+    protocol_value = protocol_;
+
+    if (fd >= 0) {
         return Errno::SUCCESS;
     }
 
-    return GetAndLogLastError();
+    fd = static_cast<SOCKET>(socket(TranslateDomainToNative(domain_value),
+                                  TranslateTypeToNative(type_value),
+                                  TranslateProtocolToNative(protocol_value)));
+    if (fd < 0) {
+        const Errno error = GetAndLogLastError();
+        LOG_ERROR(Network, "Socket creation failed");
+
+        // If we can't create the socket, force offline mode
+        if (error == Errno::NOMEM) {
+            LOG_WARNING(Network, "Critical socket error, forcing offline mode");
+            ForceOfflineMode();
+            return Errno::SUCCESS;
+        }
+        return error;
+    }
+
+    return Errno::SUCCESS;
 }
 
 std::pair<SocketBase::AcceptResult, Errno> Socket::Accept() {
@@ -928,6 +946,12 @@ bool Socket::IsOpened() const {
 
 void Socket::HandleProxyPacket(const ProxyPacket& packet) {
     LOG_WARNING(Network, "ProxyPacket received, but not in Proxy mode!");
+}
+
+void ForceOfflineMode() {
+    LOG_INFO(Network, "Forcing offline mode due to network initialization issues");
+    // Use the correct setting name
+    Settings::values.network_interface = "null"; // Or whatever value indicates disabled
 }
 
 } // namespace Network

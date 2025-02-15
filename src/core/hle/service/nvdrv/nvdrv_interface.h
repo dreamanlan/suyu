@@ -42,6 +42,9 @@ private:
     NvCore::SessionId session_id{};
     Common::ScratchBuffer<u8> output_buffer;
     Common::ScratchBuffer<u8> inline_output_buffer;
+    u32 transfer_mem_size{};
+    Handle transfer_mem{};
+    bool graphics_firmware_memory_margin_enabled{false};
 };
 
 } // namespace Service::Nvidia

@@ -170,7 +170,7 @@ Result IAudioController::IsSpeakerAutoMuteEnabled(Out<bool> out_is_speaker_auto_
 
 Result IAudioController::AcquireTargetNotification(
     OutCopyHandle<Kernel::KReadableEvent> out_notification_event) {
-    LOG_WARNING(Service_AM, "(STUBBED) called");
+    LOG_WARNING(Service_Audio, "(STUBBED) called");
 
     *out_notification_event = &notification_event->GetReadableEvent();
     R_SUCCEED();

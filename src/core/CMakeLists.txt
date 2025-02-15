@@ -1146,6 +1146,8 @@ add_library(core STATIC
     precompiled_headers.h
     reporter.cpp
     reporter.h
+    telemetry_session.cpp
+    telemetry_session.h
     tools/freezer.cpp
     tools/freezer.h
     tools/renderdoc.cpp
@@ -1173,7 +1175,6 @@ endif()
 
 target_link_libraries(core PUBLIC common PRIVATE audio_core hid_core network video_core nx_tzdb tz)
 target_link_libraries(core PUBLIC Boost::headers Boost::filesystem Boost::system PRIVATE fmt::fmt nlohmann_json::nlohmann_json mbedtls RenderDoc::API)
-
 if (MINGW)
     target_link_libraries(core PRIVATE ${MSWSOCK_LIBRARY})
 endif()

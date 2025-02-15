@@ -239,7 +239,7 @@ public:
             {2, nullptr, "ClearDebugResponse"},
             {3, nullptr, "RegisterDebugResponse"},
             {4, &NIM_ECA::IsLargeResourceAvailable, "IsLargeResourceAvailable"},
-            {5, nullptr, "CreateServerInterface2"} // 17.0.0+
+            {5, &NIM_ECA::CreateServerInterface2, "CreateServerInterface2"}
         };
         // clang-format on
 
@@ -248,7 +248,7 @@ public:
 
 private:
     void CreateServerInterface(HLERequestContext& ctx) {
-        LOG_WARNING(Service_NIM, "(STUBBED) called");
+        LOG_DEBUG(Service_NIM, "(STUBBED) called");
         IPC::ResponseBuilder rb{ctx, 2, 0, 1};
         rb.Push(ResultSuccess);
         rb.PushIpcInterface<IShopServiceAccessServer>(system);
@@ -264,6 +264,13 @@ private:
         IPC::ResponseBuilder rb{ctx, 3};
         rb.Push(ResultSuccess);
         rb.Push(false);
+    }
+
+    void CreateServerInterface2(HLERequestContext& ctx) {
+        LOG_DEBUG(Service_NIM, "Creating shop service access server interface");
+        IPC::ResponseBuilder rb{ctx, 2, 0, 1};
+        rb.Push(ResultSuccess);
+        rb.PushIpcInterface<IShopServiceAccessServer>(system);
     }
 };
 

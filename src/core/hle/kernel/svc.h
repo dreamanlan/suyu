@@ -17,6 +17,8 @@ class System;
 
 namespace Kernel::Svc {
 
+constexpr Result ResultInvalidSize{ErrorModule::Kernel, 104};
+
 // clang-format off
 Result SetHeapSize(Core::System& system, uint64_t* out_address, uint64_t size);
 Result SetMemoryPermission(Core::System& system, uint64_t address, uint64_t size, MemoryPermission perm);

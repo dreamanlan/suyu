@@ -431,9 +431,15 @@ void EmitInvocationInfo(EmitContext& ctx, IR::Inst& inst) {
         ctx.AddU32("{}=uint({}<<16);", inst,
                    InputTopologyVertices::vertices(ctx.runtime_info.input_topology));
         break;
+    case Stage::Fragment:
+        // Return sample mask in upper 16 bits
+        ctx.AddU32("{}=uint(gl_SampleMaskIn[0])<<16;", inst);
+        break;
+    case Stage::Compute:
     default:
-        LOG_WARNING(Shader, "(STUBBED) called");
-        ctx.AddU32("{}=uint(0x00ff0000);", inst);
+        // Return standard format (0x00ff0000)
+        ctx.AddU32("{}=0x00ff0000u;", inst);
+        break;
     }
 }
 

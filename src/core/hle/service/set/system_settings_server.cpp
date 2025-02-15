@@ -846,16 +846,6 @@ Result ISystemSettingsServer::SetQuestFlag(QuestFlag quest_flag) {
     R_SUCCEED();
 }
 
-Result ISystemSettingsServer::GetRebootlessSystemUpdateVersion(
-    Out<RebootlessSystemUpdateVersion> out_rebootless_system_update) {
-    LOG_INFO(Service_SET, "(STUBBED) called");
-
-    out_rebootless_system_update->version = 0;
-    strcpy(out_rebootless_system_update->display_version, "0.0.0");
-
-    R_SUCCEED();
-}
-
 Result ISystemSettingsServer::GetDeviceTimeZoneLocationName(
     Out<Service::PSC::Time::LocationName> out_name) {
     LOG_INFO(Service_SET, "called");
@@ -920,7 +910,7 @@ Result ISystemSettingsServer::SetUserSystemClockAutomaticCorrectionEnabled(
 
 Result ISystemSettingsServer::GetDebugModeFlag(Out<bool> is_debug_mode_enabled) {
     const auto result = GetSettingsItemValueImpl<bool>(*is_debug_mode_enabled, "settings_debug",
-                                                       "is_debug_mode_enabled");
+                                                      "is_debug_mode_enabled");
 
     LOG_DEBUG(Service_SET, "called, is_debug_mode_enabled={}", *is_debug_mode_enabled);
     R_RETURN(result);
@@ -1317,6 +1307,18 @@ Result ISystemSettingsServer::SetPanelCrcMode(s32 panel_crc_mode) {
 
     m_system_settings.panel_crc_mode = panel_crc_mode;
     SetSaveNeeded();
+    R_SUCCEED();
+}
+
+Result ISystemSettingsServer::GetRebootlessSystemUpdateVersion(
+    Out<RebootlessSystemUpdateVersion> out_rebootless_system_update) {
+    LOG_INFO(Service_SET, "called");
+
+    out_rebootless_system_update->version = 0;
+    std::memset(out_rebootless_system_update->display_version, 0,
+                sizeof(out_rebootless_system_update->display_version));
+    std::strcpy(out_rebootless_system_update->display_version, "0.0.0");
+
     R_SUCCEED();
 }
 

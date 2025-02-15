@@ -4,6 +4,7 @@
 #pragma once
 
 #include <vector>
+#include <array>
 
 #include "common/common_funcs.h"
 #include "common/common_types.h"
@@ -33,7 +34,39 @@ public:
 
     Kernel::KEvent* QueryEvent(u32 event_id) override;
 
+    struct IoctlGetTpcMasks {
+        u32 mask_buf_size{};
+        std::array<u32, 1> tpc_mask_buf{};
+    };
+
 private:
+    static constexpr std::size_t MaxZBCTableSize = 16;
+    static constexpr std::size_t MaxZBCFormats = 32;
+
+    enum class ZBCTableMode : u32 {
+        COLOR = 0,
+        DEPTH = 1,
+    };
+
+    struct ZBCColorEntry {
+        u32 color_ds[4];
+#ifdef _MSC_VER
+    };
+#else
+    } __attribute__((packed));
+#endif
+
+    struct ZBCDepthEntry {
+        u32 depth[4];
+#ifdef _MSC_VER
+    };
+#else
+    } __attribute__((packed));
+#endif
+
+    std::array<ZBCColorEntry, MaxZBCTableSize> zbc_color_table{};
+    std::array<ZBCDepthEntry, MaxZBCTableSize> zbc_depth_table{};
+
     struct IoctlGpuCharacteristics {
         u32_le arch;                       // 0x120 (NVGPU_GPU_ARCH_GM200)
         u32_le impl;                       // 0xB (NVGPU_GPU_IMPL_GM20B)
@@ -119,14 +152,29 @@ private:
     static_assert(sizeof(IoctlNvgpuGpuZcullGetInfoArgs) == 40,
                   "IoctlNvgpuGpuZcullGetInfoArgs is incorrect size");
 
+#ifdef _MSC_VER
+#pragma pack(push, 1)
     struct IoctlZbcSetTable {
-        u32_le color_ds[4];
-        u32_le color_l2[4];
-        u32_le depth;
-        u32_le format;
-        u32_le type;
+        u32 color_ds_table_index;
+        u32 format;
+        u32 mode;
+        u32 color_ds[4];  // 16 bytes
+        u32 color_l2[4];  // 16 bytes
+        u32 depth;        // 4 bytes
     };
-    static_assert(sizeof(IoctlZbcSetTable) == 44, "IoctlZbcSetTable is incorrect size");
+#pragma pack(pop)
+#else
+    struct IoctlZbcSetTable {
+        u32 color_ds_table_index;
+        u32 format;
+        u32 mode;
+        u32 color_ds[4];  // 16 bytes
+        u32 color_l2[4];  // 16 bytes
+        u32 depth;        // 4 bytes
+    } __attribute__((packed));
+#endif
+
+    static_assert(sizeof(IoctlZbcSetTable) == 48, "IoctlZbcSetTable is incorrect size");
 
     struct IoctlZbcQueryTable {
         u32_le color_ds[4];
@@ -151,11 +199,18 @@ private:
     };
     static_assert(sizeof(IoctlGetGpuTime) == 0x10, "IoctlGetGpuTime is incorrect size");
 
+    struct IoctlNumVsms {
+        u32_le num_vsms;    // Output: number of SM units
+        u32_le reserved;    // Output: reserved/padding
+    };
+    static_assert(sizeof(IoctlNumVsms) == 8, "IoctlNumVsms is incorrect size");
+
     NvResult GetCharacteristics1(IoctlCharacteristics& params);
     NvResult GetCharacteristics3(IoctlCharacteristics& params,
                                  std::span<IoctlGpuCharacteristics> gpu_characteristics);
 
     NvResult GetTPCMasks1(IoctlGpuGetTpcMasksArgs& params);
+    NvResult GetTpcMasks2(IoctlGetTpcMasks& params);
     NvResult GetTPCMasks3(IoctlGpuGetTpcMasksArgs& params, std::span<u32> tpc_mask);
 
     NvResult GetActiveSlotMask(IoctlActiveSlotMask& params);

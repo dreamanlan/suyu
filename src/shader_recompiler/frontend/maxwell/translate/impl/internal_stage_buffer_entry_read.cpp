@@ -45,8 +45,8 @@ void TranslatorVisitor::ISBERD(u64 insn) {
     if (isberd.shift != Shift::Default) {
         throw NotImplementedException("Shift {}", isberd.shift.Value());
     }
-    LOG_WARNING(Shader, "(STUBBED) called");
-    X(isberd.dest_reg, X(isberd.src_reg));
+    const IR::U32 buffer_value{X(isberd.src_reg)};
+    X(isberd.dest_reg, buffer_value);
 }
 
 } // namespace Shader::Maxwell

@@ -45,6 +45,8 @@ NvResult nvhost_ctrl_gpu::Ioctl1(DeviceFD fd, Ioctl command, std::span<const u8>
             return WrapFixed(this, &nvhost_ctrl_gpu::GetActiveSlotMask, input, output);
         case 0x1c:
             return WrapFixed(this, &nvhost_ctrl_gpu::GetGpuTime, input, output);
+        case 0x13:
+            return WrapFixed(this, &nvhost_ctrl_gpu::GetTpcMasks2, input, output);
         default:
             break;
         }
@@ -71,6 +73,23 @@ NvResult nvhost_ctrl_gpu::Ioctl3(DeviceFD fd, Ioctl command, std::span<const u8>
         case 0x6:
             return WrapFixedInlOut(this, &nvhost_ctrl_gpu::GetTPCMasks3, input, output,
                                    inline_output);
+        case 0x13: {
+            // NVGPU_GPU_IOCTL_NUM_VSMS
+            struct Parameters {
+                u32 num_vsms;     // Output: number of SM units
+                u32 reserved;     // Output: reserved/padding
+            };
+            static_assert(sizeof(Parameters) == 8, "Parameters is incorrect size");
+
+            // The Tegra X1 used in Switch has 2 SM units
+            Parameters params{
+                .num_vsms = 2,
+                .reserved = 0
+            };
+
+            std::memcpy(output.data(), &params, sizeof(Parameters));
+            return NvResult::Success;
+        }
         default:
             break;
         }
@@ -78,7 +97,8 @@ NvResult nvhost_ctrl_gpu::Ioctl3(DeviceFD fd, Ioctl command, std::span<const u8>
     default:
         break;
     }
-    UNIMPLEMENTED_MSG("Unimplemented ioctl={:08X}", command.raw);
+    UNIMPLEMENTED_MSG("Unimplemented ioctl={:08X}, group={:01X}, command={:01X}", command.raw,
+                      command.group, command.cmd);
     return NvResult::NotImplemented;
 }
 
@@ -223,8 +243,25 @@ NvResult nvhost_ctrl_gpu::ZCullGetInfo(IoctlNvgpuGpuZcullGetInfoArgs& params) {
 }
 
 NvResult nvhost_ctrl_gpu::ZBCSetTable(IoctlZbcSetTable& params) {
-    LOG_WARNING(Service_NVDRV, "(STUBBED) called");
-    // TODO(ogniK): What does this even actually do?
+    LOG_DEBUG(Service_NVDRV, "called. index={}, format={}, mode={}",
+              params.color_ds_table_index, params.format, params.mode);
+
+    if (params.color_ds_table_index >= MaxZBCTableSize || params.format >= MaxZBCFormats) {
+        return NvResult::BadParameter;
+    }
+
+    switch (params.mode) {
+    case 0:  // Color table
+        std::memcpy(&zbc_color_table[params.color_ds_table_index].color_ds,
+                   &params.color_ds, sizeof(params.color_ds));
+        break;
+    case 1:  // Depth table
+        zbc_depth_table[params.color_ds_table_index].depth[0] = params.depth;
+        break;
+    default:
+        return NvResult::BadParameter;
+    }
+
     return NvResult::Success;
 }
 
@@ -241,6 +278,24 @@ NvResult nvhost_ctrl_gpu::FlushL2(IoctlFlushL2& params) {
 NvResult nvhost_ctrl_gpu::GetGpuTime(IoctlGetGpuTime& params) {
     LOG_DEBUG(Service_NVDRV, "called");
     params.gpu_time = static_cast<u64_le>(system.CoreTiming().GetGlobalTimeNs().count());
+    return NvResult::Success;
+}
+
+NvResult nvhost_ctrl_gpu::GetTpcMasks2(IoctlGetTpcMasks& params) {
+    LOG_DEBUG(Service_NVDRV, "called, mask_buffer_size={}", params.mask_buf_size);
+
+    // Validate input parameters
+    if (params.mask_buf_size == 0 || params.mask_buf_size > params.tpc_mask_buf.size()) {
+        LOG_ERROR(Service_NVDRV, "Invalid mask buffer size {}", params.mask_buf_size);
+        return NvResult::InvalidState;
+    }
+
+    // Set up TPC mask values based on GPU configuration
+    // Using conservative values for compatibility
+    params.mask_buf_size = 1;
+    params.tpc_mask_buf[0] = 0x1;  // Enable first TPC only
+
+    LOG_DEBUG(Service_NVDRV, "TPC mask set to 0x{:x}", params.tpc_mask_buf[0]);
     return NvResult::Success;
 }
 

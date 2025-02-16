@@ -77,6 +77,10 @@ void ComputePipeline::MakePipeline(const ComputePipelineCacheKey& key) {
     if (device.IsKhrPipelineExecutablePropertiesEnabled()) {
         flags |= VK_PIPELINE_CREATE_CAPTURE_STATISTICS_BIT_KHR;
     }
+    if (device.HasDebuggingToolAttached()) {
+        std::string label = fmt::format("Pipeline {:016x}", key.unique_hash);
+        pipeline_layout.SetObjectNameEXT(label.c_str());
+    }
     pipeline = device.GetLogical().CreateComputePipeline(
         {
             .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
@@ -121,6 +125,11 @@ void ComputePipeline::ReplaceShader(const std::vector<uint32_t>& code,
                                     const ComputePipelineCacheKey& key) {
     auto&& cprog = Vulkan::BuildShader(device, code);
     spv_module = std::move(cprog);
+
+    if (device.HasDebuggingToolAttached()) {
+        const std::string name{fmt::format("Shader {:016x}", key.unique_hash)};
+        spv_module.SetObjectNameEXT(name.c_str());
+    }
 
     MakePipeline(key);
 }

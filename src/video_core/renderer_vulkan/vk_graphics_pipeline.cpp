@@ -311,10 +311,22 @@ void GraphicsPipeline::ReplaceShader(Shader::Stage stage, const std::vector<uint
     case Shader::Stage::VertexB: {
         auto&& vprog = Vulkan::BuildShader(device, code);
         spv_modules[static_cast<int>(stage)] = std::move(vprog);
+
+        if (device.HasDebuggingToolAttached()) {
+            const std::string name{fmt::format("Shader {:016x}", gkey.unique_hashes[static_cast<int>(stage) + 1])};
+            spv_modules[static_cast<int>(stage)].SetObjectNameEXT(name.c_str());
+        }
+
     }break;
     case Shader::Stage::Fragment: {
         auto&& fprog = Vulkan::BuildShader(device, code);
         spv_modules[static_cast<int>(stage)] = std::move(fprog);
+
+        if (device.HasDebuggingToolAttached()) {
+            const std::string name{fmt::format("Shader {:016x}", gkey.unique_hashes[static_cast<int>(stage) + 1])};
+            spv_modules[static_cast<int>(stage)].SetObjectNameEXT(name.c_str());
+        }
+
     }break;
     default:
         break;
@@ -938,6 +950,10 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
     VkPipelineCreateFlags flags{};
     if (device.IsKhrPipelineExecutablePropertiesEnabled()) {
         flags |= VK_PIPELINE_CREATE_CAPTURE_STATISTICS_BIT_KHR;
+    }
+    if (device.HasDebuggingToolAttached()) {
+        std::string label = fmt::format("Pipeline vs:{:016x} ps:{:016x}", key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1], key.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1]);
+        pipeline_layout.SetObjectNameEXT(label.c_str());
     }
     pipeline = device.GetLogical().CreateGraphicsPipeline(
         {

@@ -38,7 +38,7 @@ namespace {
 
 [[nodiscard]] std::vector<const char*> RequiredExtensions(
     const vk::InstanceDispatch& dld, Core::Frontend::WindowSystemType window_type,
-    bool enable_validation) {
+    bool enable_validation, bool enable_debug) {
     std::vector<const char*> extensions;
     extensions.reserve(6);
     switch (window_type) {
@@ -76,7 +76,7 @@ namespace {
         extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
     }
 #endif
-    if (enable_validation &&
+    if ((enable_validation || enable_debug) &&
         AreExtensionsSupported(dld, std::array{VK_EXT_DEBUG_UTILS_EXTENSION_NAME})) {
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
@@ -113,7 +113,7 @@ void RemoveUnavailableLayers(const vk::InstanceDispatch& dld, std::vector<const 
 
 vk::Instance CreateInstance(const Common::DynamicLibrary& library, vk::InstanceDispatch& dld,
                             u32 required_version, Core::Frontend::WindowSystemType window_type,
-                            bool enable_validation) {
+                            bool enable_validation, bool enable_debug) {
     if (!library.IsOpen()) {
         LOG_ERROR(Render_Vulkan, "Vulkan library not available");
         throw vk::Exception(VK_ERROR_INITIALIZATION_FAILED);
@@ -127,7 +127,7 @@ vk::Instance CreateInstance(const Common::DynamicLibrary& library, vk::InstanceD
         throw vk::Exception(VK_ERROR_INITIALIZATION_FAILED);
     }
     const std::vector<const char*> extensions =
-        RequiredExtensions(dld, window_type, enable_validation);
+        RequiredExtensions(dld, window_type, enable_validation, enable_debug);
     if (!AreExtensionsSupported(dld, extensions)) {
         throw vk::Exception(VK_ERROR_EXTENSION_NOT_PRESENT);
     }

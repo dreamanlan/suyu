@@ -25,6 +25,6 @@ namespace Vulkan {
 [[nodiscard]] vk::Instance CreateInstance(
     const Common::DynamicLibrary& library, vk::InstanceDispatch& dld, u32 required_version,
     Core::Frontend::WindowSystemType window_type = Core::Frontend::WindowSystemType::Headless,
-    bool enable_validation = false);
+    bool enable_validation = false, bool enable_debug = false);
 
 } // namespace Vulkan

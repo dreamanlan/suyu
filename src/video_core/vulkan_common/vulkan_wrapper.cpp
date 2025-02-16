@@ -616,6 +616,10 @@ void ShaderModule::SetObjectNameEXT(const char* name) const {
     SetObjectName(dld, owner, handle, VK_OBJECT_TYPE_SHADER_MODULE, name);
 }
 
+void PipelineLayout::SetObjectNameEXT(const char* name) const {
+    SetObjectName(dld, owner, handle, VK_OBJECT_TYPE_PIPELINE_LAYOUT, name);
+}
+
 void Pipeline::SetObjectNameEXT(const char* name) const {
     SetObjectName(dld, owner, handle, VK_OBJECT_TYPE_PIPELINE, name);
 }

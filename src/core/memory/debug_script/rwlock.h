@@ -89,7 +89,7 @@ public:
 
     void ReadUnlock()
     {
-        long long data = m_status.fetch_sub(1, std::memory_order_release);
+        long long data = m_status.fetch_sub(kReadersOne, std::memory_order_release);
         Status oldStatus;
         oldStatus.data = data;
         assert(oldStatus.readers > 0);
@@ -101,7 +101,7 @@ public:
 
     void WriteLock()
     {
-        long long data = m_status.fetch_add(1, std::memory_order_acquire);
+        long long data = m_status.fetch_add(kWritersOne, std::memory_order_acquire);
         Status oldStatus;
         oldStatus.data = data;
         assert(oldStatus.writers + 1 <= kMaxWritersCount);
@@ -156,6 +156,9 @@ private:
     };
     static_assert(kWritersBits + kReadersBits * 2 == kAtomicWordBits,
                   "ReadWriteLock readers and writers counters should fit long long");
+
+    static const long long kReadersOne = 1;
+    static const long long kWritersOne = static_cast<long long>(1) << (kReadersBits + kReadersBits);
 
     union Status {
         struct {

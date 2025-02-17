@@ -278,8 +278,8 @@ void RasterizerVulkan::PrepareDraw(bool indirect_draw, bool is_indexed, Func&& d
     auto gkey = pipeline_cache.CurrentGraphicsKey();
 
     auto&& pThis = this;
-    auto&& vshash = gkey.unique_hashes[static_cast<int>(Shader::Stage::VertexB)];
-    auto&& pshash = gkey.unique_hashes[static_cast<int>(Shader::Stage::Fragment)];
+    auto&& vshash = gkey.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1];
+    auto&& pshash = gkey.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1];
     DBGSCP_HOOK_VOID("RasterizerVulkan::PrepareDraw", pThis, indirect_draw, is_indexed, vshash,
                      pshash);
 

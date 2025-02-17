@@ -62,11 +62,11 @@ void mylog_dump_callstack(const char* prefix, const char* file, int line) {
     printf_console_type(kLogTypeWarning, "%s%s:%d\n", prefix, file, line);
 #elif defined(_MSC_VER)
     mylog_printf("%s%s:%d\n", prefix, file, line);
-#elif defined(UNITY_APPLE) ||
-    defined(PLATFORM_ANDROID) ||
-    defined(PLATFORM_SWITCH) ||
-    defined(PLATFORM_LUMIN) ||
-    defined(PLATFORM_PLAYSTATION) // for unity
+#elif defined(UNITY_APPLE)
+    || defined(PLATFORM_ANDROID)
+    || defined(PLATFORM_SWITCH)
+    || defined(PLATFORM_LUMIN)
+    || defined(PLATFORM_PLAYSTATION) // for unity
     printf_console_type(kLogTypeWarning, "%s%s:%d\n", prefix, file, line);
 #else
     mylog_printf("%s%s:%d\n", prefix, file, line);
@@ -80,7 +80,7 @@ void mylog_dump_callstack(const char* prefix, const char* file, int line) {
     char** stackSymbol = backtrace_symbols(stackAddr, stackDepth);
 
     for (int i = 1, n = stackDepth; i < n; ++i)
-        printf_console_type(kLogTypeWarning, " #%02d %p %s\n", i - 1, stackAddr[i], stackSymbol[i]);
+        mylog_printf(" #%02d %p %s\n", i - 1, stackAddr[i], stackSymbol[i]);
     free(stackSymbol);
 #endif
 }
@@ -89,11 +89,11 @@ void mylog_assert(bool v) {
     DebugAssert(v);
 #elif defined(_MSC_VER)
     _ASSERT(v);
-#elif defined(UNITY_APPLE) ||
-    defined(PLATFORM_ANDROID) ||
-    defined(PLATFORM_SWITCH) ||
-    defined(PLATFORM_LUMIN) ||
-    defined(PLATFORM_PLAYSTATION) // for unity
+#elif defined(UNITY_APPLE)
+    || defined(PLATFORM_ANDROID)
+    || defined(PLATFORM_SWITCH)
+    || defined(PLATFORM_LUMIN)
+    || defined(PLATFORM_PLAYSTATION) // for unity
     DebugAssert(v);
 #else
     assert(v);
@@ -286,6 +286,7 @@ extern "C" void FlushDbgScpLog() {
     DbgScp_FlushLog();
 }
 
+[[maybe_unused]]
 static inline void DbgScp_Set(int cmd, int a, double b, const char* c) {
     BEGIN_DBGSCP_HOOK_VOID()
 
@@ -293,6 +294,7 @@ static inline void DbgScp_Set(int cmd, int a, double b, const char* c) {
 
     END_DBGSCP_HOOK_VOID("DbgScp_Set", cmd, a, b, c)
 }
+[[maybe_unused]]
 static inline int DbgScp_Get(int cmd, int a, double b, const char* c) {
     BEGIN_DBGSCP_HOOK()
 
@@ -302,21 +304,25 @@ static inline int DbgScp_Get(int cmd, int a, double b, const char* c) {
     END_DBGSCP_HOOK("DbgScp_Get", int, cmd, a, b, c)
 }
 
+[[maybe_unused]]
 static inline int TestMacro1(int a, double b, const char* c) {
     DBGSCP_HOOK("TestMacro1", int, a, b, c)
     mylog_printf("TestMacro1 a:%d b:%f c:%s\n", a, b, c);
     return 0;
 }
+[[maybe_unused]]
 static inline int TestMacro2(int a, double b, const char* c) {
     BEGIN_DBGSCP_HOOK()
     mylog_printf("TestMacro2 a:%d b:%f c:%s\n", a, b, c);
     return 0;
     END_DBGSCP_HOOK("TestMacro2", int, a, b, c)
 }
+[[maybe_unused]]
 static inline void TestMacro3(int a, double b, const char* c) {
     DBGSCP_HOOK_VOID("TestMacro3", a, b, c)
     mylog_printf("TestMacro3 a:%d b:%f c:%s\n", a, b, c);
 }
+[[maybe_unused]]
 static inline void TestMacro4(int a, double b, const char* c) {
     BEGIN_DBGSCP_HOOK_VOID()
     mylog_printf("TestMacro4 a:%d b:%f c:%s\n", a, b, c);
@@ -336,6 +342,7 @@ int64_t TestFFI1(int64_t a1, int64_t a2, int64_t a3, int64_t a4, int64_t a5, int
     return 1;
 }
 
+[[maybe_unused]]
 static inline std::vector<std::string> string_split(const std::string& input, char delimiter,
                                                     int max_fields) {
     std::istringstream input_stream(input);

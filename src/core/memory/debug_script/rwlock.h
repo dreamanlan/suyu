@@ -21,11 +21,11 @@ private:
 
 public:
     ReadLockGuardT(LockType& lock) : m_lock(lock) {
-        m_lock.lockReader();
+        m_lock.ReadLock();
     }
 
     ~ReadLockGuardT() {
-        m_lock.unlockReader();
+        m_lock.ReadUnlock();
     }
 };
 
@@ -39,11 +39,11 @@ private:
 
 public:
     WriteLockGuardT(LockType& lock) : m_lock(lock) {
-        m_lock.lockWriter();
+        m_lock.WriteLock();
     }
 
     ~WriteLockGuardT() {
-        m_lock.unlockWriter();
+        m_lock.WriteUnlock();
     }
 };
 
@@ -59,10 +59,12 @@ public:
 public:
     ReadWriteLock() : m_status(0) {}
 
-    void lockReader()
+    void ReadLock()
     {
-        Status oldStatus = m_status.load(std::memory_order_relaxed);
+        long long data = m_status.load(std::memory_order_relaxed);
+        Status oldStatus;
         Status newStatus;
+        oldStatus.data = data;
         do
         {
             newStatus = oldStatus;
@@ -76,7 +78,7 @@ public:
             }
             // CAS until successful. On failure, oldStatus will be updated with the latest value.
         }
-        while (!m_status.compare_exchange_weak(oldStatus, newStatus,
+        while (!m_status.compare_exchange_weak(oldStatus.data, newStatus.data,
                                                std::memory_order_acquire, std::memory_order_relaxed));
 
         if (oldStatus.writers > 0)
@@ -85,9 +87,11 @@ public:
         }
     }
 
-    void unlockReader()
+    void ReadUnlock()
     {
-        Status oldStatus = m_status.fetch_sub(1, std::memory_order_release);
+        long long data = m_status.fetch_sub(1, std::memory_order_release);
+        Status oldStatus;
+        oldStatus.data = data;
         assert(oldStatus.readers > 0);
         if (oldStatus.readers == 1 && oldStatus.writers > 0)
         {
@@ -95,9 +99,11 @@ public:
         }
     }
 
-    void lockWriter()
+    void WriteLock()
     {
-        Status oldStatus = m_status.fetch_add(1, std::memory_order_acquire);
+        long long data = m_status.fetch_add(1, std::memory_order_acquire);
+        Status oldStatus;
+        oldStatus.data = data;
         assert(oldStatus.writers + 1 <= kMaxWritersCount);
         if (oldStatus.readers > 0 || oldStatus.writers > 0)
         {
@@ -105,10 +111,12 @@ public:
         }
     }
 
-    void unlockWriter()
+    void WriteUnlock()
     {
-        Status oldStatus = m_status.load(std::memory_order_relaxed);
+        long long data = m_status.load(std::memory_order_relaxed);
+        Status oldStatus;
         Status newStatus;
+        oldStatus.data = data;
         uint32_t waitToRead = 0;
         do
         {
@@ -123,7 +131,7 @@ public:
             }
             // CAS until successful. On failure, oldStatus will be updated with the latest value.
         }
-        while (!m_status.compare_exchange_weak(oldStatus, newStatus,
+        while (!m_status.compare_exchange_weak(oldStatus.data, newStatus.data,
                                                std::memory_order_release, std::memory_order_relaxed));
 
         if (waitToRead > 0)
@@ -152,7 +160,7 @@ private:
     union Status {
         struct {
             long long readers : kReadersBits;
-            long long waitingReaders : kReadersBits;
+            long long waitToRead : kReadersBits;
             long long writers : kWritersBits;
         };
         long long data;

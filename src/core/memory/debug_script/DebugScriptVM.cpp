@@ -21,12 +21,12 @@
 #elif defined(_MSC_VER) && _MSC_VER >= 1939
 #include <shared_mutex>
 #define USE_STD_SHARED_MUTEX 1
-#elif defined(PLATFORM_WIN) ||
-    defined(UNITY_APPLE) ||
-    defined(PLATFORM_ANDROID) ||
-    defined(PLATFORM_SWITCH) ||
-    defined(PLATFORM_LUMIN) ||
-    defined(PLATFORM_PLAYSTATION) // for unity
+#elif defined(PLATFORM_WIN)
+    || defined(UNITY_APPLE)
+    || defined(PLATFORM_ANDROID)
+    || defined(PLATFORM_SWITCH)
+    || defined(PLATFORM_LUMIN)
+    || defined(PLATFORM_PLAYSTATION) // for unity
 #include "Runtime/Threads/ReadWriteLock.h"
 #else
 #include "rwlock.h"
@@ -396,7 +396,7 @@ namespace
                         cont = false;
                         break;
                     case '%':
-                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt);
+                        ct += snprintf(buffer + ct, buf_size - ct, "%s", tmpFmt);
                         cont = false;
                         break;
                     }
@@ -488,6 +488,7 @@ namespace
     static inline R Convert(const T& v) {}
 
     template<>
+    [[maybe_unused]]
     inline int64_t Convert<int64_t, int64_t>(const int64_t& v)
     {
         return v;
@@ -509,6 +510,7 @@ namespace
         return static_cast<double>(v);
     }
     template<>
+    [[maybe_unused]]
     inline double Convert<double, double>(const double& v)
     {
         return v;
@@ -530,6 +532,7 @@ namespace
         return std::to_string(v);
     }
     template<>
+    [[maybe_unused]]
     inline std::string Convert<std::string, std::string>(const std::string& v)
     {
         return v;
@@ -2877,7 +2880,7 @@ namespace
         {
             typedef int64_t(*Fptr)(ArgsT...);
             int64_t* stacks = reinterpret_cast<int64_t*>(get_first_stack_arg_addr(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24));
-            if (stackArgSize <= c_max_stack_arg_num * sizeof(int64_t)) {
+            if (stackArgSize <= static_cast<int64_t>(c_max_stack_arg_num * sizeof(int64_t))) {
                 std::memcpy(reinterpret_cast<char*>(stacks), reinterpret_cast<const void*>(stackArgAddr), stackArgSize);
                 return reinterpret_cast<Fptr>(addr)(args...);
             }
@@ -2887,7 +2890,7 @@ namespace
         {
             typedef double(*Fptr)(ArgsT...);
             int64_t* stacks = reinterpret_cast<int64_t*>(get_first_stack_arg_addr(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24));
-            if (stackArgSize <= c_max_stack_arg_num * sizeof(int64_t)) {
+            if (stackArgSize <= static_cast<int64_t>(c_max_stack_arg_num * sizeof(int64_t))) {
                 std::memcpy(reinterpret_cast<char*>(stacks), reinterpret_cast<const void*>(stackArgAddr), stackArgSize);
                 return reinterpret_cast<Fptr>(addr)(args...);
             }
@@ -2897,7 +2900,7 @@ namespace
         {
             typedef const char* (*Fptr)(ArgsT...);
             int64_t* stacks = reinterpret_cast<int64_t*>(get_first_stack_arg_addr(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24));
-            if (stackArgSize <= c_max_stack_arg_num * sizeof(int64_t)) {
+            if (stackArgSize <= static_cast<int64_t>(c_max_stack_arg_num * sizeof(int64_t))) {
                 std::memcpy(reinterpret_cast<char*>(stacks), reinterpret_cast<const void*>(stackArgAddr), stackArgSize);
                 return reinterpret_cast<Fptr>(addr)(args...);
             }
@@ -2907,7 +2910,7 @@ namespace
         {
             typedef void (*Fptr)(ArgsT...);
             int64_t* stacks = reinterpret_cast<int64_t*>(get_first_stack_arg_addr(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24));
-            if (stackArgSize <= c_max_stack_arg_num * sizeof(int64_t)) {
+            if (stackArgSize <= static_cast<int64_t>(c_max_stack_arg_num * sizeof(int64_t))) {
                 std::memcpy(reinterpret_cast<char*>(stacks), reinterpret_cast<const void*>(stackArgAddr), stackArgSize);
                 reinterpret_cast<Fptr>(addr)(args...);
             }

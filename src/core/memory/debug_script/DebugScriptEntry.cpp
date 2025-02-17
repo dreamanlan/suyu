@@ -43,8 +43,6 @@ char** backtrace_symbols(void* const* buffer, int size);
     defined(PLATFORM_LUMIN) ||
     defined(PLATFORM_PLAYSTATION) // for unity
 #include "Runtime/Logging/LogAssert.h"
-#endif
-
 int mylog_printf(const char* fmt, ...) {
     const int c_buf_size = 1024 * 4 + 1;
     char buf[c_buf_size];
@@ -57,20 +55,23 @@ int mylog_printf(const char* fmt, ...) {
     Core::g_MainThreadCaller.SyncLogToView(ss.str());
     return r;
 }
-void mylog_dump_callstack(const char* prefix, const char* file, int line) {
-#if defined(PLATFORM_WIN) // for unity
-    printf_console_type(kLogTypeWarning, "%s%s:%d\n", prefix, file, line);
-#elif defined(_MSC_VER)
-    mylog_printf("%s%s:%d\n", prefix, file, line);
-#elif defined(UNITY_APPLE)
-    || defined(PLATFORM_ANDROID)
-    || defined(PLATFORM_SWITCH)
-    || defined(PLATFORM_LUMIN)
-    || defined(PLATFORM_PLAYSTATION) // for unity
-    printf_console_type(kLogTypeWarning, "%s%s:%d\n", prefix, file, line);
 #else
-    mylog_printf("%s%s:%d\n", prefix, file, line);
+int mylog_printf(const char* fmt, ...) {
+    const int c_buf_size = 1024 * 4 + 1;
+    char buf[c_buf_size];
+    va_list vl;
+    va_start(vl, fmt);
+    int r = std::vsnprintf(buf, c_buf_size, fmt, vl);
+    va_end(vl);
+    std::stringstream ss;
+    ss << buf;
+    Core::g_MainThreadCaller.SyncLogToView(ss.str());
+    return r;
+}
 #endif
+
+void mylog_dump_callstack(const char* prefix, const char* file, int line) {
+    mylog_printf("%s%s:%d\n", prefix, file, line);
 
 #if !BACKTRACE_UNIMPLEMENTED
     const size_t kMaxDepth = 100;

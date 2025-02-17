@@ -6193,6 +6193,34 @@ protected:
         }
     }
 };
+class GetLogPathExp final : public Brace::SimpleBraceApiBase {
+public:
+    GetLogPathExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        resultInfo.Type = Brace::BRACE_DATA_TYPE_STRING;
+        resultInfo.Name = GenTempVarName();
+        resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+        resultInfo.VarIndex =
+            AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+        return true;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+
+        auto&& system = g_pApiProvider->GetSystem();
+        if (nullptr != system.ApplicationProcess()) {
+            const auto path = g_pApiProvider->GetLogPath();
+
+            Brace::VarSetString(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex,
+                                path.string());
+        }
+    }
+};
 class GetModLoadPathExp final : public Brace::SimpleBraceApiBase {
 public:
     GetModLoadPathExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
@@ -11348,6 +11376,8 @@ inline void BraceScriptManager::InitBraceScript(Brace::BraceScript*& pBraceScrip
 
     pBraceScript->RegisterApi("getyuzupath", "getyuzupath() api",
                               new Brace::BraceApiFactory<GetYuzuPathExp>());
+    pBraceScript->RegisterApi("getlogpath", "getlogpath() api",
+                              new Brace::BraceApiFactory<GetLogPathExp>());
     pBraceScript->RegisterApi("getmodloadpath", "getmodloadpath() api",
                               new Brace::BraceApiFactory<GetModLoadPathExp>());
     pBraceScript->RegisterApi("getgamesavepath", "getgamesavepath([user_index]) api",

@@ -467,7 +467,7 @@ GraphicsPipeline* ShaderCache::BuiltPipeline(GraphicsPipeline* pipeline) const n
     return nullptr;
 }
 
-ComputePipeline* ShaderCache::CurrentComputePipeline() {
+ComputePipeline* ShaderCache::CurrentComputePipeline(ComputePipelineKey& ckey) {
     const VideoCommon::ShaderInfo* const shader{ComputeShader()};
     if (!shader) {
         return nullptr;
@@ -478,6 +478,7 @@ ComputePipeline* ShaderCache::CurrentComputePipeline() {
         .shared_memory_size = qmd.shared_alloc,
         .workgroup_size{qmd.block_dim_x, qmd.block_dim_y, qmd.block_dim_z},
     };
+    ckey = key;
     const auto [pair, is_new]{compute_cache.try_emplace(key)};
     auto& pipeline{pair->second};
     if (!is_new) {

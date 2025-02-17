@@ -3430,6 +3430,8 @@ void GMainWindow::OnStartGame() {
 #ifdef __unix__
     Common::Linux::StartGamemode();
 #endif
+
+    dataAnalystWidget->OnGameStart();
 }
 
 void GMainWindow::OnRestartGame() {

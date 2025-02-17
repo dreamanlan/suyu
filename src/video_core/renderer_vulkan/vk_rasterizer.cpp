@@ -38,6 +38,7 @@
 #include "video_core/vulkan_common/vulkan_device.h"
 #include "video_core/vulkan_common/vulkan_wrapper.h"
 #include "core/core.h"
+#include "core/memory/debug_script/DbgScpHook.h"
 
 namespace Vulkan {
 
@@ -276,6 +277,12 @@ void RasterizerVulkan::PrepareDraw(bool indirect_draw, bool is_indexed, Func&& d
     }
     auto gkey = pipeline_cache.CurrentGraphicsKey();
 
+    auto&& pThis = this;
+    auto&& vshash = gkey.unique_hashes[static_cast<int>(Shader::Stage::VertexB)];
+    auto&& pshash = gkey.unique_hashes[static_cast<int>(Shader::Stage::Fragment)];
+    DBGSCP_HOOK_VOID("RasterizerVulkan::PrepareDraw", pThis, indirect_draw, is_indexed, vshash,
+                     pshash);
+
     if (IsLogPipeline(gkey)) {
         std::stringstream ss;
         ss << "graphics pipeline: ";
@@ -448,6 +455,11 @@ void RasterizerVulkan::DrawTexture() {
                                     .y = ScaleSrc(draw_texture_state.src_y1)}};
     Extent3D src_size = {static_cast<u32>(ScaleSrc(texture.size.width)),
                          static_cast<u32>(ScaleSrc(texture.size.height)), texture.size.depth};
+
+    auto&& pThis = this;
+    auto&& imgid = texture.image_id;
+    DBGSCP_HOOK_VOID("RasterizerVulkan::DrawTexture", pThis, imgid);
+
     blit_image.BlitColor(framebuffer, texture.RenderTarget(), texture.ImageHandle(),
                          sampler->Handle(), dst_region, src_region, src_size);
 }
@@ -595,6 +607,11 @@ void RasterizerVulkan::DispatchCompute() {
 
     ComputePipelineCacheKey ckey;
     ComputePipeline* const pipeline{pipeline_cache.CurrentComputePipeline(ckey)};
+
+    auto&& pThis = this;
+    auto&& cshash = ckey.unique_hash;
+    DBGSCP_HOOK_VOID("RasterizerVulkan::DispatchCompute", pThis, cshash);
+
     if (!pipeline) {
         std::stringstream ss;
         ss << "failed compute pipeline: ";

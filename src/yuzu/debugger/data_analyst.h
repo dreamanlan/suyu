@@ -76,6 +76,8 @@ public slots:
     void OnTouchMove(int x, int y, int id);
     void OnTouchUpdateEnd();
     void OnTouchEnd();
+    void OnGameStart();
+
 public:
     Core::System& GetSystem()const { return system; };
     void InitCmdDocs();
@@ -111,7 +113,8 @@ public:
     void SetStickPosition(std::size_t player_index, int axis_id, float x_value, float y_value);
     void SetMotionState(std::size_t player_index, u64 delta_timestamp, float gyro_x, float gyro_y,
         float gyro_z, float accel_x, float accel_y, float accel_z);
-    std::filesystem::path GetYuzuPath()const;
+    std::filesystem::path GetYuzuPath() const;
+    std::filesystem::path GetLogPath() const;
     std::filesystem::path GetModLoadPath()const;
     std::filesystem::path GetGameSavePath(int user_index)const;
 protected:

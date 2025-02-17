@@ -31,6 +31,7 @@
 #include "video_core/shader_cache.h"
 #include "video_core/texture_cache/texture_cache_base.h"
 #include "core/core.h"
+#include "core/memory/debug_script/DbgScpHook.h"
 
 namespace OpenGL {
 
@@ -273,6 +274,12 @@ void RasterizerOpenGL::PrepareDraw(bool indirect_draw, bool is_indexed, Func&& d
     }
     auto gkey = shader_cache.CurrentGraphicsKey();
 
+    auto&& pThis = this;
+    auto&& vshash = gkey.unique_hashes[static_cast<int>(Shader::Stage::VertexB)];
+    auto&& pshash = gkey.unique_hashes[static_cast<int>(Shader::Stage::Fragment)];
+    DBGSCP_HOOK_VOID("RasterizerOpenGL::PrepareDraw", pThis, indirect_draw, is_indexed, vshash,
+                     pshash);
+
     gpu.TickWork();
 
     bool line_mode = false;
@@ -465,6 +472,10 @@ void RasterizerOpenGL::DrawTexture() {
     Extent3D src_size = {static_cast<u32>(Scale(texture.size.width)),
                          static_cast<u32>(Scale(texture.size.height)), texture.size.depth};
 
+    auto&& pThis = this;
+    auto&& imgid = texture.image_id;
+    DBGSCP_HOOK_VOID("RasterizerOpenGL::DrawTexture", pThis, imgid);
+
     if (device.HasDrawTexture()) {
         state_tracker.BindFramebuffer(texture_cache.GetFramebuffer()->Handle());
 
@@ -486,10 +497,16 @@ void RasterizerOpenGL::DrawTexture() {
 
 void RasterizerOpenGL::DispatchCompute() {
     gpu_memory->FlushCaching();
-    ComputePipeline* const pipeline{shader_cache.CurrentComputePipeline()};
+    ComputePipelineKey ckey;
+    ComputePipeline* const pipeline{shader_cache.CurrentComputePipeline(ckey)};
     if (!pipeline) {
         return;
     }
+
+    auto&& pThis = this;
+    auto&& cshash = ckey.unique_hash;
+    DBGSCP_HOOK_VOID("RasterizerOpenGL::DispatchCompute", pThis, cshash);
+
     if (pipeline->UsesLocalMemory()) {
         program_manager.LocalMemoryWarmup();
     }

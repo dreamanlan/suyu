@@ -13,6 +13,10 @@
 #include "core/memory.h"
 #include "core/memory/memory_sniffer.h"
 
+extern void LoadDbgScp(const std::string& log_path, const std::string& load_path);
+extern void PauseDbgScp();
+extern void ResumeDbgScp();
+
 namespace Core::Memory {
 
 using MemoryModifyInfoList = std::list<MemoryModifyInfoMap>;
@@ -143,6 +147,10 @@ struct MemorySniffer::Impl {
     static const u64 c_pc_other_mask = 0xfffffffffffc0000ull;
     static const int c_pc_max_count = 0x3ffff;
 
+    std::string yuzu_path;
+    std::string log_path;
+    std::string mod_load_path;
+
     Core::System& system;
     u64 heapBase;
     u64 heapSize;
@@ -226,6 +234,15 @@ void MemorySniffer::Initialize() {
     impl->aliasCodeSize = page_table.GetAliasCodeRegionSize();
     impl->addrSpaceStart = GetInteger(page_table.GetAddressSpaceStart());
     impl->addrSpaceSize = page_table.GetAddressSpaceSize();
+}
+
+void MemorySniffer::InitAppPath(const std::string& yuzu_path, const std::string& log_path,
+                                const std::string& mod_load_path) {
+    impl->yuzu_path = yuzu_path;
+    impl->log_path = log_path;
+    impl->mod_load_path = mod_load_path;
+
+    LoadDbgScp(log_path, mod_load_path);
 }
 
 void MemorySniffer::ClearModuleMemoryParameters() {
@@ -1618,6 +1635,12 @@ bool MemorySniffer::Exec(const std::string& cmd, const std::string& arg) {
         }
         g_MainThreadCaller.SyncLogToView(ss.str());
         return true;
+    } else if (cmd == "loaddbgscp") {
+        LoadDbgScp(impl->log_path, impl->mod_load_path);
+    } else if (cmd == "pausedbgscp") {
+        PauseDbgScp();
+    } else if (cmd == "resumedbgscp") {
+        ResumeDbgScp();
     }
 
     return false;

@@ -460,6 +460,9 @@ public:
     virtual std::filesystem::path GetYuzuPath()const override {
         return m_Widget.GetYuzuPath();
     }
+    virtual std::filesystem::path GetLogPath() const override {
+        return m_Widget.GetLogPath();
+    }
     virtual std::filesystem::path GetModLoadPath()const override {
         return m_Widget.GetModLoadPath();
     }
@@ -722,6 +725,9 @@ void DataAnalystWidget::InitCmdDocs() {
     cmdDocs.insert(std::make_pair("dumpreg", "dumpreg, dump current register value of physics cores"));
     cmdDocs.insert(std::make_pair("dumpsession", "dumpsession, dump sessions info"));
     cmdDocs.insert(std::make_pair("listprocess", "listprocess, list processes info"));
+    cmdDocs.insert(std::make_pair("loaddbgscp", "loaddbgscp, load debug/hook bytecode"));
+    cmdDocs.insert(std::make_pair("pausedbgscp", "pausedbgscp, pause debug/hook bytecode"));
+    cmdDocs.insert(std::make_pair("resumedbgscp", "resumedbgscp, resume debug/hook bytecode"));
 }
 
 void DataAnalystWidget::ShowHelp(const std::string& filter)const {
@@ -1230,6 +1236,11 @@ void DataAnalystWidget::OnTouchUpdateEnd() {
 
 void DataAnalystWidget::OnTouchEnd() {
 
+}
+
+void DataAnalystWidget::OnGameStart() {
+    system.MemorySniffer().InitAppPath(GetYuzuPath().string(), GetLogPath().string(),
+                                       GetModLoadPath().string());
 }
 
 void DataAnalystWidget::ClearResultList() {
@@ -1919,6 +1930,11 @@ void DataAnalystWidget::SetMotionState(std::size_t player_index, u64 delta_times
 
 std::filesystem::path DataAnalystWidget::GetYuzuPath()const {
     std::filesystem::path path = Common::FS::GetYuzuPath(Common::FS::YuzuPath::YuzuDir);
+
+    return path;
+}
+std::filesystem::path DataAnalystWidget::GetLogPath() const {
+    std::filesystem::path path = Common::FS::GetYuzuPath(Common::FS::YuzuPath::LogDir);
 
     return path;
 }

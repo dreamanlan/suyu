@@ -22,7 +22,8 @@ namespace BraceScriptInterpreter
         virtual void LogToView(const std::string& info)const = 0;
         virtual bool ExecCommand(std::string&& cmd, std::string&& arg)const = 0;
         virtual Core::System& GetSystem()const = 0;
-        virtual std::filesystem::path GetYuzuPath()const = 0;
+        virtual std::filesystem::path GetYuzuPath() const = 0;
+        virtual std::filesystem::path GetLogPath() const = 0;
         virtual std::filesystem::path GetModLoadPath()const = 0;
         virtual std::filesystem::path GetGameSavePath(int user_index)const = 0;
         virtual void ShowUI(int ix, int flags)const = 0;

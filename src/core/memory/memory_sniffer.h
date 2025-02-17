@@ -79,6 +79,7 @@ public:
     ~MemorySniffer();
 
     void Initialize();
+    void InitAppPath(const std::string& yuzu_path, const std::string& log_path, const std::string& mod_load_path);
     void ClearModuleMemoryParameters();
     void AddModuleMemoryParameters(Kernel::KProcess& process, std::string&& file_name, std::string&& build_id, u64 base, u64 region_begin, u64 region_size);
     void VisitMemoryArgs(VisitMemoryArg visitor)const;

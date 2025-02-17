@@ -1141,6 +1141,13 @@ add_library(core STATIC
     memory/brace_script/math_api.h
     memory/brace_script/brace_script_interpreter.h
     memory/brace_script/brace_script_interpreter.cpp
+    memory/debug_script/DbgScpHook.h
+    memory/debug_script/DebugScriptVM.h
+    memory/debug_script/DebugScriptVM.cpp
+    memory/debug_script/DebugScriptEntry.cpp
+    memory/debug_script/debug_break.h
+    memory/debug_script/sema.h
+    memory/debug_script/rwlock.h
     perf_stats.cpp
     perf_stats.h
     precompiled_headers.h

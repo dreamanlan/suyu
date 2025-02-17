@@ -50,7 +50,7 @@ public:
 
     [[nodiscard]] GraphicsPipeline* CurrentGraphicsPipeline();
 
-    [[nodiscard]] ComputePipeline* CurrentComputePipeline();
+    [[nodiscard]] ComputePipeline* CurrentComputePipeline(ComputePipelineKey& ckey);
 
 private:
     GraphicsPipeline* CurrentGraphicsPipelineSlowPath();

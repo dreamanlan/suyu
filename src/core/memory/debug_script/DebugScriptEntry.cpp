@@ -44,16 +44,11 @@ char** backtrace_symbols(void* const* buffer, int size);
     defined(PLATFORM_PLAYSTATION) // for unity
 #include "Runtime/Logging/LogAssert.h"
 int mylog_printf(const char* fmt, ...) {
-    const int c_buf_size = 1024 * 4 + 1;
-    char buf[c_buf_size];
     va_list vl;
     va_start(vl, fmt);
-    int r = std::vsnprintf(buf, c_buf_size, fmt, vl);
+    printf_consolev(kLogTypeWarning, fmt, vl);
     va_end(vl);
-    std::stringstream ss;
-    ss << buf;
-    Core::g_MainThreadCaller.SyncLogToView(ss.str());
-    return r;
+    return 1;
 }
 #else
 int mylog_printf(const char* fmt, ...) {

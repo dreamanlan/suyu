@@ -187,10 +187,10 @@ hook("RasterizerVulkan::PrepareDraw")
 {
 	onenter{
 		$this:int = ptrget(argv(0),8);
-		$indirect:int = ptrget(argv(0),1);
-		$indexed:int = ptrget(argv(0),1);
-		$vshash:int = ptrget(argv(0),8);
-		$pshash:int = ptrget(argv(0),8);
+		$indirect:int = ptrget(argv(1),1);
+		$indexed:int = ptrget(argv(2),1);
+		$vshash:int = ptrget(argv(3),8);
+		$pshash:int = ptrget(argv(4),8);
 
 		if($vshash==0xeed52323ec13b145 && $pshash==0x42cd683880844cf4){
 			printf("RasterizerVulkan::PrepareDraw enter time:%lld this:%lld indirect:%d indexed:%d vshash:%llx pshash:%llx\n",time(),$this,$indirect,$indexed,$vshash,$pshash);

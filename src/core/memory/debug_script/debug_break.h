@@ -41,8 +41,8 @@ static inline bool IsDebuggerAttached_Native()
 
     char buf[4096];
     ssize_t size = read(fd, buf, sizeof(buf) - 1);
-    int rc = close(fd);
-    BaselibAssert(rc == 0);
+    [[maybe_unused]]int rc = close(fd);
+    assert(rc == 0);
     if (size <= 0)
         return false;
     buf[size] = '\0';

@@ -8,6 +8,7 @@
 #include <list>
 #include <memory>
 #include <fstream>
+#include <sstream>
 
 #include "common/assert.h"
 #include "common/microprofile.h"

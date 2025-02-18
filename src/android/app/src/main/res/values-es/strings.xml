@@ -167,7 +167,7 @@
     <string name="about_app_description">Un emulador de Switch de código abierto</string>
     <string name="contributors">Contribuidores</string>
     <string name="contributors_description">Hecho con \u2764 del equipo yuzu</string>
-    <string name="contributors_link">https://git.yuzu.dev/yuzu/yuzu/activity/</string>
+    <string name="contributors_link">https://git.suyu.dev/suyu/suyu/activity/</string>
     <string name="licenses_description">Proyectos que hacen que yuzu para Android sea una realidad</string>
     <string name="build">Versión</string>
     <string name="user_data">Datos de usuario</string>
@@ -182,7 +182,7 @@
     <string name="user_data_import_failed_description">Asegúrese de que las carpetas de datos de usuario estén en la raíz de la carpeta del zip y contengan un archivo config en config/config.ini e inténtelo de nuevo.</string>
     <string name="support_link">https://chat.yuzu.dev/</string>
     <string name="website_link">https://yuzu.dev/</string>
-    <string name="github_link">https://git.yuzu.dev/</string>
+    <string name="github_link">https://git.suyu.dev/</string>
 
     <!-- Early access upgrade strings -->
     <string name="early_access">Early Access</string>

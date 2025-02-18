@@ -1180,6 +1180,10 @@ else()
     )
 endif()
 
+target_include_directories(core
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../externals/brace/include
+)
+
 target_link_libraries(core PUBLIC common PRIVATE audio_core hid_core network video_core nx_tzdb tz)
 target_link_libraries(core PUBLIC Boost::headers Boost::filesystem Boost::system PRIVATE fmt::fmt nlohmann_json::nlohmann_json mbedtls RenderDoc::API)
 if (MINGW)

@@ -103,12 +103,12 @@
     <string name="about_app_description">ئیمۆلیتەرێکی سەرچاوە-کراوەی سویچ</string>
     <string name="contributors">بەشداربووان</string>
     <string name="contributors_description">دروستکراوە لەگەڵ \u2764 لەلایەن تیمەکەی یوزو</string>
-    <string name="contributors_link">https://git.yuzu.dev/yuzu/yuzu/activity/</string>
+    <string name="contributors_link">https://git.suyu.dev/suyu/suyu/activity/</string>
     <string name="licenses_description">ئەو پڕۆژانەی کە یوزوی بۆ ئەندرۆید ڕەخساند</string>
     <string name="build">بونیات</string>
     <string name="support_link">https://chat.yuzu.dev/</string>
     <string name="website_link">https://yuzu.dev/</string>
-    <string name="github_link">https://git.yuzu.dev/</string>
+    <string name="github_link">https://git.suyu.dev/</string>
 
     <!-- Early access upgrade strings -->
     <string name="early_access">بەزوویی دەسپێگەشتن</string>

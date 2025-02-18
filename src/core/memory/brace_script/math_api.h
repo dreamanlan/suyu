@@ -1253,7 +1253,7 @@ namespace BraceScriptInterpreter
                 double mv = 0;
                 int ct = static_cast<int>(arr.size());
                 for (int ix = 0; ix < ct; ++ix) {
-                    mv += arr[ix];
+                    mv += static_cast<double>(arr[ix]);
                 }
                 Brace::VarSetDouble((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, mv);
             }
@@ -1318,7 +1318,7 @@ namespace BraceScriptInterpreter
                 double avg = 0;
                 int ct = static_cast<int>(arr.size());
                 for (int ix = 0; ix < ct; ++ix) {
-                    avg += arr[ix];
+                    avg += static_cast<double>(arr[ix]);
                 }
                 if (ct > 0)
                     avg /= ct;
@@ -1386,7 +1386,7 @@ namespace BraceScriptInterpreter
                 double avg = 0;
                 int ct = static_cast<int>(arr.size());
                 for (int ix = 0; ix < ct; ++ix) {
-                    avg += arr[ix];
+                    avg += static_cast<double>(arr[ix]);
                 }
                 if (ct > 0)
                     avg /= ct;
@@ -1636,7 +1636,7 @@ namespace BraceScriptInterpreter
                 auto& hash = *hashObj;
                 double mv = 0;
                 for (auto&& pair : hash) {
-                    mv += pair.second;
+                    mv += static_cast<double>(pair.second);
                 }
                 Brace::VarSetDouble((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, mv);
             }
@@ -1712,7 +1712,7 @@ namespace BraceScriptInterpreter
                 double avg = 0;
                 int ct = static_cast<int>(hash.size());
                 for (auto&& pair : hash) {
-                    avg += pair.second;
+                    avg += static_cast<double>(pair.second);
                 }
                 if (ct > 0)
                     avg /= ct;
@@ -1791,7 +1791,7 @@ namespace BraceScriptInterpreter
                 double avg = 0;
                 int ct = static_cast<int>(hash.size());
                 for (auto&& pair : hash) {
-                    avg += pair.second;
+                    avg += static_cast<double>(pair.second);
                 }
                 if (ct > 0)
                     avg /= ct;

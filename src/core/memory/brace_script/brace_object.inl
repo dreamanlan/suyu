@@ -4915,7 +4915,7 @@ namespace BraceScriptInterpreter
                 int stat = m_SelectStats[vix];
                 auto& itInfo = m_Iterators[vix++];
                 if (stat == STAT_METHOD_AVG) {
-                    cv.NumVal /= group.size();
+                    cv.NumVal /= static_cast<double>(group.size());
                 }
                 if (Brace::IsStringType(itInfo.Type))
                     Brace::VarSetString(lvars, itInfo.VarIndex, cv.StrVal);

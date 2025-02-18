@@ -32,8 +32,40 @@
 #elif defined(PLATFORM_PLAYSTATION)
 #include "PlatformDependent/SonyCommon/Player/Native/PlayStationStackTrace.h"
 #elif defined(__ANDROID__)
-int backtrace(void** buffer, int size);
-char** backtrace_symbols(void* const* buffer, int size);
+#if __ANDROID_API__ >= 33
+#include <execinfo.h>
+#else
+#define BACKTRACE_UNIMPLEMENTED 1
+
+#include <iostream>
+#include <iomanip>
+#include <dlfcn.h>
+#include <unwind.h>
+
+namespace {
+struct BacktraceState {
+    void** current;
+    void** end;
+};
+static _Unwind_Reason_Code unwindCallback(struct _Unwind_Context* context, void* arg) {
+    BacktraceState* state = static_cast<BacktraceState*>(arg);
+    uintptr_t pc = _Unwind_GetIP(context);
+    if (pc) {
+        if (state->current == state->end) {
+            return _URC_END_OF_STACK;
+        } else {
+            *state->current++ = reinterpret_cast<void*>(pc);
+        }
+    }
+    return _URC_NO_REASON;
+}
+int captureBacktrace(void** buffer, size_t max) {
+    BacktraceState state = {buffer, buffer + max};
+    _Unwind_Backtrace(unwindCallback, &state);
+    return static_cast<int>(state.current - buffer);
+}
+}
+#endif
 #else
 #define BACKTRACE_UNIMPLEMENTED 1
 #endif
@@ -68,9 +100,26 @@ int mylog_printf(const char* fmt, ...) {
 void mylog_dump_callstack(const char* prefix, const char* file, int line) {
     mylog_printf("%s%s:%d\n", prefix, file, line);
 
-#if !BACKTRACE_UNIMPLEMENTED
+#if BACKTRACE_UNIMPLEMENTED
+#if defined(__ANDROID__)
     const size_t kMaxDepth = 100;
+    void* buffer[kMaxDepth];
+    int count = captureBacktrace(buffer, kMaxDepth);
 
+    for (int idx = 0; idx < count; ++idx) {
+        const void* addr = buffer[idx];
+        const char* symbol = "";
+
+        Dl_info info;
+        if (dladdr(addr, &info) && info.dli_sname) {
+            symbol = info.dli_sname;
+        }
+
+        mylog_printf(" #%02d %p %s\n", idx, addr, symbol);
+    }
+#endif
+#else
+    const size_t kMaxDepth = 100;
     void* stackAddr[kMaxDepth];
     int stackDepth = (int)backtrace(stackAddr, kMaxDepth);
     char** stackSymbol = backtrace_symbols(stackAddr, stackDepth);
@@ -236,9 +285,27 @@ static inline void DbgScp_LogCallstack(const char* prefix, const char* file, int
     snprintf(buf, c_buf_size, "%s%s:%d\n", prefix, file, line);
     DbgScp_WriteLog(buf);
 
-#if !BACKTRACE_UNIMPLEMENTED
+#if BACKTRACE_UNIMPLEMENTED
+#if defined(__ANDROID__)
     const size_t kMaxDepth = 100;
+    void* buffer[kMaxDepth];
+    int count = captureBacktrace(buffer, kMaxDepth);
 
+    for (int idx = 0; idx < count; ++idx) {
+        const void* addr = buffer[idx];
+        const char* symbol = "";
+
+        Dl_info info;
+        if (dladdr(addr, &info) && info.dli_sname) {
+            symbol = info.dli_sname;
+        }
+
+        snprintf(buf, c_buf_size, " #%02d %p %s\n", idx, addr, symbol);
+        DbgScp_WriteLog(buf);
+    }
+#endif
+#else
+    const size_t kMaxDepth = 100;
     void* stackAddr[kMaxDepth];
     int stackDepth = (int)backtrace(stackAddr, kMaxDepth);
     char** stackSymbol = backtrace_symbols(stackAddr, stackDepth);

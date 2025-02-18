@@ -721,6 +721,7 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
             const auto& regs{maxwell3d->regs};
             const bool via_header_index{regs.sampler_binding == Maxwell::SamplerBinding::ViaHeaderBinding};
             const auto& cbufs{maxwell3d->state.shader_stages[stage_index].const_buffers};
+            [[maybe_unused]]
             const auto read_handle{[&](const auto& desc, u32 index) {
                 ASSERT(cbufs[desc.cbuf_index].enabled);
                 const u32 index_offset{index << desc.size_shift};
@@ -874,6 +875,7 @@ std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
         const auto& qmd{kepler_compute->launch_description};
         const auto& cbufs{qmd.const_buffer_config};
         const bool via_header_index{qmd.linked_tsc != 0};
+        [[maybe_unused]]
         const auto read_handle{[&](const auto& desc, u32 index) {
             ASSERT(((qmd.const_buffer_enable_mask >> desc.cbuf_index) & 1) != 0);
             const u32 index_offset{index << desc.size_shift};

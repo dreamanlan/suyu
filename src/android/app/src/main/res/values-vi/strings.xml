@@ -103,12 +103,12 @@
     <string name="about_app_description">Một giả lập Switch mã nguồn mở</string>
     <string name="contributors">Người đóng góp</string>
     <string name="contributors_description">Được làm với \u2764 từ nhóm yuzu</string>
-    <string name="contributors_link">https://git.yuzu.dev/yuzu/yuzu/activity/</string>
+    <string name="contributors_link">https://git.suyu.dev/suyu/suyu/activity/</string>
     <string name="licenses_description">Các dự án làm cho yuzu trên Android trở thành điều có thể</string>
     <string name="build">Dựng</string>
     <string name="support_link">https://chat.yuzu.dev/</string>
     <string name="website_link">https://yuzu.dev/</string>
-    <string name="github_link">https://git.yuzu.dev/</string>
+    <string name="github_link">https://git.suyu.dev/</string>
 
     <!-- Early access upgrade strings -->
     <string name="early_access">Early Access</string>

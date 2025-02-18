@@ -444,7 +444,7 @@ namespace matrix
     {
         std::size_t n = A.GetN();
         // Loses one ulp accuracy per row of diag, relative to largest magnitude
-        double tol = n * DBL_EPSILON * A.diagmax();
+        double tol = static_cast<double>(n) * DBL_EPSILON * A.diagmax();
 
         Matrix L(n, n);
 

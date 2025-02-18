@@ -34,11 +34,11 @@ It is written in C++ with portability in mind, and we actively provide builds fo
   <a href="#building">Building</a> |
   <a href="#support">Support</a> |
   <a href="#license">License</a> |
-  <a href="https://git.yuzu.dev/yuzu/yuzu/actions">Pipelines</a>
+  <a href="https://git.suyu.dev/suyu/suyu/actions">Pipelines</a>
 </p>
 
 ## Hardware Requirements
-[Click here to see the Hardware Requirements](https://git.yuzu.dev/yuzu/yuzu/wiki/Hardware-Requirements)
+[Click here to see the Hardware Requirements](https://git.suyu.dev/suyu/suyu/wiki/Hardware-Requirements)
 
 ## Migrating from yuzu
 
@@ -46,7 +46,7 @@ See [MIGRATION.md](MIGRATION.md).
 
 ## Status
 
-We currently have builds over at the [Releases](https://git.yuzu.dev/yuzu/yuzu/releases) page.
+We currently have builds over at the [Releases](https://git.suyu.dev/suyu/suyu/releases) page.
 
 **Note**: We try to update this README whenever we can, but some links might be broken, and some information may be outdated or irrelevant.
 
@@ -56,28 +56,28 @@ This project is completely free and open source, and anyone can contribute to he
 
 Most of the development happens on the Git. For development discussion, please join us in our [Chat](https://chat.yuzu.dev) or contact a developer.
 
-If you want to contribute, please take a look at the [Contributor's Guide](https://git.yuzu.dev/yuzu/yuzu/wiki/Contributing) and [Developer Information](https://git.yuzu.dev/yuzu/yuzu/wiki/Developer-Information).
+If you want to contribute, please take a look at the [Contributor's Guide](https://git.suyu.dev/suyu/suyu/wiki/Contributing) and [Developer Information](https://git.suyu.dev/suyu/suyu/wiki/Developer-Information).
 You can also contact any of the developers on the Chat to learn more about the current state of yuzu.
 
 ## Downloads
 
-* __Windows__: [Releases](https://git.yuzu.dev/yuzu/yuzu/releases)
-* __Linux__: [Releases](https://git.yuzu.dev/yuzu/yuzu/releases)
-* __macOS__: [Releases](https://git.yuzu.dev/yuzu/yuzu/releases)
-* __Android__: [Releases](https://git.yuzu.dev/yuzu/yuzu/releases)
+* __Windows__: [Releases](https://git.suyu.dev/suyu/suyu/releases)
+* __Linux__: [Releases](https://git.suyu.dev/suyu/suyu/releases)
+* __macOS__: [Releases](https://git.suyu.dev/suyu/suyu/releases)
+* __Android__: [Releases](https://git.suyu.dev/suyu/suyu/releases)
 ###### We currently do not provide builds for iOS, however if you would like, you could try the experimental [Sudachi](https://github.com/emuPlace/Sudachi/releases)/[Folium](https://github.com/jarrodnorwell/Folium/releases).
 
-If you want daily builds then [Click here](https://git.yuzu.dev/yuzu/yuzu/actions).
-If you don't know how to download the daily builds then [Click here](https://git.yuzu.dev/yuzu/yuzu/raw/branch/dev/img/daily-builds.png)
+If you want daily builds then [Click here](https://git.suyu.dev/suyu/suyu/actions).
+If you don't know how to download the daily builds then [Click here](https://git.suyu.dev/suyu/suyu/raw/branch/dev/img/daily-builds.png)
 
-We have official builds [here.](https://git.yuzu.dev/yuzu/yuzu/releases)<br>If any website or person is claiming to have a build for yuzu, take that with a grain of salt.
+We have official builds [here.](https://git.suyu.dev/suyu/suyu/releases)<br>If any website or person is claiming to have a build for yuzu, take that with a grain of salt.
 
 ## Building
 
-* __Windows__: [Windows Build](https://git.yuzu.dev/yuzu/yuzu/wiki/Building-For-Windows)
-* __Linux__: [Linux Build](https://git.yuzu.dev/yuzu/yuzu/wiki/Building-For-Linux)
-* __Android__: [Android Build](https://git.yuzu.dev/yuzu/yuzu/wiki/Building-For-Android)
-* __macOS__: [macOS Build](https://git.yuzu.dev/yuzu/yuzu/wiki/Building-for-macOS)
+* __Windows__: [Windows Build](https://git.suyu.dev/suyu/suyu/wiki/Building-For-Windows)
+* __Linux__: [Linux Build](https://git.suyu.dev/suyu/suyu/wiki/Building-For-Linux)
+* __Android__: [Android Build](https://git.suyu.dev/suyu/suyu/wiki/Building-For-Android)
+* __macOS__: [macOS Build](https://git.suyu.dev/suyu/suyu/wiki/Building-for-macOS)
 
 
 

@@ -181,10 +181,19 @@ add_library(libboostcontext_macos STATIC IMPORTED GLOBAL)
 set_target_properties(libboostcontext_macos PROPERTIES
 	IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/brace/lib/libboost_context.a)
 
+add_library(libbrace_android STATIC IMPORTED GLOBAL)
+set_target_properties(libbrace_android PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/brace/lib/Android/ARM64/libCppDsl.a)
+
+add_library(libboostcontext_android STATIC IMPORTED GLOBAL)
+set_target_properties(libboostcontext_android PROPERTIES
+    IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/brace/lib/Android/ARM64/libboost_context.a)
+
 target_include_directories(libbrace INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/brace/include)
 target_include_directories(libboostcontext INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/brace/include)
 target_include_directories(libbrace_macos INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/brace/include)
 target_include_directories(libboostcontext_macos INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/brace/include)
+target_include_directories(libbrace_android INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/brace/include)
+target_include_directories(libboostcontext_android INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/brace/include)
 
 # VMA
 if (NOT TARGET GPUOpen::VulkanMemoryAllocator)

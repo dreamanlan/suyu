@@ -89,11 +89,11 @@
     <string name="about_app_description">Емулятор Switch із відкритим першокодом</string>
     <string name="contributors">Вкладники</string>
     <string name="contributors_description">Зроблено з \u2764 від команди yuzu</string>
-    <string name="contributors_link">https://git.yuzu.dev/yuzu/yuzu/activity/</string>
+    <string name="contributors_link">https://git.suyu.dev/suyu/suyu/activity/</string>
     <string name="build">Збірка</string>
     <string name="support_link">https://chat.yuzu.dev/</string>
     <string name="website_link">https://yuzu.dev/</string>
-    <string name="github_link">https://git.yuzu.dev/</string>
+    <string name="github_link">https://git.suyu.dev/</string>
 
     <!-- Early access upgrade strings -->
     <string name="early_access">Ранній доступ</string>

@@ -13,12 +13,14 @@ add_library(yuzu-android SHARED
     android_config.cpp
     android_config.h
     native_input.cpp
+    data_analyst_null.cpp
 )
 
 set_property(TARGET yuzu-android PROPERTY IMPORTED_LOCATION ${FFmpeg_LIBRARY_DIR})
 
-target_link_libraries(yuzu-android PRIVATE audio_core common core input_common frontend_common Vulkan::Headers)
+target_link_libraries(yuzu-android PRIVATE audio_core common core video_core input_common frontend_common Vulkan::Headers)
 target_link_libraries(yuzu-android PRIVATE android camera2ndk EGL glad jnigraphics log)
+target_link_libraries(yuzu-android PRIVATE libbrace_android)
 if (ARCHITECTURE_arm64)
     target_link_libraries(yuzu-android PRIVATE adrenotools)
 endif()

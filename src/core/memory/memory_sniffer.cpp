@@ -4,6 +4,7 @@
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>
+#include <sstream>
 #include "brace_script/brace_script_interpreter.h"
 #include "common/hex_util.h"
 #include "common/microprofile.h"

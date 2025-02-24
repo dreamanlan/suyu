@@ -72,17 +72,17 @@ IApplicationFunctions::IApplicationFunctions(Core::System& system_, std::shared_
         {121, D<&IApplicationFunctions::ClearUserChannel>, "ClearUserChannel"},
         {122, D<&IApplicationFunctions::UnpopToUserChannel>, "UnpopToUserChannel"},
         {123, D<&IApplicationFunctions::GetPreviousProgramIndex>, "GetPreviousProgramIndex"},
-        {124, D<&IApplicationFunctions::EnableApplicationAllThreadDumpOnCrash>, "EnableApplicationAllThreadDumpOnCrash"},
+        {124, nullptr, "EnableApplicationAllThreadDumpOnCrash"},
         {130, D<&IApplicationFunctions::GetGpuErrorDetectedSystemEvent>, "GetGpuErrorDetectedSystemEvent"},
-        {131, D<&IApplicationFunctions::SetDelayTimeToAbortOnGpuError>, "SetDelayTimeToAbortOnGpuError"},
+        {131, nullptr, "SetDelayTimeToAbortOnGpuError"},
         {140, D<&IApplicationFunctions::GetFriendInvitationStorageChannelEvent>, "GetFriendInvitationStorageChannelEvent"},
         {141, D<&IApplicationFunctions::TryPopFromFriendInvitationStorageChannel>, "TryPopFromFriendInvitationStorageChannel"},
         {150, D<&IApplicationFunctions::GetNotificationStorageChannelEvent>, "GetNotificationStorageChannelEvent"},
-        {151, D<&IApplicationFunctions::TryPopFromNotificationStorageChannel>, "TryPopFromNotificationStorageChannel"},
+        {151, nullptr, "TryPopFromNotificationStorageChannel"},
         {160, D<&IApplicationFunctions::GetHealthWarningDisappearedSystemEvent>, "GetHealthWarningDisappearedSystemEvent"},
-        {170, D<&IApplicationFunctions::SetHdcpAuthenticationActivated>, "SetHdcpAuthenticationActivated"},
-        {180, D<&IApplicationFunctions::GetLaunchRequiredVersion>, "GetLaunchRequiredVersion"},
-        {181, D<&IApplicationFunctions::UpgradeLaunchRequiredVersion>, "UpgradeLaunchRequiredVersion"},
+        {170, nullptr, "SetHdcpAuthenticationActivated"},
+        {180, nullptr, "GetLaunchRequiredVersion"},
+        {181, nullptr, "UpgradeLaunchRequiredVersion"},
         {190, nullptr, "SendServerMaintenanceOverlayNotification"},
         {200, nullptr, "GetLastApplicationExitReason"},
         {500, nullptr, "StartContinuousRecordingFlushForDebug"},
@@ -181,16 +181,13 @@ Result IApplicationFunctions::GetDesiredLanguage(Out<u64> out_language_code) {
 }
 
 Result IApplicationFunctions::SetTerminateResult(Result terminate_result) {
-    LOG_INFO(Service_AM, "called, result={:#x} ({:04}-{:04})",
+    LOG_INFO(Service_AM, "(STUBBED) called, result={:#x} ({:04}-{:04})",
              terminate_result.GetInnerValue(),
              static_cast<u32>(terminate_result.GetModule()) + 2000,
              terminate_result.GetDescription());
 
-    // Only set the terminate result if it's not a panic
-    if (!terminate_result.IsError()) {
-        std::scoped_lock lk{m_applet->lock};
-        m_applet->terminate_result = terminate_result;
-    }
+    std::scoped_lock lk{m_applet->lock};
+    m_applet->terminate_result = terminate_result;
 
     R_SUCCEED();
 }
@@ -459,22 +456,8 @@ Result IApplicationFunctions::GetFriendInvitationStorageChannelEvent(
 
 Result IApplicationFunctions::TryPopFromFriendInvitationStorageChannel(
     Out<SharedPointer<IStorage>> out_storage) {
-    LOG_DEBUG(Service_AM, "called");
-
-    std::scoped_lock lock{m_applet->lock};
-
-    // Check if there's any data in the friend invitation storage channel
-    if (m_applet->friend_invitation_storage_channel.empty()) {
-        R_THROW(AM::ResultNoData);
-    }
-
-    // Pop the most recent data
-    std::vector<u8> data = std::move(m_applet->friend_invitation_storage_channel.front());
-    m_applet->friend_invitation_storage_channel.pop_front();
-
-    // Create IStorage containing the data
-    *out_storage = std::make_shared<IStorage>(system, std::move(data));
-    R_SUCCEED();
+    LOG_INFO(Service_AM, "(STUBBED) called");
+    R_THROW(AM::ResultNoDataInChannel);
 }
 
 Result IApplicationFunctions::GetNotificationStorageChannelEvent(
@@ -498,39 +481,6 @@ Result IApplicationFunctions::PrepareForJit() {
     m_applet->jit_service_launched = true;
 
     R_SUCCEED();
-}
-
-Result IApplicationFunctions::EnableApplicationAllThreadDumpOnCrash() {
-    LOG_WARNING(Service_AM, "(STUBBED) called");
-    return ResultSuccess;
-}
-
-Result IApplicationFunctions::SetDelayTimeToAbortOnGpuError(u64 delay_time_ns) {
-    LOG_WARNING(Service_AM, "(STUBBED) called, delay_time_ns={}", delay_time_ns);
-    return ResultSuccess;
-}
-
-Result IApplicationFunctions::TryPopFromNotificationStorageChannel(Out<bool> out_success,
-                                                                OutBuffer<BufferAttr_HipcMapAlias> out_buffer) {
-    LOG_WARNING(Service_AM, "(STUBBED) called");
-    *out_success = false;
-    return ResultSuccess;
-}
-
-Result IApplicationFunctions::SetHdcpAuthenticationActivated(bool activated) {
-    LOG_WARNING(Service_AM, "(STUBBED) called, activated={}", activated);
-    return ResultSuccess;
-}
-
-Result IApplicationFunctions::GetLaunchRequiredVersion(Out<LaunchRequiredVersion> out_version) {
-    LOG_WARNING(Service_AM, "(STUBBED) called");
-    *out_version = {}; // Zero-initialize the struct
-    return ResultSuccess;
-}
-
-Result IApplicationFunctions::UpgradeLaunchRequiredVersion(const LaunchRequiredVersion& version) {
-    LOG_WARNING(Service_AM, "(STUBBED) called");
-    return ResultSuccess;
 }
 
 } // namespace Service::AM

@@ -19,7 +19,6 @@
 
 namespace Service::SM {
 
-[[maybe_unused]] constexpr Result ResultNotAllowed(ErrorModule::SM, 1);
 constexpr Result ResultInvalidClient(ErrorModule::SM, 2);
 constexpr Result ResultAlreadyRegistered(ErrorModule::SM, 4);
 constexpr Result ResultInvalidServiceName(ErrorModule::SM, 6);
@@ -159,10 +158,9 @@ void SM::GetServiceTipc(HLERequestContext& ctx) {
 }
 
 static std::string PopServiceName(IPC::RequestParser& rp) {
-    const u64 name_encoded = rp.PopRaw<u64>();
+    auto name_buf = rp.PopRaw<std::array<char, 8>>();
     std::string result;
-    for (int i = 0; i < 8; i++) {
-        const char c = static_cast<char>((name_encoded >> (i * 8)) & 0xFF);
+    for (const auto& c : name_buf) {
         if (c >= ' ' && c <= '~') {
             result.push_back(c);
         }
@@ -257,32 +255,6 @@ void SM::UnregisterService(HLERequestContext& ctx) {
     rb.Push(service_manager.UnregisterService(name));
 }
 
-void SM::RegisterClient(HLERequestContext& ctx) {
-    LOG_DEBUG(Service_SM, "called");
-
-    IPC::RequestParser rp{ctx};
-
-    // Read PID descriptor
-    rp.Skip(2, false); // Skip PID descriptor and reserved u64
-
-    ctx.GetManager()->SetIsInitializedForSm();
-
-    IPC::ResponseBuilder rb{ctx, 2};
-    rb.Push(ResultSuccess);
-}
-
-void SM::DetachClient(HLERequestContext& ctx) {
-    LOG_DEBUG(Service_SM, "called");
-
-    IPC::RequestParser rp{ctx};
-    rp.Skip(2, false); // Skip PID descriptor and reserved u64
-
-    ctx.GetManager()->SetIsInitializedForSm();
-
-    IPC::ResponseBuilder rb{ctx, 2};
-    rb.Push(ResultSuccess);
-}
-
 SM::SM(ServiceManager& service_manager_, Core::System& system_)
     : ServiceFramework{system_, "sm:", 4},
       service_manager{service_manager_}, kernel{system_.Kernel()} {
@@ -291,14 +263,14 @@ SM::SM(ServiceManager& service_manager_, Core::System& system_)
         {1, &SM::GetServiceCmif, "GetService"},
         {2, &SM::RegisterServiceCmif, "RegisterService"},
         {3, &SM::UnregisterService, "UnregisterService"},
-        {4, &SM::DetachClient, "DetachClient"},
+        {4, nullptr, "DetachClient"},
     });
     RegisterHandlersTipc({
         {0, &SM::Initialize, "Initialize"},
         {1, &SM::GetServiceTipc, "GetService"},
         {2, &SM::RegisterServiceTipc, "RegisterService"},
         {3, &SM::UnregisterService, "UnregisterService"},
-        {4, &SM::DetachClient, "DetachClient"},
+        {4, nullptr, "DetachClient"},
     });
 }
 

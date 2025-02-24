@@ -38,15 +38,12 @@ public:
                                     const std::string& category, const std::string& name);
 
     template <typename T>
-    Result GetSettingsItemValueImpl(T& output_value, const std::string& category,
-                                  const std::string& name) {
-        const size_t value_size = sizeof(T);
-        std::vector<u8> raw_data(value_size);
-        u64 actual_size{};
-
-        R_TRY(GetSettingsItemValueImpl(raw_data, actual_size, category, name));
-        std::memcpy(&output_value, raw_data.data(), actual_size);
-
+    Result GetSettingsItemValueImpl(T& out_value, const std::string& category,
+                                    const std::string& name) {
+        u64 data_size{};
+        std::vector<u8> data(sizeof(T));
+        R_TRY(GetSettingsItemValueImpl(data, data_size, category, name));
+        std::memcpy(&out_value, data.data(), data_size);
         R_SUCCEED();
     }
 
@@ -95,6 +92,8 @@ public:
     Result SetSpeakerAutoMuteFlag(bool force_mute_on_headphone_removed);
     Result GetQuestFlag(Out<QuestFlag> out_quest_flag);
     Result SetQuestFlag(QuestFlag quest_flag);
+    Result GetRebootlessSystemUpdateVersion(
+        Out<RebootlessSystemUpdateVersion> out_rebootless_system_update);
     Result GetDeviceTimeZoneLocationName(Out<Service::PSC::Time::LocationName> out_name);
     Result SetDeviceTimeZoneLocationName(const Service::PSC::Time::LocationName& name);
     Result SetRegionCode(SystemRegionCode region_code);
@@ -158,7 +157,6 @@ public:
     Result GetFieldTestingFlag(Out<bool> out_field_testing_flag);
     Result GetPanelCrcMode(Out<s32> out_panel_crc_mode);
     Result SetPanelCrcMode(s32 panel_crc_mode);
-    Result GetRebootlessSystemUpdateVersion(Out<RebootlessSystemUpdateVersion> out_rebootless_system_update);
 
 private:
     bool LoadSettingsFile(std::filesystem::path& path, auto&& default_func);

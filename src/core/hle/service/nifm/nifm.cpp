@@ -420,19 +420,9 @@ void IGeneralService::GetCurrentNetworkProfile(HLERequestContext& ctx) {
 }
 
 void IGeneralService::EnumerateNetworkInterfaces(HLERequestContext& ctx) {
-    // Return empty list since network interface enumeration is not yet implemented
-    LOG_DEBUG(Service_NIFM, "Network interface enumeration requested");
+    for (const auto& interface : Network::GetAvailableNetworkInterfaces())
+        LOG_WARNING(Service_NIFM, "(STUBBED) called, interface={}", interface.name);
 
-    // Build response with just success status
-    IPC::ResponseBuilder rb{ctx, 2};
-    rb.Push(ResultSuccess);
-}
-
-void IGeneralService::EnumerateNetworkProfiles(HLERequestContext& ctx) {
-    // Return empty list since network profile enumeration is not yet implemented
-    LOG_DEBUG(Service_NIFM, "Network profile enumeration requested");
-
-    // Build response with just success status
     IPC::ResponseBuilder rb{ctx, 2};
     rb.Push(ResultSuccess);
 }
@@ -592,24 +582,6 @@ void IGeneralService::GetSsidListVersion(HLERequestContext& ctx) {
     rb.Push<u64>(ssid);
 }
 
-void IGeneralService::ConfirmSystemAvailability(HLERequestContext& ctx) {
-    // Verify system network availability
-    LOG_DEBUG(Service_NIFM, "Confirming system network availability");
-
-    // Return success to indicate system is available
-    IPC::ResponseBuilder response{ctx, 2};
-    response.Push(ResultSuccess);
-}
-
-void IGeneralService::SetBackgroundRequestEnabled(HLERequestContext& ctx) {
-    // Enable background network requests
-    LOG_DEBUG(Service_NIFM, "Setting background network requests enabled");
-
-    // Build success response
-    IPC::ResponseBuilder response{ctx, 2};
-    response.Push(ResultSuccess);
-}
-
 IGeneralService::IGeneralService(Core::System& system_)
     : ServiceFramework{system_, "IGeneralService"}, network{system_.GetRoomNetwork()} {
     // clang-format off
@@ -619,7 +591,7 @@ IGeneralService::IGeneralService(Core::System& system_)
         {4, &IGeneralService::CreateRequest, "CreateRequest"},
         {5, &IGeneralService::GetCurrentNetworkProfile, "GetCurrentNetworkProfile"},
         {6, &IGeneralService::EnumerateNetworkInterfaces, "EnumerateNetworkInterfaces"},
-        {7, &IGeneralService::EnumerateNetworkProfiles, "EnumerateNetworkProfiles"},
+        {7, nullptr, "EnumerateNetworkProfiles"},
         {8, nullptr, "GetNetworkProfile"},
         {9, nullptr, "SetNetworkProfile"},
         {10, &IGeneralService::RemoveNetworkProfile, "RemoveNetworkProfile"},
@@ -645,8 +617,8 @@ IGeneralService::IGeneralService(Core::System& system_)
         {30, nullptr, "SetEthernetCommunicationEnabledForTest"},
         {31, nullptr, "GetTelemetorySystemEventReadableHandle"},
         {32, nullptr, "GetTelemetryInfo"},
-        {33, &IGeneralService::ConfirmSystemAvailability, "ConfirmSystemAvailability"},
-        {34, &IGeneralService::SetBackgroundRequestEnabled, "SetBackgroundRequestEnabled"},
+        {33, nullptr, "ConfirmSystemAvailability"},
+        {34, nullptr, "SetBackgroundRequestEnabled"},
         {35, nullptr, "GetScanData"},
         {36, nullptr, "GetCurrentAccessPoint"},
         {37, nullptr, "Shutdown"},

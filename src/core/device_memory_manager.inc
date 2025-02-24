@@ -411,28 +411,18 @@ void DeviceMemoryManager<Traits>::WalkBlock(DAddr addr, std::size_t size, auto o
 
 template <typename Traits>
 void DeviceMemoryManager<Traits>::ReadBlock(DAddr address, void* dest_pointer, size_t size) {
-    if (!dest_pointer || size == 0) {
-        return;
-    }
-
     device_inter->FlushRegion(address, size);
     WalkBlock(
         address, size,
         [&](size_t copy_amount, DAddr current_vaddr) {
-            // Fill unmapped memory with a known pattern instead of zeros
-            constexpr u8 UNMAPPED_MEMORY_PATTERN = 0xCC;
-            std::memset(dest_pointer, UNMAPPED_MEMORY_PATTERN, copy_amount);
-            LOG_DEBUG(HW_Memory,
-                "Unmapped Device ReadBlock @ 0x{:016X} (start address = 0x{:016X}, size = {}). "
-                "Filling with pattern 0x{:02X}",
-                current_vaddr, address, size, UNMAPPED_MEMORY_PATTERN);
+            LOG_ERROR(
+                HW_Memory,
+                "Unmapped Device ReadBlock @ 0x{:016X} (start address = 0x{:016X}, size = {})",
+                current_vaddr, address, size);
+            std::memset(dest_pointer, 0, copy_amount);
         },
         [&](size_t copy_amount, const u8* const src_ptr) {
-            if (src_ptr) {
-                std::memcpy(dest_pointer, src_ptr, copy_amount);
-            } else {
-                LOG_ERROR(HW_Memory, "Invalid source pointer in ReadBlock");
-            }
+            std::memcpy(dest_pointer, src_ptr, copy_amount);
         },
         [&](const std::size_t copy_amount) {
             dest_pointer = static_cast<u8*>(dest_pointer) + copy_amount;

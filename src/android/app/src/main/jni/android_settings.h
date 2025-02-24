@@ -51,7 +51,7 @@ struct Values {
 
     Settings::Setting<s32> theme{linkage, 0, "theme", Settings::Category::Android};
     Settings::Setting<s32> theme_mode{linkage, -1, "theme_mode", Settings::Category::Android};
-    Settings::Setting<bool> black_backgrounds{linkage, true, "black_backgrounds",
+    Settings::Setting<bool> black_backgrounds{linkage, false, "black_backgrounds",
                                               Settings::Category::Android};
 
     // Input/performance overlay settings
@@ -67,10 +67,8 @@ struct Values {
                                             Settings::Category::Overlay};
     Settings::Setting<bool> show_performance_overlay{linkage, true, "show_performance_overlay",
                                                      Settings::Category::Overlay};
-    Settings::Setting<bool> show_thermal_overlay{linkage, true, "show_thermal_overlay",
+    Settings::Setting<bool> show_thermal_overlay{linkage, false, "show_thermal_overlay",
                                                  Settings::Category::Overlay};
-    Settings::Setting<bool> show_ram_overlay{linkage, false, "show_ram_overlay",
-                                             Settings::Category::Overlay};
     Settings::Setting<bool> show_input_overlay{linkage, true, "show_input_overlay",
                                                Settings::Category::Overlay};
     Settings::Setting<bool> touchscreen{linkage, true, "touchscreen", Settings::Category::Overlay};

@@ -46,7 +46,6 @@ enum class Errno {
     MSGSIZE,
     INPROGRESS,
     OTHER,
-    NOMEM,
 };
 
 enum class GetAddrInfoError {
@@ -123,7 +122,5 @@ u32 IPv4AddressToInteger(IPv4Address ip_addr);
 // named to avoid name collision with Windows macro
 Common::Expected<std::vector<AddrInfo>, GetAddrInfoError> GetAddressInfo(
     const std::string& host, const std::optional<std::string>& service);
-
-void ForceOfflineMode();
 
 } // namespace Network

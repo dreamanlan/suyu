@@ -1006,7 +1006,7 @@ BSD::BSD(Core::System& system_, const char* name)
         {30, nullptr, "SendMMsg"},
         {31, &BSD::EventFd, "EventFd"},
         {32, nullptr, "RegisterResourceStatisticsName"},
-        {33, nullptr, "Initialize2"},
+        {33, nullptr, "RegisterClientShared"},
         {35, nullptr, "NifIoctl"} // 17.0.0+
     };
     // clang-format on

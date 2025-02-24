@@ -28,7 +28,6 @@ private:
     void CreateRequest(HLERequestContext& ctx);
     void GetCurrentNetworkProfile(HLERequestContext& ctx);
     void EnumerateNetworkInterfaces(HLERequestContext& ctx);
-    void EnumerateNetworkProfiles(HLERequestContext& ctx);
     void RemoveNetworkProfile(HLERequestContext& ctx);
     void GetCurrentIpAddress(HLERequestContext& ctx);
     void CreateTemporaryNetworkProfile(HLERequestContext& ctx);
@@ -39,8 +38,6 @@ private:
     void IsAnyInternetRequestAccepted(HLERequestContext& ctx);
     void IsAnyForegroundRequestAccepted(HLERequestContext& ctx);
     void GetSsidListVersion(HLERequestContext& ctx);
-    void ConfirmSystemAvailability(HLERequestContext& ctx);
-    void SetBackgroundRequestEnabled(HLERequestContext& ctx);
 
     Network::RoomNetwork& network;
 };

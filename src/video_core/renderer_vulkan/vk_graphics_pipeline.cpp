@@ -276,6 +276,24 @@ GraphicsPipeline::GraphicsPipeline(
         Validate();
         MakePipeline(render_pass);
 
+#if DEBUG
+        {
+            std::stringstream os;
+            os << std::hex;
+            os << "vk_graphic";
+            os << " ";
+            os << reinterpret_cast<u64>(*pipeline);
+            os << " ";
+            for (int ix = 0; ix < static_cast<int>(NUM_STAGES); ++ix) {
+                os << fmt::format("{:016x}", key.unique_hashes[ix + 1]);
+                os << "|";
+            }
+            os << reinterpret_cast<u64>(*descriptor_update_template);
+            builder.DumpInfo(os);
+            printf("CreateDescriptorUpdateTemplate %s\n", os.str().c_str());
+        }
+#endif
+
         std::scoped_lock lock{build_mutex};
         is_built = true;
         build_condvar.notify_one();
@@ -348,6 +366,23 @@ void GraphicsPipeline::ConfigureImpl(bool is_indexed, bool line_mode) {
     std::array<VideoCommon::SamplerId, MAX_IMAGE_ELEMENTS> samplers;
     size_t sampler_index{};
     size_t view_index{};
+
+#if DEBUG
+    {
+        std::stringstream os;
+        os << std::hex;
+        os << "vk_graphic";
+        os << " ";
+        os << reinterpret_cast<u64>(*pipeline);
+        os << " ";
+        for (int ix = 0; ix < static_cast<int>(NUM_STAGES); ++ix) {
+            os << fmt::format("{:016x}", key.unique_hashes[ix + 1]);
+            os << "|";
+        }
+        os << reinterpret_cast<u64>(*descriptor_update_template);
+        printf("ConfigureBegin %s\n", os.str().c_str());
+    }
+#endif
 
     texture_cache.SynchronizeGraphicsDescriptors();
 
@@ -530,6 +565,24 @@ void GraphicsPipeline::ConfigureImpl(bool is_indexed, bool line_mode) {
     }
     texture_cache.UpdateRenderTargets(false);
     texture_cache.CheckFeedbackLoop(views);
+
+#if DEBUG
+    {
+        std::stringstream os;
+        os << std::hex;
+        os << "vk_graphic";
+        os << " ";
+        os << reinterpret_cast<u64>(*pipeline);
+        os << " ";
+        for (int ix = 0; ix < static_cast<int>(NUM_STAGES); ++ix) {
+            os << fmt::format("{:016x}", key.unique_hashes[ix + 1]);
+            os << "|";
+        }
+        os << reinterpret_cast<u64>(*descriptor_update_template);
+        printf("ConfigureEnd %s\n", os.str().c_str());
+    }
+#endif
+
     ConfigureDraw(rescaling, render_area, line_mode);
 }
 
@@ -583,6 +636,24 @@ void GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
         if (!descriptor_set_layout) {
             return;
         }
+
+#if DEBUG
+        {
+            std::stringstream os;
+            os << std::hex;
+            os << "vk_graphic";
+            os << " ";
+            os << reinterpret_cast<u64>(*pipeline);
+            os << " ";
+            for (int ix = 0; ix < static_cast<int>(NUM_STAGES); ++ix) {
+                os << fmt::format("{:016x}", key.unique_hashes[ix + 1]);
+                os << "|";
+            }
+            os << reinterpret_cast<u64>(*descriptor_update_template);
+            printf("UpdateDescriptorSet %s\n", os.str().c_str());
+        }
+#endif
+
         if (uses_push_descriptor) {
             cmdbuf.PushDescriptorSetWithTemplateKHR(*descriptor_update_template, *pipeline_layout,
                                                     0, descriptor_data);

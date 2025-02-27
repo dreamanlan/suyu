@@ -25,7 +25,6 @@ public:
 
     bool CanUsePushDescriptor() const noexcept {
 #if __APPLE__
-        //return false;
         return device->IsKhrPushDescriptorSupported() &&
                num_descriptors <= device->MaxPushDescriptors();
 #else
@@ -105,9 +104,42 @@ public:
         Add(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, stage, info.image_descriptors);
     }
 
+    void DumpInfo(std::ostream& os)const {
+        os << std::dec;
+        os << std::endl;
+        os << "binding count:";
+        os << binding;
+        os << " descriptor num:";
+        os << num_descriptors;
+        for(auto&& b : bindings){
+            os << std::endl;
+            os << " binding:" << b.binding;
+            os << " type:" << b.descriptorType;
+            os << " count:" << b.descriptorCount;
+            os << std::hex;
+            os << " flags:0x" << b.stageFlags;
+            os << std::dec;
+        }
+        for(auto&& e : entries){
+            os << std::endl;
+            os << " dstBinding:" << e.dstBinding;
+            os << " type:" << e.descriptorType;
+            os << " count:" << e.descriptorCount;
+            os << std::hex;
+            os << " offset:0x" << e.offset;
+            os << std::dec;
+            os << " stride:" << e.stride;
+        }
+    }
+
 private:
     template <typename Descriptors>
     void Add(VkDescriptorType type, VkShaderStageFlags stage, const Descriptors& descriptors) {
+#if __APPLE__
+        if (stage==VK_SHADER_STAGE_GEOMETRY_BIT) {
+            return;
+        }
+#endif
         const size_t num{descriptors.size()};
         for (size_t i = 0; i < num; ++i) {
             bindings.push_back({

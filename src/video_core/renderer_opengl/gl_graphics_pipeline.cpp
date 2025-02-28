@@ -8,6 +8,8 @@
 
 #include "common/settings.h" // for enum class Settings::ShaderBackend
 #include "common/thread_worker.h"
+#include "common/logging/log.h"
+#include "core/memory/debug_script/DbgScpHook.h"
 #include "shader_recompiler/shader_info.h"
 #include "video_core/renderer_opengl/gl_graphics_pipeline.h"
 #include "video_core/renderer_opengl/gl_shader_manager.h"

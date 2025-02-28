@@ -48,7 +48,8 @@ public:
     void ReplaceShader(const std::vector<uint32_t>& code, const ComputePipelineCacheKey& key);
 
     void Configure(Tegra::Engines::KeplerCompute& kepler_compute, Tegra::MemoryManager& gpu_memory,
-                   Scheduler& scheduler, BufferCache& buffer_cache, TextureCache& texture_cache);
+                   Scheduler& scheduler, BufferCache& buffer_cache, TextureCache& texture_cache,
+                   const ComputePipelineCacheKey& key);
 
 private:
     void MakePipeline(const ComputePipelineCacheKey& key);

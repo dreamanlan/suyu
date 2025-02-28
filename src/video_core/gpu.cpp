@@ -50,11 +50,6 @@ int g_LineModeLogFrameIndex = -1;
 std::unordered_set<uint64_t> g_LineModeVsHashes;
 std::unordered_set<uint64_t> g_LineModePsHashes;
 
-std::unordered_set<uint64_t> g_LogPipelineKeys;
-
-bool NeedLogPipeline(uint64_t key) {
-    return g_LogPipelineKeys.find(key) != g_LogPipelineKeys.end();
-}
 void LogPipelineDebugArgs() {
     std::stringstream ss;
     ss << "polygon mode line:" << std::dec << g_IsPolygonModeLine << std::endl;
@@ -69,10 +64,6 @@ void LogPipelineDebugArgs() {
     }
     ss << "\tps hashes:" << std::endl;
     for (auto&& hash : g_LineModePsHashes) {
-        ss << "\t\t" << std::hex << "0x" << hash << std::endl;
-    }
-    ss << "\tlog pipeline keys:" << std::endl;
-    for (auto&& hash : g_LogPipelineKeys) {
         ss << "\t\t" << std::hex << "0x" << hash << std::endl;
     }
 
@@ -546,21 +537,6 @@ void GPU::RequestReplaceSourceShader(uint64_t hash, int stage, std::string&& cod
 void GPU::RequestReplaceSpirvShader(uint64_t hash, int stage, std::vector<uint32_t>&& code) {
     impl->RequestAsyncOperation([this, hash, stage, code = std::move(code)]() {
         impl->rasterizer->ReplaceSpirvShader(hash, stage, code);
-    });
-}
-void GPU::RequestClearLogPipelines() {
-    impl->RequestAsyncOperation([]() {
-        VideoCore::g_LogPipelineKeys.clear();
-    });
-}
-void GPU::RequestAddLogPipeline(uint64_t hash) {
-    impl->RequestAsyncOperation([hash]() {
-        VideoCore::g_LogPipelineKeys.insert(hash);
-    });
-}
-void GPU::RequestRemoveLogPipeline(uint64_t hash) {
-    impl->RequestAsyncOperation([hash]() {
-        VideoCore::g_LogPipelineKeys.erase(hash);
     });
 }
 void GPU::RequestPipelineDebugArgs() {

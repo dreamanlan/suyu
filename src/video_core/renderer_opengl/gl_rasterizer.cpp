@@ -276,9 +276,10 @@ void RasterizerOpenGL::PrepareDraw(bool indirect_draw, bool is_indexed, Func&& d
 
     auto&& pThis = this;
     auto&& vshash = gkey.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1];
+    auto&& geohash = gkey.unique_hashes[static_cast<int>(Shader::Stage::Geometry) + 1];
     auto&& pshash = gkey.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1];
     DBGSCP_HOOK_VOID("RasterizerOpenGL::PrepareDraw", pThis, indirect_draw, is_indexed, vshash,
-                     pshash);
+                     geohash, pshash);
 
     gpu.TickWork();
 

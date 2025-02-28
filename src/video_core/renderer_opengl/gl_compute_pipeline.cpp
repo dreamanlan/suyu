@@ -5,6 +5,8 @@
 
 #include "common/cityhash.h"
 #include "common/settings.h" // for enum class Settings::ShaderBackend
+#include "common/logging/log.h"
+#include "core/memory/debug_script/DbgScpHook.h"
 #include "video_core/renderer_opengl/gl_compute_pipeline.h"
 #include "video_core/renderer_opengl/gl_shader_manager.h"
 #include "video_core/renderer_opengl/gl_shader_util.h"

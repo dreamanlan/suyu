@@ -190,6 +190,5 @@ extern int g_LineModeLogFrameIndex;
 extern std::unordered_set<uint64_t> g_LineModeVsHashes;
 extern std::unordered_set<uint64_t> g_LineModePsHashes;
 
-bool NeedLogPipeline(uint64_t key);
 void LogPipelineDebugArgs();
 } // namespace VideoCore

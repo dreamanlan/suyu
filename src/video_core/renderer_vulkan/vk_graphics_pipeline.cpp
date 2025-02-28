@@ -10,6 +10,8 @@
 #include "video_core/renderer_vulkan/pipeline_helper.h"
 
 #include "common/bit_field.h"
+#include "common/logging/log.h"
+#include "core/memory/debug_script/DbgScpHook.h"
 #include "video_core/renderer_vulkan/maxwell_to_vk.h"
 #include "video_core/renderer_vulkan/pipeline_statistics.h"
 #include "video_core/renderer_vulkan/vk_buffer_cache.h"
@@ -276,8 +278,14 @@ GraphicsPipeline::GraphicsPipeline(
         Validate();
         MakePipeline(render_pass);
 
-#if DEBUG
-        {
+        auto&& pThis = this;
+        auto&& vshash = key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1];
+        auto&& geohash = key.unique_hashes[static_cast<int>(Shader::Stage::Geometry) + 1];
+        auto&& pshash = key.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1];
+        u64 descTempl = reinterpret_cast<u64>(*descriptor_update_template);
+        bool log = false;
+        DBGSCP_HOOK_VOID("Vulkan::GraphicsPipeline", log, pThis, vshash, geohash, pshash, descTempl);
+        if (log) {
             std::stringstream os;
             os << std::hex;
             os << "vk_graphic";
@@ -290,9 +298,8 @@ GraphicsPipeline::GraphicsPipeline(
             }
             os << reinterpret_cast<u64>(*descriptor_update_template);
             builder.DumpInfo(os);
-            printf("CreateDescriptorUpdateTemplate %s\n", os.str().c_str());
+            LOG_INFO(Render_Vulkan, "CreateDescriptorUpdateTemplate {}", os.str());
         }
-#endif
 
         std::scoped_lock lock{build_mutex};
         is_built = true;
@@ -367,8 +374,15 @@ void GraphicsPipeline::ConfigureImpl(bool is_indexed, bool line_mode) {
     size_t sampler_index{};
     size_t view_index{};
 
-#if DEBUG
-    {
+    auto&& pThis = this;
+    auto&& vshash = key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1];
+    auto&& geohash = key.unique_hashes[static_cast<int>(Shader::Stage::Geometry) + 1];
+    auto&& pshash = key.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1];
+    u64 descTempl = reinterpret_cast<u64>(*descriptor_update_template);
+    bool log = false;
+    DBGSCP_HOOK_VOID("Vulkan::GraphicsPipeline::Configure", log, pThis, vshash, geohash, pshash,
+                     descTempl);
+    if (log) {
         std::stringstream os;
         os << std::hex;
         os << "vk_graphic";
@@ -380,9 +394,8 @@ void GraphicsPipeline::ConfigureImpl(bool is_indexed, bool line_mode) {
             os << "|";
         }
         os << reinterpret_cast<u64>(*descriptor_update_template);
-        printf("ConfigureBegin %s\n", os.str().c_str());
+        LOG_INFO(Render_Vulkan, "ConfigureBegin {}", os.str());
     }
-#endif
 
     texture_cache.SynchronizeGraphicsDescriptors();
 
@@ -566,8 +579,7 @@ void GraphicsPipeline::ConfigureImpl(bool is_indexed, bool line_mode) {
     texture_cache.UpdateRenderTargets(false);
     texture_cache.CheckFeedbackLoop(views);
 
-#if DEBUG
-    {
+    if (log) {
         std::stringstream os;
         os << std::hex;
         os << "vk_graphic";
@@ -579,9 +591,8 @@ void GraphicsPipeline::ConfigureImpl(bool is_indexed, bool line_mode) {
             os << "|";
         }
         os << reinterpret_cast<u64>(*descriptor_update_template);
-        printf("ConfigureEnd %s\n", os.str().c_str());
+        LOG_INFO(Render_Vulkan, "ConfigureEnd {}", os.str());
     }
-#endif
 
     ConfigureDraw(rescaling, render_area, line_mode);
 }
@@ -637,8 +648,14 @@ void GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
             return;
         }
 
-#if DEBUG
-        {
+        auto&& pThis = this;
+        auto&& vshash = key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1];
+        auto&& geohash = key.unique_hashes[static_cast<int>(Shader::Stage::Geometry) + 1];
+        auto&& pshash = key.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1];
+        u64 descTempl = reinterpret_cast<u64>(*descriptor_update_template);
+        bool log = false;
+        DBGSCP_HOOK_VOID("Vulkan::GraphicsPipeline::UpdateDescriptorSet", log, pThis, vshash, geohash, pshash, descTempl);
+        if (log) {
             std::stringstream os;
             os << std::hex;
             os << "vk_graphic";
@@ -650,9 +667,8 @@ void GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
                 os << "|";
             }
             os << reinterpret_cast<u64>(*descriptor_update_template);
-            printf("UpdateDescriptorSet %s\n", os.str().c_str());
+            LOG_INFO(Render_Vulkan, "UpdateDescriptorSet {}", os.str());
         }
-#endif
 
         if (uses_push_descriptor) {
             cmdbuf.PushDescriptorSetWithTemplateKHR(*descriptor_update_template, *pipeline_layout,

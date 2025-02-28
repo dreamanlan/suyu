@@ -803,7 +803,7 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
     }
     ss << fmt::format(" {}", exception.what());
     auto&& msg = ss.str();
-    printf("%s\n", msg.c_str());
+    LOG_ERROR(Render_Vulkan, "{}", msg);
     Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
     LOG_ERROR(Render_Vulkan, "{}", exception.what());
     return nullptr;
@@ -925,7 +925,7 @@ std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
     ss << "exception in compute pipeline: ";
     ss << fmt::format("{:016x} {}", key.unique_hash, exception.what());
     auto&& msg = ss.str();
-    printf("%s\n", msg.c_str());
+    LOG_ERROR(Render_Vulkan, "{}", msg);
     Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
     LOG_ERROR(Render_Vulkan, "{}", exception.what());
     return nullptr;

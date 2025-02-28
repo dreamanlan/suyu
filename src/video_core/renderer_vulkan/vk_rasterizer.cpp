@@ -233,21 +233,6 @@ void RasterizerVulkan::ReplaceSpirvShader(uint64_t hash, int stage, const std::v
     Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
 }
 
-static inline bool IsLogPipeline(GraphicsPipelineCacheKey key) {
-    bool ret = false;
-    for (auto&& h : key.unique_hashes) {
-        if (VideoCore::NeedLogPipeline(h)) {
-            ret = true;
-            break;
-        }
-    }
-    return ret;
-}
-static inline bool IsLogPipeline(ComputePipelineCacheKey key) {
-    bool ret = VideoCore::NeedLogPipeline(key.unique_hash);
-    return ret;
-}
-
 template <typename Func>
 void RasterizerVulkan::PrepareDraw(bool indirect_draw, bool is_indexed, Func&& draw_func) {
     MICROPROFILE_SCOPE(Vulkan_Drawing);
@@ -271,7 +256,7 @@ void RasterizerVulkan::PrepareDraw(bool indirect_draw, bool is_indexed, Func&& d
             ss << fmt::format("{:016x}", gkey0.unique_hashes[ix + 1]);
         }
         auto&& msg = ss.str();
-        printf("%s\n", msg.c_str());
+        LOG_ERROR(Render_Vulkan, "{}", msg);
         Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
         return;
     }
@@ -279,18 +264,10 @@ void RasterizerVulkan::PrepareDraw(bool indirect_draw, bool is_indexed, Func&& d
 
     auto&& pThis = this;
     auto&& vshash = gkey.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1];
+    auto&& geohash = gkey.unique_hashes[static_cast<int>(Shader::Stage::Geometry) + 1];
     auto&& pshash = gkey.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1];
     DBGSCP_HOOK_VOID("RasterizerVulkan::PrepareDraw", pThis, indirect_draw, is_indexed, vshash,
-                     pshash);
-
-    if (IsLogPipeline(gkey)) {
-        std::stringstream ss;
-        ss << "graphics pipeline: ";
-        pipeline->DumpInfo(ss, gkey);
-        auto&& msg = ss.str();
-        printf("%s\n", msg.c_str());
-        Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
-    }
+                     geohash, pshash);
 
     bool line_mode = false;
     if (indirect_draw) {
@@ -617,22 +594,13 @@ void RasterizerVulkan::DispatchCompute() {
         ss << "failed compute pipeline: ";
         ss << fmt::format("{:016x}", ckey.unique_hash);
         auto&& msg = ss.str();
-        printf("%s\n", msg.c_str());
+        LOG_ERROR(Render_Vulkan, "{}", msg);
         Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
         return;
     }
 
-    if (IsLogPipeline(ckey)) {
-        std::stringstream ss;
-        ss << "compute pipeline: ";
-        pipeline->DumpInfo(ss, ckey);
-        auto&& msg = ss.str();
-        printf("%s\n", msg.c_str());
-        Core::g_MainThreadCaller.RequestLogToView(std::move(msg));
-    }
-
     std::scoped_lock lock{texture_cache.mutex, buffer_cache.mutex};
-    pipeline->Configure(*kepler_compute, *gpu_memory, scheduler, buffer_cache, texture_cache);
+    pipeline->Configure(*kepler_compute, *gpu_memory, scheduler, buffer_cache, texture_cache, ckey);
 
     const auto& qmd{kepler_compute->launch_description};
     auto indirect_address = kepler_compute->GetIndirectComputeAddress();

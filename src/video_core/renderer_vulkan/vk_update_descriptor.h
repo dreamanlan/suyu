@@ -48,9 +48,8 @@ public:
     }
 
     void AddSampledImage(VkImageView image_view, VkSampler sampler) {
-#if DEBUG
-        printf("image_view:%p sampler:%p layout:%d\n", image_view, sampler, VK_IMAGE_LAYOUT_GENERAL);
-#endif
+        LogAddSampledImage(image_view, sampler);
+
         *(payload_cursor++) = VkDescriptorImageInfo{
             .sampler = sampler,
             .imageView = image_view,
@@ -59,9 +58,8 @@ public:
     }
 
     void AddImage(VkImageView image_view) {
-#if DEBUG
-        printf("image_view:%p sampler:%p layout:%d\n", image_view, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL);
-#endif
+        LogAddImage(image_view);
+
         *(payload_cursor++) = VkDescriptorImageInfo{
             .sampler = VK_NULL_HANDLE,
             .imageView = image_view,
@@ -70,9 +68,8 @@ public:
     }
 
     void AddBuffer(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize size) {
-#if DEBUG
-        printf("buffer:%p offset:0x%llx range:%lld\n", buffer, offset, size);
-#endif
+        LogAddBuffer(buffer, offset, size);
+
         *(payload_cursor++) = VkDescriptorBufferInfo{
             .buffer = buffer,
             .offset = offset,
@@ -81,11 +78,16 @@ public:
     }
 
     void AddTexelBuffer(VkBufferView texel_buffer) {
-#if DEBUG
-        printf("buffer view:%p\n", texel_buffer);
-#endif
+        LogAddTexelBuffer(texel_buffer);
+
         *(payload_cursor++) = texel_buffer;
     }
+
+private:
+    void LogAddSampledImage(VkImageView image_view, VkSampler sampler);
+    void LogAddImage(VkImageView image_view);
+    void LogAddBuffer(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize size);
+    void LogAddTexelBuffer(VkBufferView texel_buffer);
 
 private:
     const Device& device;

@@ -403,40 +403,6 @@ public:
             VideoCore::g_LineModeLogRequest = true;
             return true;
         }
-        else if (cmd == "clearlogpipelines") {
-            auto&& system = m_Widget.GetSystem();
-            if (system.ApplicationProcess() == nullptr) {
-                m_Widget.AddLog("game isn't running.");
-                return true;
-            }
-            auto& gpu = system.GPU();
-            gpu.RequestClearLogPipelines();
-            return true;
-        }
-        else if (cmd == "addlogpipeline") {
-            uint64_t hash = std::stoull(arg, nullptr, 0);
-
-            auto&& system = m_Widget.GetSystem();
-            if (system.ApplicationProcess() == nullptr) {
-                m_Widget.AddLog("game isn't running.");
-                return true;
-            }
-            auto& gpu = system.GPU();
-            gpu.RequestAddLogPipeline(hash);
-            return true;
-        }
-        else if (cmd == "removelogpipeline") {
-            uint64_t hash = std::stoull(arg, nullptr, 0);
-
-            auto&& system = m_Widget.GetSystem();
-            if (system.ApplicationProcess() == nullptr) {
-                m_Widget.AddLog("game isn't running.");
-                return true;
-            }
-            auto& gpu = system.GPU();
-            gpu.RequestRemoveLogPipeline(hash);
-            return true;
-        }
         else if (cmd == "requestpipelinedebugargs") {
             auto&& system = m_Widget.GetSystem();
             if (system.ApplicationProcess() == nullptr) {
@@ -657,9 +623,6 @@ void DataAnalystWidget::InitCmdDocs() {
     cmdDocs.insert(std::make_pair("clearpshashes", "clearpshashes, clear all ps hashes for line render mode"));
     cmdDocs.insert(std::make_pair("setlinemodelogframecount", "setlinemodelogframecount num, def 2"));
     cmdDocs.insert(std::make_pair("requestlinemodelog", "requestlinemodelog, log shader info in line render mode"));
-    cmdDocs.insert(std::make_pair("clearlogpipelines", "clearlogpipelines, clear all logged pipelines"));
-    cmdDocs.insert(std::make_pair("addlogpipeline", "addlogpipeline hash, add a logged pipeline"));
-    cmdDocs.insert(std::make_pair("removelogpipeline", "removelogpipeline hash, remove a logged pipeline"));
     cmdDocs.insert(std::make_pair("requestpipelinedebugargs", "requestpipelinedebugargs, log  pipeline debug command args"));
 
     //in MemorySniffer

@@ -23,6 +23,7 @@
 #include "core/memory.h"
 #include "core/memory/memory_sniffer.h"
 #include "common/fs/fs.h"
+#include "common/logging/log.h"
 
 namespace BraceScriptInterpreter
 {

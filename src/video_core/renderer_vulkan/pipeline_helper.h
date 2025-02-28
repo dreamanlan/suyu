@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cstddef>
+#include <sstream>
 
 #include <boost/container/small_vector.hpp>
 

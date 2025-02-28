@@ -176,9 +176,6 @@ public:
     void RequestDumpShaderInfo(std::string&& file_path);
     void RequestReplaceSourceShader(uint64_t hash, int stage, std::string&& code);
     void RequestReplaceSpirvShader(uint64_t hash, int stage, std::vector<uint32_t>&& code);
-    void RequestClearLogPipelines();
-    void RequestAddLogPipeline(uint64_t hash);
-    void RequestRemoveLogPipeline(uint64_t hash);
     void RequestPipelineDebugArgs();
 
     /// Tick pending requests within the GPU.

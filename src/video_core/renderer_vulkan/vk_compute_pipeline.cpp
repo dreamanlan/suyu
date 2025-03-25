@@ -101,6 +101,8 @@ void ComputePipeline::MakePipeline(const ComputePipelineCacheKey& key) {
     if (device.HasDebuggingToolAttached()) {
         std::string label = fmt::format("Pipeline {:016x}", key.unique_hash);
         pipeline_layout.SetObjectNameEXT(label.c_str());
+
+        printf("CreateComputePipeline %s\n", label.c_str());
     }
     pipeline = device.GetLogical().CreateComputePipeline(
         {

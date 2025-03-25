@@ -1041,6 +1041,8 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
     if (device.HasDebuggingToolAttached()) {
         std::string label = fmt::format("Pipeline vs:{:016x} ps:{:016x}", key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1], key.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1]);
         pipeline_layout.SetObjectNameEXT(label.c_str());
+
+        printf("CreateGraphicsPipeline %s\n", label.c_str());
     }
     pipeline = device.GetLogical().CreateGraphicsPipeline(
         {

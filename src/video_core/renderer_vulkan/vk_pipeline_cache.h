@@ -164,6 +164,7 @@ private:
 
     std::unordered_map<ComputePipelineCacheKey, std::unique_ptr<ComputePipeline>> compute_cache;
     std::unordered_map<GraphicsPipelineCacheKey, std::unique_ptr<GraphicsPipeline>> graphics_cache;
+    std::unordered_map<u64, std::unordered_map<Shader::Stage, std::vector<uint32_t>>> replace_shaders;
 
     ShaderPools main_pools;
 

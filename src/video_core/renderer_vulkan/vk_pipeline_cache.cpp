@@ -600,6 +600,15 @@ int PipelineCache::ReplaceShader(uint64_t hash, Shader::Stage stage, const std::
             }
         }
     }
+    auto&& it = replace_shaders.find(hash);
+    if (it == replace_shaders.end()) {
+        std::unordered_map<Shader::Stage, std::vector<uint32_t>> stage_shaders{};
+        stage_shaders[stage] = code;
+        replace_shaders.insert(std::make_pair(hash, std::move(stage_shaders)));
+    }
+    else {
+        it->second[stage] = code;
+    }
     return ct;
 }
 
@@ -756,7 +765,7 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
 
         const auto runtime_info{MakeRuntimeInfo(programs, key, program, previous_stage)};
         ConvertLegacyToGeneric(program, runtime_info);
-        const std::vector<u32> code{EmitSPIRV(profile, runtime_info, program, binding)};
+        std::vector<u32> code{EmitSPIRV(profile, runtime_info, program, binding)};
         device.SaveShader(code);
         VideoCommon::DumpSpirvShader(hash, key.unique_hashes[index], Shader::StageFromIndex(stage_index), code);
 #if __APPLE__
@@ -767,6 +776,13 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
             continue;
         }
 #endif
+        auto&& it = replace_shaders.find(key.unique_hashes[index]);
+        if (it != replace_shaders.end()) {
+            auto&& it2 = it->second.find(Shader::StageFromIndex(stage_index));
+            if (it2 != it->second.end()) {
+                code = it2->second;
+            }
+        }
         modules[stage_index] = BuildShader(device, code);
         if (device.HasDebuggingToolAttached()) {
             const std::string name{fmt::format("Shader {:016x}", key.unique_hashes[index])};
@@ -907,9 +923,16 @@ std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
 #endif
     }
 
-    const std::vector<u32> code{EmitSPIRV(profile, program)};
+    std::vector<u32> code{EmitSPIRV(profile, program)};
     device.SaveShader(code);
     VideoCommon::DumpSpirvShader(hash, key.unique_hash, Shader::Stage::Compute, code);
+    auto&& it = replace_shaders.find(key.unique_hash);
+    if (it != replace_shaders.end()) {
+        auto&& it2 = it->second.find(Shader::Stage::Compute);
+        if (it2 != it->second.end()) {
+            code = it2->second;
+        }
+    }
     vk::ShaderModule spv_module{BuildShader(device, code)};
     if (device.HasDebuggingToolAttached()) {
         const auto name{fmt::format("Shader {:016x}", key.unique_hash)};

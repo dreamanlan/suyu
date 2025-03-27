@@ -379,6 +379,14 @@ int ShaderCache::ReplaceShader(uint64_t hash, Shader::Stage stage, const std::st
             }
         }
     }
+    auto&& it = replace_txt_shaders.find(hash);
+    if (it == replace_txt_shaders.end()) {
+        std::unordered_map<Shader::Stage, std::string> stage_shaders{};
+        stage_shaders[stage] = code;
+        replace_txt_shaders.insert(std::make_pair(hash, std::move(stage_shaders)));
+    } else {
+        it->second[stage] = code;
+    }
     return ct;
 }
 
@@ -403,6 +411,14 @@ int ShaderCache::ReplaceShader(uint64_t hash, Shader::Stage stage, const std::ve
                 ++ct;
             }
         }
+    }
+    auto&& it = replace_bin_shaders.find(hash);
+    if (it == replace_bin_shaders.end()) {
+        std::unordered_map<Shader::Stage, std::vector<uint32_t>> stage_shaders{};
+        stage_shaders[stage] = code;
+        replace_bin_shaders.insert(std::make_pair(hash, std::move(stage_shaders)));
+    } else {
+        it->second[stage] = code;
     }
     return ct;
 }
@@ -606,7 +622,29 @@ std::unique_ptr<GraphicsPipeline> ShaderCache::CreateGraphicsPipeline(
             break;
         }
         previous_program = &program;
-
+        switch (device.GetShaderBackend()) {
+        case Settings::ShaderBackend::Glsl:
+        case Settings::ShaderBackend::Glasm: {
+            auto&& it = replace_txt_shaders.find(key.unique_hashes[index]);
+            if (it != replace_txt_shaders.end()) {
+                auto&& it2 = it->second.find(Shader::StageFromIndex(stage_index));
+                if (it2 != it->second.end()) {
+                    sources[stage_index] = it2->second;
+                }
+            }
+        } break;
+        case Settings::ShaderBackend::SpirV: {
+            auto&& it = replace_bin_shaders.find(key.unique_hashes[index]);
+            if (it != replace_bin_shaders.end()) {
+                auto&& it2 = it->second.find(Shader::StageFromIndex(stage_index));
+                if (it2 != it->second.end()) {
+                    sources_spirv[stage_index] = it2->second;
+                }
+            }
+        } break;
+        default:
+            break;
+        }
     }
     auto* const thread_worker{use_shader_workers ? workers.get() : nullptr};
     return std::make_unique<GraphicsPipeline>(device, texture_cache, buffer_cache, program_manager,
@@ -669,6 +707,29 @@ std::unique_ptr<ComputePipeline> ShaderCache::CreateComputePipeline(
         break;
     }
 
+    switch (device.GetShaderBackend()) {
+    case Settings::ShaderBackend::Glsl:
+    case Settings::ShaderBackend::Glasm: {
+        auto&& it = replace_txt_shaders.find(key.unique_hash);
+        if (it != replace_txt_shaders.end()) {
+            auto&& it2 = it->second.find(Shader::Stage::Compute);
+            if (it2 != it->second.end()) {
+                code = it2->second;
+            }
+        }
+    } break;
+    case Settings::ShaderBackend::SpirV: {
+        auto&& it = replace_bin_shaders.find(key.unique_hash);
+        if (it != replace_bin_shaders.end()) {
+            auto&& it2 = it->second.find(Shader::Stage::Compute);
+            if (it2 != it->second.end()) {
+                code_spirv = it2->second;
+            }
+        }
+    } break;
+    default:
+        break;
+    }
     return std::make_unique<ComputePipeline>(device, texture_cache, buffer_cache, program_manager, key,
                                              program.info, code, code_spirv, force_context_flush);
 } catch (Shader::Exception& exception) {

@@ -90,6 +90,8 @@ private:
     ShaderContext::ShaderPools main_pools;
     std::unordered_map<GraphicsPipelineKey, std::unique_ptr<GraphicsPipeline>> graphics_cache;
     std::unordered_map<ComputePipelineKey, std::unique_ptr<ComputePipeline>> compute_cache;
+    std::unordered_map<u64, std::unordered_map<Shader::Stage, std::vector<uint32_t>>> replace_bin_shaders;
+    std::unordered_map<u64, std::unordered_map<Shader::Stage, std::string>> replace_txt_shaders;
 
     Shader::Profile profile;
     Shader::HostTranslateInfo host_info;

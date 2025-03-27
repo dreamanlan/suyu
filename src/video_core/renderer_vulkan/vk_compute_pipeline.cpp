@@ -37,6 +37,11 @@ ComputePipeline::ComputePipeline(const Device& device_, vk::PipelineCache& pipel
     : device{device_}, pipeline_statistics{pipeline_statistics_},
       pipeline_cache{pipeline_cache_}, guest_descriptor_queue{guest_descriptor_queue_}, info{info_},
       spv_module(std::move(spv_module_)) {
+    {
+        auto&& pThis = this;
+        auto&& cshash = key.unique_hash;
+        DBGSCP_HOOK_VOID("Vulkan::ComputePipeline::ctor", pThis, cshash);
+    }
     if (shader_notify) {
         shader_notify->MarkShaderBuilding();
     }
@@ -59,7 +64,7 @@ ComputePipeline::ComputePipeline(const Device& device_, vk::PipelineCache& pipel
         auto&& cshash = key.unique_hash;
         u64 descTempl = reinterpret_cast<u64>(*descriptor_update_template);
         bool log = false;
-        DBGSCP_HOOK_VOID("Vulkan::ComputePipeline", log, pThis, cshash, descTempl);
+        DBGSCP_HOOK_VOID("Vulkan::ComputePipeline::AfterMake", log, pThis, cshash, descTempl);
         if (log) {
             std::stringstream os;
             os << std::hex;

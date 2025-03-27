@@ -249,6 +249,13 @@ GraphicsPipeline::GraphicsPipeline(
       render_pass_cache{render_pass_cache_}, pipeline_statistics{pipeline_statistics_},
       pipeline_cache{pipeline_cache_}, scheduler{scheduler_},
       guest_descriptor_queue{guest_descriptor_queue_}, spv_modules{std::move(stages)} {
+    {
+        auto&& pThis = this;
+        auto&& vshash = key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1];
+        auto&& geohash = key.unique_hashes[static_cast<int>(Shader::Stage::Geometry) + 1];
+        auto&& pshash = key.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1];
+        DBGSCP_HOOK_VOID("Vulkan::GraphicsPipeline::ctor", pThis, vshash, geohash, pshash);
+    }
     if (shader_notify) {
         shader_notify->MarkShaderBuilding();
     }
@@ -284,7 +291,7 @@ GraphicsPipeline::GraphicsPipeline(
         auto&& pshash = key.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1];
         u64 descTempl = reinterpret_cast<u64>(*descriptor_update_template);
         bool log = false;
-        DBGSCP_HOOK_VOID("Vulkan::GraphicsPipeline", log, pThis, vshash, geohash, pshash, descTempl);
+        DBGSCP_HOOK_VOID("Vulkan::GraphicsPipeline::AfterMake", log, pThis, vshash, geohash, pshash, descTempl);
         if (log) {
             std::stringstream os;
             os << std::hex;

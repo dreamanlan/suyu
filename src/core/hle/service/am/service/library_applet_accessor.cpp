@@ -4,6 +4,7 @@
 #include "core/hle/service/am/applet_data_broker.h"
 #include "core/hle/service/am/applet_manager.h"
 #include "core/hle/service/am/frontend/applets.h"
+#include "core/hle/service/am/frontend/applet_controller.h"
 #include "core/hle/service/am/service/library_applet_accessor.h"
 #include "core/hle/service/am/service/storage.h"
 #include "core/hle/service/cmif_serialization.h"
@@ -155,9 +156,19 @@ Result ILibraryAppletAccessor::GetIndirectLayerConsumerHandle(Out<u64> out_handl
 }
 
 void ILibraryAppletAccessor::FrontendExecute() {
-    if (m_applet->frontend) {
+    auto&& caller = m_applet->caller_applet;
+    auto&& applet = caller.lock();
+    if (applet->is_frontend_handled) {
+        if (m_applet->frontend) {
+            static_cast<Frontend::Controller*>(m_applet->frontend.get())->ConfigurationComplete(true);
+        }
+    }
+    else if (m_applet->frontend) {
         m_applet->frontend->Initialize();
         m_applet->frontend->Execute();
+
+        applet->is_frontend_handled = true;
+        applet->frontend_applet = m_applet;
     }
 }
 

@@ -94,6 +94,12 @@ std::shared_ptr<ILibraryAppletAccessor> CreateFrontendApplet(Core::System& syste
                                                              std::shared_ptr<Applet> caller_applet,
                                                              AppletId applet_id,
                                                              LibraryAppletMode mode) {
+    if (caller_applet->is_frontend_handled) {
+        auto applet = *caller_applet->child_applets.begin();
+        auto storage = applet->caller_applet_broker;
+        return std::make_shared<ILibraryAppletAccessor>(system, storage, applet);
+    }
+
     const auto program_id = static_cast<u64>(AppletIdToProgramId(applet_id));
 
     auto process = std::make_unique<Process>(system);

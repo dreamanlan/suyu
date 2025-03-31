@@ -128,6 +128,8 @@ struct Applet {
 
     // Frontend state
     std::shared_ptr<Frontend::FrontendApplet> frontend{};
+    bool is_frontend_handled{false};
+    std::shared_ptr<Applet> frontend_applet{};
 
     // Process state management
     void UpdateSuspensionStateLocked(bool force_message);

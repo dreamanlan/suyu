@@ -68,6 +68,59 @@ int captureBacktrace(void** buffer, size_t max) {
 #endif
 #else
 #define BACKTRACE_UNIMPLEMENTED 1
+#if _MSC_VER
+#include <dbghelp.h>
+#pragma comment(lib, "dbghelp.lib")
+//for old windows before vista
+void captureStack(DWORD64 stackAddr[], int maxDepth) {
+    HANDLE process = GetCurrentProcess();
+    HANDLE thread = GetCurrentThread();
+
+    CONTEXT context;
+    RtlCaptureContext(&context);
+
+    SymInitialize(process, NULL, TRUE);
+
+    STACKFRAME64 stackFrame;
+    ZeroMemory(&stackFrame, sizeof(STACKFRAME64));
+
+#ifdef _M_IX86
+    DWORD machineType = IMAGE_FILE_MACHINE_I386;
+    stackFrame.AddrPC.Offset = context.Eip;
+    stackFrame.AddrPC.Mode = AddrModeFlat;
+    stackFrame.AddrFrame.Offset = context.Ebp;
+    stackFrame.AddrFrame.Mode = AddrModeFlat;
+    stackFrame.AddrStack.Offset = context.Esp;
+    stackFrame.AddrStack.Mode = AddrModeFlat;
+#elif _M_X64
+    DWORD machineType = IMAGE_FILE_MACHINE_AMD64;
+    stackFrame.AddrPC.Offset = context.Rip;
+    stackFrame.AddrPC.Mode = AddrModeFlat;
+    stackFrame.AddrFrame.Offset = context.Rsp;
+    stackFrame.AddrFrame.Mode = AddrModeFlat;
+    stackFrame.AddrStack.Offset = context.Rsp;
+    stackFrame.AddrStack.Mode = AddrModeFlat;
+#elif _M_IA64
+    DWORD machineType = IMAGE_FILE_MACHINE_IA64;
+    stackFrame.AddrPC.Offset = context.StIIP;
+    stackFrame.AddrPC.Mode = AddrModeFlat;
+    stackFrame.AddrFrame.Offset = context.IntSp;
+    stackFrame.AddrFrame.Mode = AddrModeFlat;
+    stackFrame.AddrBStore.Offset = context.RsBSP;
+    stackFrame.AddrBStore.Mode = AddrModeFlat;
+    stackFrame.AddrStack.Offset = context.IntSp;
+    stackFrame.AddrStack.Mode = AddrModeFlat;
+#endif
+
+    int ix = 0;
+    while (StackWalk64(machineType, process, thread, &stackFrame, &context, NULL,
+                       SymFunctionTableAccess64, SymGetModuleBase64, NULL) && ix < maxDepth) {
+        stackAddr[ix++] = stackFrame.AddrPC.Offset;
+    }
+
+    SymCleanup(process);
+}
+#endif
 #endif
 
 #if defined(PLATFORM_WIN)
@@ -93,6 +146,8 @@ int mylog_printf(const char* fmt, ...) {
     std::stringstream ss;
     ss << buf;
     Core::g_MainThreadCaller.SyncLogToView(ss.str());
+
+    LOG_INFO(Log, "{}", buf);
     return r;
 }
 #endif
@@ -117,6 +172,25 @@ void mylog_dump_callstack(const char* prefix, const char* file, int line) {
 
         mylog_printf(" #%02d %p %s\n", idx, addr, symbol);
     }
+#elif _MSC_VER
+    const size_t kMaxDepth = 100;
+
+    HANDLE process = GetCurrentProcess();
+    SymInitialize(process, NULL, TRUE);
+
+    void* stack[kMaxDepth];
+    USHORT frames = CaptureStackBackTrace(0, kMaxDepth, stack, NULL);
+
+    SYMBOL_INFO* symbol = (SYMBOL_INFO*)malloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char));
+    symbol->MaxNameLen = 255;
+    symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+
+    for (USHORT i = 0; i < frames; ++i) {
+        SymFromAddr(process, (DWORD64)(stack[i]), 0, symbol);
+        mylog_printf(" #%02d %p %s\n", i, symbol->Address, symbol->Name);
+    }
+
+    free(symbol);
 #endif
 #else
     const size_t kMaxDepth = 100;

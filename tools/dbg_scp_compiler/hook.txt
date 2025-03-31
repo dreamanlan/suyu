@@ -200,3 +200,27 @@ hook("RasterizerVulkan::PrepareDraw")
 		};
 	};
 };
+
+hook("ServiceContext::CreateEvent")
+{
+	onenter{
+		$this:int = ptrget(argv(1),8);
+		$event:int = ptrget(argv(2),8);
+		$id:int = ptrget(argv(3),8);
+		$name:string = ptrget(argv(4),8);
+		
+		printf("ServiceContext::CreateEvent %llx %lld %s", $event, $id, $name);
+		//dumpstack("ServiceContext::CreateEvent");
+	};
+};
+hook("ServiceContext::CloseEvent")
+{
+	onenter{
+		$this:int = ptrget(argv(0),8);
+		$event:int = ptrget(argv(1),8);
+		$id:int = ptrget(argv(2),8);
+		
+		printf("ServiceContext::CloseEvent %llx %lld", $event, $id);
+		//dumpstack("ServiceContext::CloseEvent");
+	};
+};

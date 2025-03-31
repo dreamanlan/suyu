@@ -10,6 +10,7 @@
 #include "core/hle/kernel/k_resource_limit.h"
 #include "core/hle/kernel/k_scoped_resource_reservation.h"
 #include "core/hle/service/kernel_helpers.h"
+#include "core/memory/debug_script/DbgScpHook.h"
 
 namespace Service::KernelHelpers {
 
@@ -52,6 +53,11 @@ Kernel::KEvent* ServiceContext::CreateEvent(std::string&& name) {
         return {};
     }
 
+    auto&& pThis = this;
+    u64 id = event->GetId();
+    auto&& nameStr = name.c_str();
+    DBGSCP_HOOK("ServiceContext::CreateEvent", Kernel::KEvent*, pThis, event, id, nameStr);
+
     // Initialize the event.
     event->Initialize(process);
 
@@ -65,6 +71,10 @@ Kernel::KEvent* ServiceContext::CreateEvent(std::string&& name) {
 }
 
 void ServiceContext::CloseEvent(Kernel::KEvent* event) {
+    auto&& pThis = this;
+    u64 id = event->GetId();
+    DBGSCP_HOOK_VOID("ServiceContext::CloseEvent", pThis, event, id);
+
     if (!event) {
         return;
     }

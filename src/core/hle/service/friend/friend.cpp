@@ -356,7 +356,7 @@ private:
         LOG_DEBUG(Service_Friend, "called");
 
         if (notifications.empty()) {
-            LOG_ERROR(Service_Friend, "No notifications in queue!");
+            //LOG_ERROR(Service_Friend, "No notifications in queue!");
             IPC::ResponseBuilder rb{ctx, 2};
             rb.Push(Account::ResultNoNotifications);
             return;

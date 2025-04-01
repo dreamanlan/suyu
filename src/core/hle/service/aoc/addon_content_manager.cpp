@@ -162,7 +162,7 @@ Result IAddOnContentManager::PrepareAddOnContent(s32 addon_index, ClientProcessI
 
 Result IAddOnContentManager::GetAddOnContentListChangedEvent(
     OutCopyHandle<Kernel::KReadableEvent> out_event) {
-    LOG_WARNING(Service_AOC, "(STUBBED) called");
+    //LOG_WARNING(Service_AOC, "(STUBBED) called");
 
     *out_event = &aoc_change_event->GetReadableEvent();
 
@@ -171,7 +171,7 @@ Result IAddOnContentManager::GetAddOnContentListChangedEvent(
 
 Result IAddOnContentManager::GetAddOnContentListChangedEventWithProcessId(
     OutCopyHandle<Kernel::KReadableEvent> out_event, ClientProcessId process_id) {
-    LOG_WARNING(Service_AOC, "(STUBBED) called");
+    //LOG_WARNING(Service_AOC, "(STUBBED) called");
 
     *out_event = &aoc_change_event->GetReadableEvent();
 
@@ -198,7 +198,7 @@ Result IAddOnContentManager::CheckAddOnContentMountStatus() {
 
 Result IAddOnContentManager::CreateEcPurchasedEventManager(
     OutInterface<IPurchaseEventManager> out_interface) {
-    LOG_WARNING(Service_AOC, "(STUBBED) called");
+    //LOG_WARNING(Service_AOC, "(STUBBED) called");
 
     *out_interface = std::make_shared<IPurchaseEventManager>(system);
 
@@ -207,7 +207,7 @@ Result IAddOnContentManager::CreateEcPurchasedEventManager(
 
 Result IAddOnContentManager::CreatePermanentEcPurchasedEventManager(
     OutInterface<IPurchaseEventManager> out_interface) {
-    LOG_WARNING(Service_AOC, "(STUBBED) called");
+    //LOG_WARNING(Service_AOC, "(STUBBED) called");
 
     *out_interface = std::make_shared<IPurchaseEventManager>(system);
 

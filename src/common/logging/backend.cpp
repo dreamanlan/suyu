@@ -358,7 +358,21 @@ void FmtLogMessageImpl(Class log_class, Level log_level, const char* filename,
         return;
     }
 
+    auto&& info = fmt::vformat(format, args);
+#if __APPLE__
+    switch(log_level){
+        case Level::Info:
+        case Level::Warning:
+        case Level::Error:
+        case Level::Critical:
+            printf("log:%d level:%d filename:%s line:%d func:%s info:%s\n", static_cast<int>(log_class), static_cast<int>(log_level), filename, line_num, function, info.c_str());
+            break;
+        default:
+            break;
+    }
+#endif
+
     Impl::Instance().PushEntry(log_class, log_level, filename, line_num, function,
-                               fmt::vformat(format, args));
+                               std::move(info));
 }
 } // namespace Common::Log

@@ -485,7 +485,7 @@ private:
             exer->Build(id);
             auto coro = std::make_shared<BraceScriptCoroutine>();
             coro->SetMsgId(id);
-            coro->OnRoutine = [exer = exer, msgId = id, this]() { HandleMessage(msgId, exer); };
+            coro->OnRoutine = [exer, msgId = id, this]() { HandleMessage(msgId, exer); };
             m_MessageHandlerCoroutines.push_back(coro);
             m_CoroutineExers.push_back(exer);
         }

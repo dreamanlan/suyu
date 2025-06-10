@@ -362,21 +362,21 @@ namespace
                         break;
                     case 'f':
                     case 'F':
-                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, args[i++]);
+                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, *reinterpret_cast<double*>(&args[i++]));
                         cont = false;
                         break;
                     case 'e':
                     case 'E':
-                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, args[i++]);
+                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, *reinterpret_cast<double*>(&args[i++]));
                         break;
                     case 'g':
                     case 'G':
-                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, args[i++]);
+                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, *reinterpret_cast<double*>(&args[i++]));
                         cont = false;
                         break;
                     case 'a':
                     case 'A':
-                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, args[i++]);
+                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, *reinterpret_cast<double*>(&args[i++]));
                         cont = false;
                         break;
                     case 'c':

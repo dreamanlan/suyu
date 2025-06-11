@@ -126,8 +126,8 @@ namespace Core {
     }
     void MainThreadCaller::RequestLogToView(std::string&& msg) {
         if (impl) {
-            impl->RequestAsyncOperation([this, msg]() {
-                impl->data_widget.AddLog(msg);
+            impl->RequestAsyncOperation([this, moved_msg = std::move(msg)]() {
+                impl->data_widget.AddLog(moved_msg);
             });
         }
     }

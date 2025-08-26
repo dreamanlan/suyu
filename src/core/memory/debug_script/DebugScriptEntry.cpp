@@ -4,7 +4,10 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "DbgScpHook.h"
 #include "core/core.h"
 
@@ -37,8 +40,8 @@
 #else
 #define BACKTRACE_UNIMPLEMENTED 1
 
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 #include <dlfcn.h>
 #include <unwind.h>
 
@@ -64,14 +67,14 @@ int captureBacktrace(void** buffer, size_t max) {
     _Unwind_Backtrace(unwindCallback, &state);
     return static_cast<int>(state.current - buffer);
 }
-}
+} // namespace
 #endif
 #else
 #define BACKTRACE_UNIMPLEMENTED 1
 #if _MSC_VER
 #include <dbghelp.h>
 #pragma comment(lib, "dbghelp.lib")
-//for old windows before vista
+// for old windows before vista
 void captureStack(DWORD64 stackAddr[], int maxDepth) {
     HANDLE process = GetCurrentProcess();
     HANDLE thread = GetCurrentThread();
@@ -114,7 +117,8 @@ void captureStack(DWORD64 stackAddr[], int maxDepth) {
 
     int ix = 0;
     while (StackWalk64(machineType, process, thread, &stackFrame, &context, NULL,
-                       SymFunctionTableAccess64, SymGetModuleBase64, NULL) && ix < maxDepth) {
+                       SymFunctionTableAccess64, SymGetModuleBase64, NULL) &&
+           ix < maxDepth) {
         stackAddr[ix++] = stackFrame.AddrPC.Offset;
     }
 
@@ -128,7 +132,7 @@ void captureStack(DWORD64 stackAddr[], int maxDepth) {
     defined(PLATFORM_LUMIN) ||
     defined(PLATFORM_PLAYSTATION) // for unity
 #include "Runtime/Logging/LogAssert.h"
-int mylog_printf(const char* fmt, ...) {
+    int mylog_printf(const char* fmt, ...) {
     va_list vl;
     va_start(vl, fmt);
     printf_consolev(kLogTypeWarning, fmt, vl);
@@ -209,18 +213,15 @@ void mylog_assert(bool v) {
 #elif defined(_MSC_VER)
     _ASSERT(v);
 #elif defined(UNITY_APPLE)
-    || defined(PLATFORM_ANDROID)
-    || defined(PLATFORM_SWITCH)
-    || defined(PLATFORM_LUMIN)
-    || defined(PLATFORM_PLAYSTATION) // for unity
-    DebugAssert(v);
+    || defined(PLATFORM_ANDROID) || defined(PLATFORM_SWITCH) || defined(PLATFORM_LUMIN) ||
+        defined(PLATFORM_PLAYSTATION) // for unity
+        DebugAssert(v);
 #else
     assert(v);
 #endif
 }
 
-static inline int64_t GetProcessId()
-{
+static inline int64_t GetProcessId() {
 #if defined(PLATFORM_WIN) || defined(_MSC_VER)
     return static_cast<int64_t>(GetCurrentProcessId());
 #elif defined(__APPLE__) || defined(__ANDROID__) || defined(UNITY_POSIX)
@@ -228,8 +229,7 @@ static inline int64_t GetProcessId()
 #endif
     return 0;
 }
-static inline int64_t GetThreadId()
-{
+static inline int64_t GetThreadId() {
 #if defined(PLATFORM_WIN) || defined(_MSC_VER)
     return static_cast<int64_t>(GetCurrentThreadId());
 #elif defined(PLATFORM_ANDROID) || defined(__ANDROID__)
@@ -240,10 +240,61 @@ static inline int64_t GetThreadId()
     return 0;
 }
 
-struct WatchPointCommandInfo
-{
-    short cmd;//0--nothing 1--add 2--remove
-    short flag;//0--nothing 1--read 2--write 3--readwrite
+static void get_errno_message(int err, char* buf, size_t buflen) {
+    if (buflen == 0)
+        return;
+#if defined(_WIN32)
+    if (strerror_s(buf, buflen, err) != 0) {
+        // fallback
+        snprintf(buf, buflen, "Unknown error %d", err);
+    }
+#else
+#if defined(GLIBC) && defined(_GNU_SOURCE)
+    char* msg = strerror_r(err, buf, buflen);
+    if (msg) {
+        strncpy(buf, msg, buflen);
+        buf[buflen - 1] = '\0';
+    } else {
+        snprintf(buf, buflen, "Unknown error %d", err);
+    }
+#else
+    if (strerror_r(err, buf, buflen) != 0) {
+        snprintf(buf, buflen, "Unknown error %d", err);
+    }
+#endif
+#endif
+}
+static FILE* open_file_with_error(const char* path, const char* mode, int& err, char* errbuf,
+                                  size_t errbufSize) {
+    err = 0;
+    if (errbuf && errbufSize > 0)
+        errbuf[0] = '\0';
+
+#if defined(_WIN32)
+    FILE* f = NULL;
+    errno_t er = fopen_s(&f, path, mode);
+    if (er != 0) {
+        err = (int)er;
+        if (errbuf)
+            get_errno_message(err, errbuf, errbufSize);
+        return NULL;
+    }
+    return f;
+#else
+    FILE* f = fopen(path, mode);
+    if (!f) {
+        err = errno;
+        if (errbuf)
+            get_errno_message(err, errbuf, errbufSize);
+        return NULL;
+    }
+    return f;
+#endif
+}
+
+struct WatchPointCommandInfo {
+    short cmd;  // 0--nothing 1--add 2--remove
+    short flag; // 0--nothing 1--read 2--write 3--readwrite
     int size;
     int64_t addr;
     int64_t tid;
@@ -299,10 +350,12 @@ static int g_LogIndex = 0;
 static bool g_FirstLog = true;
 static uint64_t g_LogSize = 0;
 
-static inline bool DbgScp_FlushLog_NoLock(const char* pstr, size_t len) {
-    bool r = false;
+static int DbgScp_FlushLog_NoLock(const char* pstr, size_t len) {
+    int err = g_LogIndex;
     if (g_LogIndex < c_max_log_file_num) {
-        FILE* fp = fopen(g_LogFile[g_LogIndex].c_str(), g_FirstLog ? "wt" : "at");
+        char errmsg[256];
+        FILE* fp = open_file_with_error(g_LogFile[g_LogIndex].c_str(), g_FirstLog ? "wt" : "at",
+                                        err, errmsg, sizeof(errmsg));
         if (fp) {
             auto&& pos = g_LogBuffer.tellp();
             g_LogSize += pos;
@@ -325,26 +378,28 @@ static inline bool DbgScp_FlushLog_NoLock(const char* pstr, size_t len) {
             fclose(fp);
             g_LogBuffer.str("");
             g_FirstLog = false;
-            r = true;
+            err = 0;
 
             if (g_LogSize >= c_max_log_file_size) {
                 g_FirstLog = true;
                 ++g_LogIndex;
                 g_LogSize = 0;
             }
+        } else {
+            mylog_printf("open file failed: %s, error:%s\n", g_LogFile[g_LogIndex].c_str(), errmsg);
         }
     }
-    return r;
+    return err;
 }
-static inline bool DbgScp_FlushLog() {
+static inline int DbgScp_FlushLog() {
     std::lock_guard<std::recursive_mutex> lock(g_LogBufferMutex);
 
     return DbgScp_FlushLog_NoLock(nullptr, 0);
 }
-static inline bool DbgScp_WriteLog(const std::string& str) {
+static inline int DbgScp_WriteLog(const std::string& str) {
     std::lock_guard<std::recursive_mutex> lock(g_LogBufferMutex);
 
-    bool r = true;
+    int r = 0;
     auto&& pos = g_LogBuffer.tellp();
     if (pos + static_cast<std::streamoff>(str.length()) > c_log_buffer_size) {
         r = DbgScp_FlushLog_NoLock(str.c_str(), str.length());
@@ -468,14 +523,14 @@ static inline void TestMacro4(int a, double b, const char* c) {
 
 int TestFFI0(int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, float f1, float f2,
              int64_t sv1, int64_t sv2) {
-    mylog_printf("%d %d %d %d %d %d %d %d %f %f %lld %lld\n", a1, a2, a3, a4, a5, a6, a7, a8, f1, f2, sv1,
-           sv2);
+    mylog_printf("%d %d %d %d %d %d %d %d %f %f %lld %lld\n", a1, a2, a3, a4, a5, a6, a7, a8, f1,
+                 f2, sv1, sv2);
     return 0;
 }
 int64_t TestFFI1(int64_t a1, int64_t a2, int64_t a3, int64_t a4, int64_t a5, int64_t a6, int64_t a7,
                  int64_t a8, double f1, double f2, int64_t sv1, int64_t sv2) {
-    mylog_printf("%lld %lld %lld %lld %lld %lld %lld %lld %f %f %lld %lld\n", a1, a2, a3, a4, a5, a6, a7,
-           a8, f1, f2, sv1, sv2);
+    mylog_printf("%lld %lld %lld %lld %lld %lld %lld %lld %f %f %lld %lld\n", a1, a2, a3, a4, a5,
+                 a6, a7, a8, f1, f2, sv1, sv2);
     return 1;
 }
 
@@ -663,18 +718,16 @@ struct ExternApi {
         const ExternApiArgOrRetVal args[], int32_t argNum, const ExternApiArgOrRetVal& retVal) {
         const std::string& str = DebugScript::GetVarString(args[0].IsGlobal, args[0].Index,
                                                            stackBase, strLocals, strGlobals);
-        bool r = DbgScp_WriteLog(str);
-        DebugScript::SetVarInt(retVal.IsGlobal, retVal.Index, r ? 1 : 0, stackBase, intLocals,
-                               intGlobals);
+        int r = DbgScp_WriteLog(str);
+        DebugScript::SetVarInt(retVal.IsGlobal, retVal.Index, r, stackBase, intLocals, intGlobals);
     }
     static inline void FlushLog(
         int32_t stackBase, DebugScript::IntLocals& intLocals, DebugScript::FloatLocals& fltLocals,
         DebugScript::StringLocals& strLocals, DebugScript::IntGlobals& intGlobals,
         DebugScript::FloatGlobals& fltGlobals, DebugScript::StringGlobals& strGlobals,
         const ExternApiArgOrRetVal args[], int32_t argNum, const ExternApiArgOrRetVal& retVal) {
-        bool r = DbgScp_FlushLog();
-        DebugScript::SetVarInt(retVal.IsGlobal, retVal.Index, r ? 1 : 0, stackBase, intLocals,
-                               intGlobals);
+        int r = DbgScp_FlushLog();
+        DebugScript::SetVarInt(retVal.IsGlobal, retVal.Index, r, stackBase, intLocals, intGlobals);
     }
     static inline void LogStack(
         int32_t stackBase, DebugScript::IntLocals& intLocals, DebugScript::FloatLocals& fltLocals,

@@ -3844,7 +3844,7 @@ namespace
         {
             MyAssert(ty == TypeEnum::Int && argTy == TypeEnum::Int);
             int64_t val = GetVarInt(argIsGlobal, argIndex, stackBase, intLocals, intGlobals);
-            SetVarInt(isGlobal, index, val ? 1 : 0, stackBase, intLocals, intGlobals);
+            SetVarInt(isGlobal, index, val ? 0 : 1, stackBase, intLocals, intGlobals);
         }
     };
     struct GTOperation

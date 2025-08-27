@@ -351,7 +351,7 @@ static bool g_FirstLog = true;
 static uint64_t g_LogSize = 0;
 
 static int DbgScp_FlushLog_NoLock(const char* pstr, size_t len) {
-    int err = g_LogIndex;
+    int err = -1;
     if (g_LogIndex < c_max_log_file_num) {
         char errmsg[256];
         FILE* fp = open_file_with_error(g_LogFile[g_LogIndex].c_str(), g_FirstLog ? "wt" : "at",
@@ -401,10 +401,12 @@ static inline int DbgScp_WriteLog(const std::string& str) {
 
     int r = 0;
     auto&& pos = g_LogBuffer.tellp();
-    if (pos + static_cast<std::streamoff>(str.length()) > c_log_buffer_size) {
+    size_t sizeInBuffer = pos + static_cast<std::streamoff>(str.length());
+    if (sizeInBuffer > c_log_buffer_size) {
         r = DbgScp_FlushLog_NoLock(str.c_str(), str.length());
     } else {
         g_LogBuffer << str;
+        r = static_cast<int>(sizeInBuffer);
     }
     return r;
 }

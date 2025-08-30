@@ -31,8 +31,8 @@ add_executable(yuzu-cmd
 
 if (WIN32)
     if (MSVC)
-        set_target_properties(yuzu-cmd PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:WINDOWS /NODEFAULTLIB:libboost_context-vc141-mt-gd-x64-1_83.lib")
-        set_target_properties(yuzu-cmd PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:WINDOWS /NODEFAULTLIB:libboost_context-vc141-mt-x64-1_83.lib")
+        set_target_properties(yuzu-cmd PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:WINDOWS /NODEFAULTLIB:libboost_context-vc141-mt-gd-x64-1_89.lib")
+        set_target_properties(yuzu-cmd PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:WINDOWS /NODEFAULTLIB:libboost_context-vc141-mt-x64-1_89.lib")
     endif()
     target_link_libraries(yuzu-cmd PRIVATE libboostcontext)
 endif()

@@ -106,8 +106,11 @@ public:
     }
 
     bool IsInterlaced() const {
-        //return m_frame->interlaced_frame != 0;
+#if _WIN32
+        return m_frame->interlaced_frame != 0;
+#else
         return (m_frame->flags & AV_FRAME_FLAG_INTERLACED) != 0;
+#endif
     }
 
     bool IsHardwareDecoded() const {

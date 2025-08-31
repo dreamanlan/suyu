@@ -465,8 +465,10 @@ std::shared_ptr<Frame> DecoderContext::ReceiveFrame() {
     }
 
 #if defined(FF_API_INTERLACED_FRAME) || LIBAVUTIL_VERSION_MAJOR >= 59
-    //m_temp_frame->GetFrame()->interlaced_frame =
-    //    (m_temp_frame->GetFrame()->flags & AV_FRAME_FLAG_INTERLACED) != 0;
+#if _WIN32
+    m_temp_frame->GetFrame()->interlaced_frame =
+        (m_temp_frame->GetFrame()->flags & AV_FRAME_FLAG_INTERLACED) != 0;
+#endif
 #endif
     return std::move(m_temp_frame);
 }

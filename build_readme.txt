@@ -1,6 +1,5 @@
 compile with vc143
-1.Change "add_custom_target(clang-format" in externals\cubeb\CMakeLists.txt to "add_custom_target(clang-format-cubed"
-2.Modify the opRO_MR function in xbyak.h and add the type T_ALLOW_DIFF_SIZE
+1.Change "add_custom_target(clang-format" in externals\cubeb\CMakeLists.txt to "add_custom_target(clang-format-cubeb"
 
 delete old boost in vcpgk
 1.Delete boost files in externals\vcpgk\downloads

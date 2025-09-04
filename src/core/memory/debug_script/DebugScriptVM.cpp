@@ -83,7 +83,7 @@ namespace
     struct DebugScriptVMImpl;
     static DebugScriptGlobalImpl* g_pDebugScriptGlobal = nullptr;
     static thread_local DebugScriptVMImpl* g_pDebugScriptVM = nullptr;
-    static thread_local bool g_IsInNewDebugScriptVM = false;
+    static thread_local volatile bool g_IsInNewDebugScriptVM = false;
     static std::chrono::time_point<std::chrono::high_resolution_clock> g_start_time{};
 
     static inline void MyAssert(bool v)
@@ -4945,7 +4945,7 @@ namespace
     };
     struct AutoMark
     {
-        AutoMark(bool& flag) :m_Flag(flag)
+        AutoMark(volatile bool& flag) :m_Flag(flag)
         {
             m_Flag = true;
         }
@@ -4954,7 +4954,7 @@ namespace
             m_Flag = false;
         }
     private:
-        bool& m_Flag;
+        volatile bool& m_Flag;
     };
 
     DebugScriptGlobalImpl* GetDebugScriptGlobal()

@@ -84,6 +84,7 @@ namespace
     static DebugScriptGlobalImpl* g_pDebugScriptGlobal = nullptr;
     static thread_local DebugScriptVMImpl* g_pDebugScriptVM = nullptr;
     static thread_local volatile bool g_IsInNewDebugScriptVM = false;
+    static thread_local volatile bool g_IsInFindHook = false;
     static std::chrono::time_point<std::chrono::high_resolution_clock> g_start_time{};
 
     static inline void MyAssert(bool v)
@@ -4554,7 +4555,7 @@ namespace
         }
 
         //these methods must be protected by read_locker
-        int32_t FindHook(const std::string& name)const
+        int32_t FindHook(const char* name)const
         {
             auto&& it = m_HookMap.find(name);
             if (it != m_HookMap.end())
@@ -4589,7 +4590,7 @@ namespace
 
         std::vector<ExternApiArgOrRetVal> m_ExternApiArgs{};
 
-        int32_t FindHook(const std::string& name)const
+        int32_t FindHook(const char* name)const
         {
             DebugScriptGlobalImpl::read_locker lock(g_pDebugScriptGlobal->GetReadWriteLock(), m_StackDepth != 0);
 
@@ -4976,6 +4977,15 @@ namespace
         }
         return g_pDebugScriptVM;
     }
+
+    int32_t FindHookImpl(DebugScriptVMImpl* vm, const char* name)
+    {
+        if (g_IsInFindHook) {
+            return -1;
+        }
+        AutoMark mark(g_IsInFindHook);
+        return vm->FindHook(name);
+    }
 }
 
 void DebugScriptGlobal::Reset()
@@ -5037,7 +5047,7 @@ int32_t DebugScriptVM::FindHook(const char* name)
     UNLIKELY_ATTR
     if (OPTIMIZER_UNLIKELY(!vm))
         return -1;
-    return vm->FindHook(name);
+    return FindHookImpl(vm, name);
 }
 bool DebugScriptVM::CanRun()
 {

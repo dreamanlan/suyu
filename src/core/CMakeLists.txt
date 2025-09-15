@@ -1144,7 +1144,7 @@ add_library(core STATIC
     memory/debug_script/DbgScpHook.h
     memory/debug_script/DebugScriptVM.h
     memory/debug_script/DebugScriptVM.cpp
-    memory/debug_script/DebugScriptEntry.cpp
+    memory/debug_script/DebugScriptExternApiAndEntry.cpp
     memory/debug_script/debug_break.h
     memory/debug_script/sema.h
     memory/debug_script/rwlock.h

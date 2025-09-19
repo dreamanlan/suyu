@@ -327,10 +327,28 @@ static short DbgScp_GetWatchPoint(short& flag, int& size, int64_t& addr, int64_t
 static const int c_max_log_file_num = 16;
 static const int c_max_log_file_size = 1024 * 1024 * 1024;
 static const std::streamsize c_log_buffer_size = 8 * 1024 * 1024;
-static std::vector<char> g_SwapBuffer(c_log_buffer_size);
-static std::stringstream g_LogBuffer{};
-static std::recursive_mutex g_LogBufferMutex{};
-static std::string g_LogFile[c_max_log_file_num] = {"dbgscp_log_0.txt",
+static int g_LogIndex = 0;
+static bool g_FirstLog = true;
+static uint64_t g_LogSize = 0;
+
+static inline std::vector<char>& GetSwapBufferRef()
+{
+    static std::vector<char> s_SwapBuffer(c_log_buffer_size);
+    return s_SwapBuffer;
+}
+static inline std::stringstream& GetLogBufferRef()
+{
+    static std::stringstream s_LogBuffer;
+    return s_LogBuffer;
+}
+static inline std::recursive_mutex& GetLogBufferMutexRef()
+{
+    static std::recursive_mutex s_LogBufferMutex;
+    return s_LogBufferMutex;
+}
+static inline std::string* GetLogFilesRef()
+{
+    static std::string s_LogFile[c_max_log_file_num] = { "dbgscp_log_0.txt",
                                                     "dbgscp_log_1.txt",
                                                     "dbgscp_log_2.txt",
                                                     "dbgscp_log_3.txt"
@@ -345,30 +363,28 @@ static std::string g_LogFile[c_max_log_file_num] = {"dbgscp_log_0.txt",
                                                     "dbgscp_log_12.txt",
                                                     "dbgscp_log_13.txt",
                                                     "dbgscp_log_14.txt",
-                                                    "dbgscp_log_15.txt"};
-static int g_LogIndex = 0;
-static bool g_FirstLog = true;
-static uint64_t g_LogSize = 0;
+                                                    "dbgscp_log_15.txt" };
+    return s_LogFile;
+}
 
 static int DbgScp_FlushLog_NoLock(const char* pstr, size_t len) {
     int err = -1;
     if (g_LogIndex < c_max_log_file_num) {
         char errmsg[256];
-        FILE* fp = open_file_with_error(g_LogFile[g_LogIndex].c_str(), g_FirstLog ? "wt" : "at",
-                                        err, errmsg, sizeof(errmsg));
+        FILE* fp = open_file_with_error(GetLogFilesRef()[g_LogIndex].c_str(), g_FirstLog ? "wt" : "at", err, errmsg, sizeof(errmsg));
         if (fp) {
-            auto&& pos = g_LogBuffer.tellp();
+            auto&& pos = GetLogBufferRef().tellp();
             g_LogSize += pos;
 
             std::streampos curPos = 0;
-            g_LogBuffer.seekg(curPos, std::ios::beg);
+            GetLogBufferRef().seekg(curPos, std::ios::beg);
             while (curPos < pos) {
                 std::streamsize size = pos - curPos;
                 if (size > c_log_buffer_size) {
                     size = c_log_buffer_size;
                 }
-                g_LogBuffer.read(g_SwapBuffer.data(), size);
-                fwrite(g_SwapBuffer.data(), 1, size, fp);
+                GetLogBufferRef().read(GetSwapBufferRef().data(), size);
+                fwrite(GetSwapBufferRef().data(), 1, size, fp);
                 curPos += size;
             }
             if (pstr) {
@@ -376,7 +392,7 @@ static int DbgScp_FlushLog_NoLock(const char* pstr, size_t len) {
                 g_LogSize += len;
             }
             fclose(fp);
-            g_LogBuffer.str("");
+            GetLogBufferRef().str("");
             g_FirstLog = false;
             err = 0;
 
@@ -385,32 +401,37 @@ static int DbgScp_FlushLog_NoLock(const char* pstr, size_t len) {
                 ++g_LogIndex;
                 g_LogSize = 0;
             }
-        } else {
-            mylog_printf("open file failed: %s, error:%s\n", g_LogFile[g_LogIndex].c_str(), errmsg);
+        }
+        else {
+            mylog_printf("open file failed: %s, error:%s\n", GetLogFilesRef()[g_LogIndex].c_str(), errmsg);
         }
     }
     return err;
 }
-static int DbgScp_FlushLog() {
-    std::lock_guard<std::recursive_mutex> lock(g_LogBufferMutex);
+static int DbgScp_FlushLog()
+{
+    std::lock_guard<std::recursive_mutex> lock(GetLogBufferMutexRef());
 
     return DbgScp_FlushLog_NoLock(nullptr, 0);
 }
-static int DbgScp_WriteLog(const std::string& str) {
-    std::lock_guard<std::recursive_mutex> lock(g_LogBufferMutex);
+static int DbgScp_WriteLog(const std::string& str)
+{
+    std::lock_guard<std::recursive_mutex> lock(GetLogBufferMutexRef());
 
     int r = 0;
-    auto&& pos = g_LogBuffer.tellp();
+    auto&& pos = GetLogBufferRef().tellp();
     size_t sizeInBuffer = pos + static_cast<std::streamoff>(str.length());
     if (sizeInBuffer > c_log_buffer_size) {
         r = DbgScp_FlushLog_NoLock(str.c_str(), str.length());
-    } else {
-        g_LogBuffer << str;
+    }
+    else {
+        GetLogBufferRef() << str;
         r = static_cast<int>(sizeInBuffer);
     }
     return r;
 }
-static void DbgScp_LogCallstack(const char* prefix, const char* file, int line) {
+static void DbgScp_LogCallstack(const char* prefix, const char* file, int line)
+{
     const int c_buf_size = 1024 * 4 + 1;
     char buf[c_buf_size];
     snprintf(buf, c_buf_size, "%s%s:%d\n", prefix, file, line);
@@ -449,27 +470,38 @@ static void DbgScp_LogCallstack(const char* prefix, const char* file, int line) 
 #endif
 }
 
-static std::unordered_map<int64_t, int64_t> g_MemoryFlags{};
-static std::recursive_mutex g_MemoryFlagMutex{};
+static inline std::unordered_map<int64_t, int64_t>& GetMemoryFlagsRef()
+{
+    static std::unordered_map<int64_t, int64_t> s_MemoryFlags;
+    return s_MemoryFlags;
+}
+static inline std::recursive_mutex& GetMemoryFlagMutexRef()
+{
+    static std::recursive_mutex s_MemoryFlagMutex;
+    return s_MemoryFlagMutex;
+}
 
-static inline bool DbgScp_AddMemoryFlag(int64_t addr, int64_t flag) {
-    std::lock_guard<std::recursive_mutex> lock(g_MemoryFlagMutex);
+static inline bool DbgScp_AddMemoryFlag(int64_t addr, int64_t flag)
+{
+    std::lock_guard<std::recursive_mutex> lock(GetMemoryFlagMutexRef());
 
-    auto&& r = g_MemoryFlags.insert(std::make_pair(addr, flag));
+    auto&& r = GetMemoryFlagsRef().insert(std::make_pair(addr, flag));
     return r.second;
 }
-static inline bool DbgScp_RemoveMemoryFlag(int64_t addr) {
-    std::lock_guard<std::recursive_mutex> lock(g_MemoryFlagMutex);
+static inline bool DbgScp_RemoveMemoryFlag(int64_t addr)
+{
+    std::lock_guard<std::recursive_mutex> lock(GetMemoryFlagMutexRef());
 
-    auto&& r = g_MemoryFlags.erase(addr);
+    auto&& r = GetMemoryFlagsRef().erase(addr);
     return r > 0;
 }
-static inline bool DbgScp_GetMemoryFlag(int64_t addr, int64_t& flag) {
-    std::lock_guard<std::recursive_mutex> lock(g_MemoryFlagMutex);
+static inline bool DbgScp_GetMemoryFlag(int64_t addr, int64_t& flag)
+{
+    std::lock_guard<std::recursive_mutex> lock(GetMemoryFlagMutexRef());
 
     bool r = false;
-    auto&& it = g_MemoryFlags.find(addr);
-    if (it != g_MemoryFlags.end()) {
+    auto&& it = GetMemoryFlagsRef().find(addr);
+    if (it != GetMemoryFlagsRef().end()) {
         flag = it->second;
         r = true;
     }
@@ -894,9 +926,9 @@ void CppDbgScp_CallExternApi(int api, int32_t stackBase, DebugScript::IntLocals&
 
 void LoadDbgScp(const std::string& log_path, const std::string& load_path) {
     for (int i = 0; i < c_max_log_file_num; ++i) {
-        if (g_LogFile[i].empty()) {
+        if (GetLogFilesRef()[i].empty()) {
             auto&& path = fmt::format("{}/dbgscp_log_{}.txt", log_path.c_str(), i);
-            g_LogFile[i] = path.c_str();
+            GetLogFilesRef()[i] = path.c_str();
         }
     }
     std::string data_file = load_path + "/bytecode.dat";

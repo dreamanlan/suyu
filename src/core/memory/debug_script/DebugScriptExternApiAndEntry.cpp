@@ -303,8 +303,7 @@ struct WatchPointCommandInfo {
 static std::recursive_mutex g_WatchPointMutex{};
 WatchPointCommandInfo g_WatchPointCommandInfo{0, 0, 0, 0, 0};
 
-static void DbgScp_SetWatchPoint(short cmd, short flag, int size, int64_t addr,
-                                        int64_t tid) {
+static void DbgScp_SetWatchPoint(short cmd, short flag, int size, int64_t addr, int64_t tid) {
     std::lock_guard<std::recursive_mutex> lock(g_WatchPointMutex);
 
     g_WatchPointCommandInfo.cmd = cmd;
@@ -331,39 +330,35 @@ static int g_LogIndex = 0;
 static bool g_FirstLog = true;
 static uint64_t g_LogSize = 0;
 
-static inline std::vector<char>& GetSwapBufferRef()
-{
+static inline std::vector<char>& GetSwapBufferRef() {
     static std::vector<char> s_SwapBuffer(c_log_buffer_size);
     return s_SwapBuffer;
 }
-static inline std::stringstream& GetLogBufferRef()
-{
+static inline std::stringstream& GetLogBufferRef() {
     static std::stringstream s_LogBuffer;
     return s_LogBuffer;
 }
-static inline std::recursive_mutex& GetLogBufferMutexRef()
-{
+static inline std::recursive_mutex& GetLogBufferMutexRef() {
     static std::recursive_mutex s_LogBufferMutex;
     return s_LogBufferMutex;
 }
-static inline std::string* GetLogFilesRef()
-{
-    static std::string s_LogFile[c_max_log_file_num] = { "dbgscp_log_0.txt",
-                                                    "dbgscp_log_1.txt",
-                                                    "dbgscp_log_2.txt",
-                                                    "dbgscp_log_3.txt"
-                                                    "dbgscp_log_4.txt",
-                                                    "dbgscp_log_5.txt",
-                                                    "dbgscp_log_6.txt",
-                                                    "dbgscp_log_7.txt",
-                                                    "dbgscp_log_8.txt",
-                                                    "dbgscp_log_9.txt",
-                                                    "dbgscp_log_10.txt",
-                                                    "dbgscp_log_11.txt",
-                                                    "dbgscp_log_12.txt",
-                                                    "dbgscp_log_13.txt",
-                                                    "dbgscp_log_14.txt",
-                                                    "dbgscp_log_15.txt" };
+static inline std::string* GetLogFilesRef() {
+    static std::string s_LogFile[c_max_log_file_num] = {"dbgscp_log_0.txt",
+                                                        "dbgscp_log_1.txt",
+                                                        "dbgscp_log_2.txt",
+                                                        "dbgscp_log_3.txt"
+                                                        "dbgscp_log_4.txt",
+                                                        "dbgscp_log_5.txt",
+                                                        "dbgscp_log_6.txt",
+                                                        "dbgscp_log_7.txt",
+                                                        "dbgscp_log_8.txt",
+                                                        "dbgscp_log_9.txt",
+                                                        "dbgscp_log_10.txt",
+                                                        "dbgscp_log_11.txt",
+                                                        "dbgscp_log_12.txt",
+                                                        "dbgscp_log_13.txt",
+                                                        "dbgscp_log_14.txt",
+                                                        "dbgscp_log_15.txt"};
     return s_LogFile;
 }
 
@@ -371,7 +366,8 @@ static int DbgScp_FlushLog_NoLock(const char* pstr, size_t len) {
     int err = -1;
     if (g_LogIndex < c_max_log_file_num) {
         char errmsg[256];
-        FILE* fp = open_file_with_error(GetLogFilesRef()[g_LogIndex].c_str(), g_FirstLog ? "wt" : "at", err, errmsg, sizeof(errmsg));
+        FILE* fp = open_file_with_error(GetLogFilesRef()[g_LogIndex].c_str(),
+                                        g_FirstLog ? "wt" : "at", err, errmsg, sizeof(errmsg));
         if (fp) {
             auto&& pos = GetLogBufferRef().tellp();
             g_LogSize += pos;
@@ -401,21 +397,19 @@ static int DbgScp_FlushLog_NoLock(const char* pstr, size_t len) {
                 ++g_LogIndex;
                 g_LogSize = 0;
             }
-        }
-        else {
-            mylog_printf("open file failed: %s, error:%s\n", GetLogFilesRef()[g_LogIndex].c_str(), errmsg);
+        } else {
+            mylog_printf("open file failed: %s, error:%s\n", GetLogFilesRef()[g_LogIndex].c_str(),
+                         errmsg);
         }
     }
     return err;
 }
-static int DbgScp_FlushLog()
-{
+static int DbgScp_FlushLog() {
     std::lock_guard<std::recursive_mutex> lock(GetLogBufferMutexRef());
 
     return DbgScp_FlushLog_NoLock(nullptr, 0);
 }
-static int DbgScp_WriteLog(const std::string& str)
-{
+static int DbgScp_WriteLog(const std::string& str) {
     std::lock_guard<std::recursive_mutex> lock(GetLogBufferMutexRef());
 
     int r = 0;
@@ -423,15 +417,13 @@ static int DbgScp_WriteLog(const std::string& str)
     size_t sizeInBuffer = pos + static_cast<std::streamoff>(str.length());
     if (sizeInBuffer > c_log_buffer_size) {
         r = DbgScp_FlushLog_NoLock(str.c_str(), str.length());
-    }
-    else {
+    } else {
         GetLogBufferRef() << str;
         r = static_cast<int>(sizeInBuffer);
     }
     return r;
 }
-static void DbgScp_LogCallstack(const char* prefix, const char* file, int line)
-{
+static void DbgScp_LogCallstack(const char* prefix, const char* file, int line) {
     const int c_buf_size = 1024 * 4 + 1;
     char buf[c_buf_size];
     snprintf(buf, c_buf_size, "%s%s:%d\n", prefix, file, line);
@@ -470,33 +462,28 @@ static void DbgScp_LogCallstack(const char* prefix, const char* file, int line)
 #endif
 }
 
-static inline std::unordered_map<int64_t, int64_t>& GetMemoryFlagsRef()
-{
+static inline std::unordered_map<int64_t, int64_t>& GetMemoryFlagsRef() {
     static std::unordered_map<int64_t, int64_t> s_MemoryFlags;
     return s_MemoryFlags;
 }
-static inline std::recursive_mutex& GetMemoryFlagMutexRef()
-{
+static inline std::recursive_mutex& GetMemoryFlagMutexRef() {
     static std::recursive_mutex s_MemoryFlagMutex;
     return s_MemoryFlagMutex;
 }
 
-static inline bool DbgScp_AddMemoryFlag(int64_t addr, int64_t flag)
-{
+static inline bool DbgScp_AddMemoryFlag(int64_t addr, int64_t flag) {
     std::lock_guard<std::recursive_mutex> lock(GetMemoryFlagMutexRef());
 
     auto&& r = GetMemoryFlagsRef().insert(std::make_pair(addr, flag));
     return r.second;
 }
-static inline bool DbgScp_RemoveMemoryFlag(int64_t addr)
-{
+static inline bool DbgScp_RemoveMemoryFlag(int64_t addr) {
     std::lock_guard<std::recursive_mutex> lock(GetMemoryFlagMutexRef());
 
     auto&& r = GetMemoryFlagsRef().erase(addr);
     return r > 0;
 }
-static inline bool DbgScp_GetMemoryFlag(int64_t addr, int64_t& flag)
-{
+static inline bool DbgScp_GetMemoryFlag(int64_t addr, int64_t& flag) {
     std::lock_guard<std::recursive_mutex> lock(GetMemoryFlagMutexRef());
 
     bool r = false;

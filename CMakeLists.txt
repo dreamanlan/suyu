@@ -358,7 +358,7 @@ if (ENABLE_WEB_SERVICE OR USE_DISCORD_PRESENCE)
 endif()
 
 if (YUZU_TESTS)
-    find_package(Catch2 3.0.1 REQUIRED)
+    find_package(Catch2 3.10.0 REQUIRED)
 endif()
 
 # boost:asio has functions that require AcceptEx et al

@@ -9,7 +9,7 @@ extern "C" {
 #if PLATFORM_WIN
     __declspec(dllimport) BOOL __stdcall IsDebuggerPresent();
 #elif _WIN64
-    __declspec(dllimport) long __stdcall IsDebuggerPresent();
+    __declspec(dllimport) BOOL __stdcall IsDebuggerPresent();
 #else
     __declspec(dllimport) int __stdcall IsDebuggerPresent();
 #endif

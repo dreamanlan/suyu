@@ -10,6 +10,7 @@
 #include "BraceAny.h"
 #include "BraceCoroutine.h"
 #include "BraceScript.h"
+#include "ScriptableDslHelper.h"
 #include "brace_object.h"
 #include "math_api.h"
 
@@ -304,6 +305,7 @@ private:
             m_pBuffer->Reset();
 
         DslParser::DslFile parsedFile(*m_pBuffer);
+        ScriptableDslHelper::ForBraceScript().SetCallbacks(parsedFile);
         parsedFile.Parse(scp.c_str());
         if (parsedFile.HasError()) {
             for (int i = 0; i < parsedFile.GetErrorNum(); ++i) {
@@ -11693,6 +11695,7 @@ int SplitCmd(const std::string& cmdLine, std::string& first, std::string& second
         }
 
         DslParser::DslFile parsedFile(*g_pDslBufferForCommand);
+        ScriptableDslHelper::ForBraceScript().SetCallbacks(parsedFile);
         parsedFile.Parse(cmdStr.c_str());
         if (!parsedFile.HasError()) {
             // Commands can be expressed as functions with simple arguments

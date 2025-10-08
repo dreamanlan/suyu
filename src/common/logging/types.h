@@ -18,6 +18,7 @@ enum class Level : u8 {
               ///< completed.
     Critical, ///< Major problems during execution that threaten the stability of the entire
               ///< application.
+    DbgScp,
 
     Count ///< Total number of logging levels
 };

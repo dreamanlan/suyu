@@ -8,6 +8,7 @@
 #include <numeric>
 
 #include "common/range_sets.inc"
+#include "shader_recompiler/stage.h"
 #include "video_core/buffer_cache/buffer_cache_base.h"
 #include "video_core/guest_memory.h"
 #include "video_core/host1x/gpu_device_memory_manager.h"
@@ -853,7 +854,7 @@ void BufferCache<P>::BindHostGraphicsUniformBuffer(size_t stage, u32 index, u32 
     if constexpr (NEEDS_BIND_UNIFORM_INDEX) {
         runtime.BindUniformBuffer(stage, binding_index, buffer, offset, size);
     } else {
-        runtime.BindUniformBuffer(buffer, offset, size);
+        runtime.BindUniformBuffer(static_cast<int>(stage), static_cast<int>(binding_index), buffer, offset, size);
     }
 }
 
@@ -876,16 +877,17 @@ void BufferCache<P>::BindHostGraphicsStorageBuffers(size_t stage) {
         }
 
         if constexpr (NEEDS_BIND_STORAGE_INDEX) {
-            runtime.BindStorageBuffer(stage, binding_index, buffer, offset, size, is_written);
-            ++binding_index;
+            runtime.BindStorageBuffer(static_cast<int>(stage), static_cast<int>(binding_index), buffer, offset, size, is_written);
         } else {
-            runtime.BindStorageBuffer(buffer, offset, size, is_written);
+            runtime.BindStorageBuffer(static_cast<int>(stage), static_cast<int>(binding_index), buffer, offset, size, is_written);
         }
+        ++binding_index;
     });
 }
 
 template <class P>
 void BufferCache<P>::BindHostGraphicsTextureBuffers(size_t stage) {
+    u32 binding_index = 0;
     ForEachEnabledBit(channel_state->enabled_texture_buffers[stage], [&](u32 index) {
         const TextureBufferBinding& binding = channel_state->texture_buffers[stage][index];
         Buffer& buffer = slot_buffers[binding.buffer_id];
@@ -902,13 +904,14 @@ void BufferCache<P>::BindHostGraphicsTextureBuffers(size_t stage) {
         buffer.MarkUsage(offset, size);
         if constexpr (SEPARATE_IMAGE_BUFFERS_BINDINGS) {
             if (((channel_state->image_texture_buffers[stage] >> index) & 1) != 0) {
-                runtime.BindImageBuffer(buffer, offset, size, format);
+                runtime.BindImageBuffer(static_cast<int>(stage), static_cast<int>(binding_index), buffer, offset, size, format);
             } else {
-                runtime.BindTextureBuffer(buffer, offset, size, format);
+                runtime.BindTextureBuffer(static_cast<int>(stage), static_cast<int>(binding_index), buffer, offset, size, format);
             }
         } else {
-            runtime.BindTextureBuffer(buffer, offset, size, format);
+            runtime.BindTextureBuffer(static_cast<int>(stage), static_cast<int>(binding_index), buffer, offset, size, format);
         }
+        ++binding_index;
     });
 }
 
@@ -960,12 +963,13 @@ void BufferCache<P>::BindHostComputeUniformBuffers() {
 
         const u32 offset = buffer.Offset(binding.device_addr);
         buffer.MarkUsage(offset, size);
+        const Shader::Stage stage = Shader::Stage::Compute;
         if constexpr (NEEDS_BIND_UNIFORM_INDEX) {
-            runtime.BindComputeUniformBuffer(binding_index, buffer, offset, size);
-            ++binding_index;
+            runtime.BindComputeUniformBuffer(static_cast<int>(stage), static_cast<int>(binding_index), buffer, offset, size);
         } else {
-            runtime.BindUniformBuffer(buffer, offset, size);
+            runtime.BindUniformBuffer(static_cast<int>(stage), static_cast<int>(binding_index), buffer, offset, size);
         }
+        ++binding_index;
     });
 }
 
@@ -988,17 +992,19 @@ void BufferCache<P>::BindHostComputeStorageBuffers() {
             MarkWrittenBuffer(binding.buffer_id, binding.device_addr, size);
         }
 
+        const Shader::Stage stage = Shader::Stage::Compute;
         if constexpr (NEEDS_BIND_STORAGE_INDEX) {
-            runtime.BindComputeStorageBuffer(binding_index, buffer, offset, size, is_written);
-            ++binding_index;
+            runtime.BindComputeStorageBuffer(static_cast<int>(stage), static_cast<int>(binding_index), buffer, offset, size, is_written);
         } else {
-            runtime.BindStorageBuffer(buffer, offset, size, is_written);
+            runtime.BindStorageBuffer(static_cast<int>(stage), static_cast<int>(binding_index), buffer, offset, size, is_written);
         }
+        ++binding_index;
     });
 }
 
 template <class P>
 void BufferCache<P>::BindHostComputeTextureBuffers() {
+    u32 binding_index = 0;
     ForEachEnabledBit(channel_state->enabled_compute_texture_buffers, [&](u32 index) {
         const TextureBufferBinding& binding = channel_state->compute_texture_buffers[index];
         Buffer& buffer = slot_buffers[binding.buffer_id];
@@ -1014,15 +1020,17 @@ void BufferCache<P>::BindHostComputeTextureBuffers() {
         const u32 offset = buffer.Offset(binding.device_addr);
         const PixelFormat format = binding.format;
         buffer.MarkUsage(offset, size);
+        const Shader::Stage stage = Shader::Stage::Compute;
         if constexpr (SEPARATE_IMAGE_BUFFERS_BINDINGS) {
             if (((channel_state->image_compute_texture_buffers >> index) & 1) != 0) {
-                runtime.BindImageBuffer(buffer, offset, size, format);
+                runtime.BindImageBuffer(static_cast<int>(stage), static_cast<int>(binding_index), buffer, offset, size, format);
             } else {
-                runtime.BindTextureBuffer(buffer, offset, size, format);
+                runtime.BindTextureBuffer(static_cast<int>(stage), static_cast<int>(binding_index), buffer, offset, size, format);
             }
         } else {
-            runtime.BindTextureBuffer(buffer, offset, size, format);
+            runtime.BindTextureBuffer(static_cast<int>(stage), static_cast<int>(binding_index), buffer, offset, size, format);
         }
+        ++binding_index;
     });
 }
 

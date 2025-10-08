@@ -26,6 +26,7 @@
 #include "video_core/vulkan_common/vulkan_device.h"
 #include "video_core/vulkan_common/vulkan_memory_allocator.h"
 #include "video_core/vulkan_common/vulkan_wrapper.h"
+#include "core/memory/debug_script/DbgScpHook.h"
 
 namespace Vulkan {
 
@@ -1269,11 +1270,29 @@ void TextureCacheRuntime::CopyImage(Image& dst, Image& src,
     const VkImageAspectFlags aspect_mask = dst.AspectMask();
     ASSERT(aspect_mask == src.AspectMask());
 
+    auto&& src_fmt = src.info.format;
+    auto&& src_num_samples = src.info.num_samples;
+    auto&& src_bytes_per_block = BytesPerBlock(src_fmt);
+    auto&& dst_fmt = dst.info.format;
+    auto&& dst_num_samples = dst.info.num_samples;
+    auto&& dst_bytes_per_block = BytesPerBlock(dst_fmt);
+
     std::ranges::transform(copies, vk_copies.begin(), [aspect_mask](const auto& copy) {
         return MakeImageCopy(copy, aspect_mask);
     });
     const VkImage dst_image = dst.Handle();
     const VkImage src_image = src.Handle();
+
+#ifdef __APPLE__
+    if (src_num_samples != dst_num_samples || src_bytes_per_block != dst_bytes_per_block) {
+        bool skip = false;
+        DBGSCP_HOOK_VOID("TextureCacheRuntime::CopyImageFailedOnApple", skip, src_fmt, dst_fmt, src_num_samples, dst_num_samples, src_bytes_per_block, dst_bytes_per_block);
+        if (skip) {
+            return;
+        }
+    }
+#endif
+
     scheduler.RequestOutsideRenderPassOperationContext();
     scheduler.Record([dst_image, src_image, aspect_mask, vk_copies](vk::CommandBuffer cmdbuf) {
         RangedBarrierRange dst_range;

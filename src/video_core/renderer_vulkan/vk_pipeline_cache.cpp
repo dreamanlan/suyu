@@ -752,7 +752,7 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
                 }
                 return GetHandleSecond(gpu_memory->Read<u32>(addr), via_header_index);
             }};
-#if __APPLE__
+#ifdef __APPLE__
             for (auto& desc : program.info.texture_descriptors) {
                 for (u32 tindex = 0; tindex < desc.count; ++tindex) {
                     const auto handle{read_handle(desc, tindex)};
@@ -768,11 +768,16 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
         std::vector<u32> code{EmitSPIRV(profile, runtime_info, program, binding)};
         device.SaveShader(code);
         VideoCommon::DumpSpirvShader(hash, key.unique_hashes[index], Shader::StageFromIndex(stage_index), code);
-#if __APPLE__
+#ifdef __APPLE__
         // Currently, Apple's Metal does not support geometry shader.
         // [See MoltenVK]: The current plan for geometry shaders is to use Apple's new Shader Converter tech.
         // As for more info, we've got this identified in the MoltenVK roadmap.
         if (index == static_cast<u32>(Maxwell::ShaderType::Geometry)) {
+            printf("Skip geometry shader, pipeline:%llx vs:%llx gs:%llx fs:%llx\n",
+                   static_cast<u64>(hash),
+                   key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1],
+                   key.unique_hashes[static_cast<int>(Shader::Stage::Geometry) + 1],
+                   key.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1]);
             continue;
         }
 #endif
@@ -911,7 +916,7 @@ std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
             }
             return GetHandleSecond(gpu_memory->Read<u32>(addr), via_header_index);
         }};
-#if __APPLE__
+#ifdef __APPLE__
         for (const auto& desc : program.info.texture_descriptors) {
             for (u32 index = 0; index < desc.count; ++index) {
                 const auto handle{read_handle(desc, index)};

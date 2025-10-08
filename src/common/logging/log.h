@@ -66,3 +66,8 @@ void FmtLogMessage(Class log_class, Level log_level, const char* filename, unsig
     Common::Log::FmtLogMessage(Common::Log::Class::log_class, Common::Log::Level::Critical,        \
                                Common::Log::TrimSourcePath(__FILE__), __LINE__, __func__,          \
                                __VA_ARGS__)
+
+#define LOG_DBGSCP(log_class, ...)                                                                 \
+    Common::Log::FmtLogMessage(Common::Log::Class::log_class, Common::Log::Level::DbgScp,          \
+                               Common::Log::TrimSourcePath(__FILE__), __LINE__, __func__,          \
+                               __VA_ARGS__)

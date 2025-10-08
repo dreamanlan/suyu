@@ -47,8 +47,8 @@ public:
         return upload_start;
     }
 
-    void AddSampledImage(VkImageView image_view, VkSampler sampler) {
-        LogAddSampledImage(image_view, sampler);
+    void AddSampledImage(int stage, int binding_index, VkImageView image_view, VkSampler sampler) {
+        LogAddSampledImage(stage, binding_index, image_view, sampler);
 
         *(payload_cursor++) = VkDescriptorImageInfo{
             .sampler = sampler,
@@ -57,8 +57,8 @@ public:
         };
     }
 
-    void AddImage(VkImageView image_view) {
-        LogAddImage(image_view);
+    void AddImage(int stage, int binding_index, VkImageView image_view) {
+        LogAddImage(stage, binding_index, image_view);
 
         *(payload_cursor++) = VkDescriptorImageInfo{
             .sampler = VK_NULL_HANDLE,
@@ -67,8 +67,8 @@ public:
         };
     }
 
-    void AddBuffer(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize size) {
-        LogAddBuffer(buffer, offset, size);
+    void AddBuffer(int stage, int binding_index, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize size) {
+        LogAddBuffer(stage, binding_index, buffer, offset, size);
 
         *(payload_cursor++) = VkDescriptorBufferInfo{
             .buffer = buffer,
@@ -77,17 +77,17 @@ public:
         };
     }
 
-    void AddTexelBuffer(VkBufferView texel_buffer) {
-        LogAddTexelBuffer(texel_buffer);
+    void AddTexelBuffer(int stage, int binding_index, VkBufferView texel_buffer) {
+        LogAddTexelBuffer(stage, binding_index, texel_buffer);
 
         *(payload_cursor++) = texel_buffer;
     }
 
 private:
-    void LogAddSampledImage(VkImageView image_view, VkSampler sampler);
-    void LogAddImage(VkImageView image_view);
-    void LogAddBuffer(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize size);
-    void LogAddTexelBuffer(VkBufferView texel_buffer);
+    void LogAddSampledImage(int stage, int binding_index, VkImageView image_view, VkSampler sampler);
+    void LogAddImage(int stage, int binding_index, VkImageView image_view);
+    void LogAddBuffer(int stage, int binding_index, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize size);
+    void LogAddTexelBuffer(int stage, int binding_index, VkBufferView texel_buffer);
 
 private:
     const Device& device;

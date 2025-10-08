@@ -359,12 +359,13 @@ void FmtLogMessageImpl(Class log_class, Level log_level, const char* filename,
     }
 
     auto&& info = fmt::vformat(format, args);
-#if __APPLE__
+#ifdef __APPLE__
     switch(log_level){
-        case Level::Info:
-        case Level::Warning:
+        //case Level::Info:
+        //case Level::Warning:
         case Level::Error:
         case Level::Critical:
+        case Level::DbgScp:
             printf("log:%d level:%d filename:%s line:%d func:%s info:%s\n", static_cast<int>(log_class), static_cast<int>(log_level), filename, line_num, function, info.c_str());
             break;
         default:

@@ -183,6 +183,33 @@ hook(DbgScp_Get)
 	};
 };
 
+hook("Vulkan::GraphicsPipeline::ctor")
+{
+	onenter{
+		$this:int = ptrget(argv(0),8);
+		$vshash:int = ptrget(argv(1),8);
+		$geohash:int = ptrget(argv(2),8);
+		$pshash:int = ptrget(argv(3),8);
+
+		if ($vshash==0xfc6acaf325f8139a && $pshash==0xe7751a4a608bfc2d) {
+			printf("Vulkan::GraphicsPipeline::ctor vs:%llx gs:%llx ps:%llx\n",$vshash,$geohash,$pshash);
+		};
+	};
+};
+hook("Vulkan::GraphicsPipeline::AfterMake")
+{
+	onenter{
+		//$log:int = ptrget(argv(0),1);
+		$this:int = ptrget(argv(1),8);
+		$vshash:int = ptrget(argv(2),8);
+		$geohash:int = ptrget(argv(3),8);
+		$pshash:int = ptrget(argv(4),8);
+		$desctmpl:int = ptrget(argv(5),8);
+
+		//log
+		ptrset(argv(0),1,1);
+	};
+};
 hook("RasterizerVulkan::PrepareDraw")
 {
 	onenter{
@@ -193,11 +220,100 @@ hook("RasterizerVulkan::PrepareDraw")
 		$geohash:int = ptrget(argv(4),8);
 		$pshash:int = ptrget(argv(5),8);
 
-		if($vshash==0xeed52323ec13b145 && $pshash==0x42cd683880844cf4){
-			printf("RasterizerVulkan::PrepareDraw enter time:%lld this:%lld indirect:%d indexed:%d vshash:%llx pshash:%llx\n",time(),$this,$indirect,$indexed,$vshash,$pshash);
-			dumpstack("RasterizerVulkan::PrepareDraw");
-			assert(0);
+		if($vshash==0x86d7c683e2589201 && $pshash==0xf9af955d3cbfadeb){
+			//printf("RasterizerVulkan::PrepareDraw enter time:%lld this:%lld indirect:%d indexed:%d vshash:%llx gshash:%llx pshash:%llx\n",time(),$this,$indirect,$indexed,$vshash,$geohash,$pshash);
+			//dumpstack("RasterizerVulkan::PrepareDraw");
+			//assert(0);
 		};
+	};
+};
+hook("Vulkan::GraphicsPipeline::UpdateDescriptorSet")
+{
+	onenter{
+		//$log:int = ptrget(argv(0),1);
+		//$skip:int = ptrget(argv(1),1);
+		$this:int = ptrget(argv(2),8);
+		$vshash:int = ptrget(argv(3),8);
+		$geohash:int = ptrget(argv(4),8);
+		$pshash:int = ptrget(argv(5),8);
+		$desctmpl:int = ptrget(argv(6),8);
+
+		if ($vshash==0xfc6acaf325f8139a && $pshash==0xe7751a4a608bfc2d) {
+			//printf("Vulkan::GraphicsPipeline::UpdateDescriptorSet vs:%llx gs:%llx ps:%llx desc tmpl:%llx\n",$vshash,$geohash,$pshash,$desctmpl);
+			//log
+			//ptrset(argv(0),1,1);
+			//skip
+			//ptrset(argv(1),1,1);
+		};
+	};
+};
+hook("UpdateDescriptorQueue::LogAddSampledImage")
+{
+	onenter{
+		//$log:int = ptrget(argv(0),1);
+		$this:int = ptrget(argv(1),8);
+		$stage:int = ptrget(argv(2),4);
+		$binding:int = ptrget(argv(3),4);
+		$imgview:int = ptrget(argv(4),8);
+		$sampler:int = ptrget(argv(5),8);
+
+		//ptrset(argv(0),1,1);
+	};
+};
+hook("UpdateDescriptorQueue::LogAddImage")
+{
+	onenter{
+		//$log:int = ptrget(argv(0),1);
+		$this:int = ptrget(argv(1),8);
+		$stage:int = ptrget(argv(2),4);
+		$binding:int = ptrget(argv(3),4);
+		$imgview:int = ptrget(argv(4),8);
+
+		//ptrset(argv(0),1,1);
+	};
+};
+hook("UpdateDescriptorQueue::LogAddBuffer")
+{
+	onenter{
+		//$log:int = ptrget(argv(0),1);
+		$this:int = ptrget(argv(1),8);
+		$stage:int = ptrget(argv(2),4);
+		$binding:int = ptrget(argv(3),4);
+		$buffer:int = ptrget(argv(4),8);
+		$offset:int = ptrget(argv(5),8);
+		$size:int = ptrget(argv(6),8);
+
+		//ptrset(argv(0),1,1);
+	};
+};
+hook("UpdateDescriptorQueue::LogAddTexelBuffer")
+{
+	onenter{
+		//$log:int = ptrget(argv(0),1);
+		$this:int = ptrget(argv(1),8);
+		$stage:int = ptrget(argv(2),4);
+		$binding:int = ptrget(argv(3),4);
+		$texbuffer:int = ptrget(argv(4),8);
+
+		//ptrset(argv(0),1,1);
+	};
+};
+hook("TextureCacheRuntime::CopyImageFailedOnApple")
+{
+	onenter{
+		//$skip:int = ptrget(argv(0),1);
+		$src_fmt:int = ptrget(argv(1),4);
+		$dst_fmt:int = ptrget(argv(2),4);
+		$src_num_samples:int = ptrget(argv(3),4);
+		$dst_num_samples:int = ptrget(argv(4),4);
+		$src_bytes_per_block:int = ptrget(argv(5),4);
+		$dst_bytes_per_block:int = ptrget(argv(6),4);
+
+		printf("TextureCacheRuntime::CopyImageFailedOnApple src_fmt:%d, dst_fmt:%d, src_num_samples:%d, dst_num_samples:%d, src_bytes_per_block:%d, dst_bytes_per_block:%d\n",$src_fmt,$dst_fmt,$src_num_samples,$dst_num_samples,$src_bytes_per_block,$dst_bytes_per_block);
+		//assert(0);
+
+		//skip
+		//ptrset(argv(0),1,1);
 	};
 };
 

@@ -2395,7 +2395,16 @@ void TextureCache<P>::CopyImage(ImageId dst_id, ImageId src_id, std::vector<Imag
     }
     const auto dst_format_type = GetFormatType(dst.info.format);
     const auto src_format_type = GetFormatType(src.info.format);
-    if (src_format_type == dst_format_type) {
+    bool otherConditionChecked = true;
+#ifdef __APPLE__
+    if (dst.info.format >= PixelFormat::BC1_RGBA_UNORM && dst.info.format <= PixelFormat::BC6H_SFLOAT) {
+        dst.info.format = PixelFormat::A8B8G8R8_UNORM;
+    }
+    if (BytesPerBlock(dst.info.format) != BytesPerBlock(src.info.format)) {
+        otherConditionChecked = false;
+    }
+#endif
+    if (src_format_type == dst_format_type && otherConditionChecked) {
         if constexpr (HAS_EMULATED_COPIES) {
             if (!runtime.CanImageBeCopied(dst, src)) {
                 return runtime.EmulateCopyImage(dst, src, copies);

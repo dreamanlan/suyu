@@ -127,27 +127,27 @@ public:
     std::span<u8> BindMappedUniformBuffer([[maybe_unused]] size_t stage,
                                           [[maybe_unused]] u32 binding_index, u32 size) {
         const StagingBufferRef ref = staging_pool.Request(size, MemoryUsage::Upload);
-        BindBuffer(ref.buffer, static_cast<u32>(ref.offset), size);
+        BindBuffer(static_cast<int>(stage), static_cast<int>(binding_index), ref.buffer, static_cast<u32>(ref.offset), size);
         return ref.mapped_span;
     }
 
-    void BindUniformBuffer(VkBuffer buffer, u32 offset, u32 size) {
-        BindBuffer(buffer, offset, size);
+    void BindUniformBuffer(int stage, int binding_index, VkBuffer buffer, u32 offset, u32 size) {
+        BindBuffer(stage, binding_index, buffer, offset, size);
     }
 
-    void BindStorageBuffer(VkBuffer buffer, u32 offset, u32 size,
+    void BindStorageBuffer(int stage, int binding_index, VkBuffer buffer, u32 offset, u32 size,
                            [[maybe_unused]] bool is_written) {
-        BindBuffer(buffer, offset, size);
+        BindBuffer(stage, binding_index, buffer, offset, size);
     }
 
-    void BindTextureBuffer(Buffer& buffer, u32 offset, u32 size,
+    void BindTextureBuffer(int stage, int binding_index, Buffer& buffer, u32 offset, u32 size,
                            VideoCore::Surface::PixelFormat format) {
-        guest_descriptor_queue.AddTexelBuffer(buffer.View(offset, size, format));
+        guest_descriptor_queue.AddTexelBuffer(stage, binding_index, buffer.View(offset, size, format));
     }
 
 private:
-    void BindBuffer(VkBuffer buffer, u32 offset, u32 size) {
-        guest_descriptor_queue.AddBuffer(buffer, offset, size);
+    void BindBuffer(int stage, int binding_index, VkBuffer buffer, u32 offset, u32 size) {
+        guest_descriptor_queue.AddBuffer(stage, binding_index, buffer, offset, size);
     }
 
     void ReserveNullBuffer();

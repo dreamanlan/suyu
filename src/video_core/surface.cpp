@@ -95,7 +95,7 @@ PixelFormat PixelFormatFromDepthFormat(Tegra::DepthFormat format) {
 }
 
 PixelFormat PixelFormatFromRenderTargetFormat(Tegra::RenderTargetFormat format) {
-#if __APPLE__
+#ifdef __APPLE__
     bool isApple = true;
 #else
     bool isApple = false;

@@ -1638,10 +1638,13 @@ bool MemorySniffer::Exec(const std::string& cmd, const std::string& arg) {
         return true;
     } else if (cmd == "loaddbgscp") {
         LoadDbgScp(impl->log_path, impl->mod_load_path);
+        return true;
     } else if (cmd == "pausedbgscp") {
         PauseDbgScp();
+        return true;
     } else if (cmd == "resumedbgscp") {
         ResumeDbgScp();
+        return true;
     }
 
     return false;

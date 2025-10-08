@@ -192,6 +192,7 @@ const char* GetLevelName(Level log_level) {
         LVL(Warning);
         LVL(Error);
         LVL(Critical);
+        LVL(DbgScp);
     case Level::Count:
         break;
     }

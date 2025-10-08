@@ -223,7 +223,11 @@ struct SimpleImageSpec {
 };
 
 struct DefaultSpec {
+#ifdef __APPLE__
+    static constexpr std::array<bool, 5> enabled_stages{true, true, true, false, true};
+#else
     static constexpr std::array<bool, 5> enabled_stages{true, true, true, true, true};
+#endif
     static constexpr bool has_storage_buffers = true;
     static constexpr bool has_texture_buffers = true;
     static constexpr bool has_image_buffers = true;
@@ -305,7 +309,7 @@ GraphicsPipeline::GraphicsPipeline(
             }
             os << reinterpret_cast<u64>(*descriptor_update_template);
             builder.DumpInfo(os);
-            LOG_INFO(Render_Vulkan, "CreateDescriptorUpdateTemplate {}", os.str());
+            LOG_DBGSCP(Render_Vulkan, "CreateDescriptorUpdateTemplate {}", os.str());
         }
 
         std::scoped_lock lock{build_mutex};
@@ -401,7 +405,7 @@ void GraphicsPipeline::ConfigureImpl(bool is_indexed, bool line_mode) {
             os << "|";
         }
         os << reinterpret_cast<u64>(*descriptor_update_template);
-        LOG_INFO(Render_Vulkan, "ConfigureBegin {}", os.str());
+        LOG_DBGSCP(Render_Vulkan, "ConfigureBegin {}", os.str());
     }
 
     texture_cache.SynchronizeGraphicsDescriptors();
@@ -559,7 +563,7 @@ void GraphicsPipeline::ConfigureImpl(bool is_indexed, bool line_mode) {
     const VideoCommon::ImageViewInOut* views_it{views.data()};
     const auto prepare_stage{[&](size_t stage) LAMBDA_FORCEINLINE {
         buffer_cache.BindHostStageBuffers(stage);
-        PushImageDescriptors(texture_cache, guest_descriptor_queue, stage_infos[stage], rescaling,
+        PushImageDescriptors(texture_cache, guest_descriptor_queue, static_cast<int>(stage), stage_infos[stage], rescaling,
                              samplers_it, views_it);
         const auto& info{stage_infos[0]};
         if (info.uses_render_area) {
@@ -598,7 +602,7 @@ void GraphicsPipeline::ConfigureImpl(bool is_indexed, bool line_mode) {
             os << "|";
         }
         os << reinterpret_cast<u64>(*descriptor_update_template);
-        LOG_INFO(Render_Vulkan, "ConfigureEnd {}", os.str());
+        LOG_DBGSCP(Render_Vulkan, "ConfigureEnd {}", os.str());
     }
 
     ConfigureDraw(rescaling, render_area, line_mode);
@@ -661,7 +665,8 @@ void GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
         auto&& pshash = key.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1];
         u64 descTempl = reinterpret_cast<u64>(*descriptor_update_template);
         bool log = false;
-        DBGSCP_HOOK_VOID("Vulkan::GraphicsPipeline::UpdateDescriptorSet", log, pThis, vshash, geohash, pshash, descTempl);
+        bool skip = false;
+        DBGSCP_HOOK_VOID("Vulkan::GraphicsPipeline::UpdateDescriptorSet", log, skip, pThis, vshash, geohash, pshash, descTempl);
         if (log) {
             std::stringstream os;
             os << std::hex;
@@ -674,7 +679,10 @@ void GraphicsPipeline::ConfigureDraw(const RescalingPushConstant& rescaling,
                 os << "|";
             }
             os << reinterpret_cast<u64>(*descriptor_update_template);
-            LOG_INFO(Render_Vulkan, "UpdateDescriptorSet {}", os.str());
+            LOG_DBGSCP(Render_Vulkan, "UpdateDescriptorSet {}", os.str());
+        }
+        if (skip) {
+            return;
         }
 
         if (uses_push_descriptor) {
@@ -1046,7 +1054,10 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
         flags |= VK_PIPELINE_CREATE_CAPTURE_STATISTICS_BIT_KHR;
     }
     if (device.HasDebuggingToolAttached()) {
-        std::string label = fmt::format("Pipeline vs:{:016x} ps:{:016x}", key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1], key.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1]);
+        std::string label = fmt::format("Pipeline {:016x} vs:{:016x} ps:{:016x}",
+            key.Hash(),
+            key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1],
+            key.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1]);
         pipeline_layout.SetObjectNameEXT(label.c_str());
 
         printf("CreateGraphicsPipeline %s\n", label.c_str());
@@ -1098,7 +1109,10 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
         },
         *pipeline_cache);
     if (device.HasDebuggingToolAttached()) {
-        std::string label = fmt::format("Pipeline vs:{:016x} ps:{:016x}", key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1], key.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1]);
+        std::string label = fmt::format("Pipeline {:016x} vs:{:016x} ps:{:016x}",
+            key.Hash(),
+            key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1],
+            key.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1]);
         pipeline.SetObjectNameEXT(label.c_str());
         line_mode_pipeline.SetObjectNameEXT(label.c_str());
     }

@@ -21,7 +21,7 @@
 
 namespace Common {
 
-#if __APPLE__
+#ifdef __APPLE__
 
 #define THREAD_STACK_SIZE 10*1024*1024
 

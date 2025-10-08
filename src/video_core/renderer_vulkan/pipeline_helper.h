@@ -25,7 +25,7 @@ public:
     DescriptorLayoutBuilder(const Device& device_) : device{&device_} {}
 
     bool CanUsePushDescriptor() const noexcept {
-#if __APPLE__
+#ifdef __APPLE__
         return device->IsKhrPushDescriptorSupported() &&
                num_descriptors <= device->MaxPushDescriptors();
 #else
@@ -136,7 +136,7 @@ public:
 private:
     template <typename Descriptors>
     void Add(VkDescriptorType type, VkShaderStageFlags stage, const Descriptors& descriptors) {
-#if __APPLE__
+#ifdef __APPLE__
         if (stage==VK_SHADER_STAGE_GEOMETRY_BIT) {
             return;
         }
@@ -214,7 +214,7 @@ public:
 };
 
 inline void PushImageDescriptors(TextureCache& texture_cache,
-                                 GuestDescriptorQueue& guest_descriptor_queue,
+                                 GuestDescriptorQueue& guest_descriptor_queue, int stage,
                                  const Shader::Info& info, RescalingPushConstant& rescaling,
                                  const VideoCommon::SamplerId*& samplers,
                                  const VideoCommon::ImageViewInOut*& views) {
@@ -233,7 +233,7 @@ inline void PushImageDescriptors(TextureCache& texture_cache,
                                             !image_view.SupportsAnisotropy()};
             const VkSampler vk_sampler{use_fallback_sampler ? sampler.HandleWithDefaultAnisotropy()
                                                             : sampler.Handle()};
-            guest_descriptor_queue.AddSampledImage(vk_image_view, vk_sampler);
+            guest_descriptor_queue.AddSampledImage(stage, desc.cbuf_index, vk_image_view, vk_sampler);
             rescaling.PushTexture(texture_cache.IsRescaling(image_view));
         }
     }
@@ -244,7 +244,7 @@ inline void PushImageDescriptors(TextureCache& texture_cache,
                 texture_cache.MarkModification(image_view.image_id);
             }
             const VkImageView vk_image_view{image_view.StorageView(desc.type, desc.format)};
-            guest_descriptor_queue.AddImage(vk_image_view);
+            guest_descriptor_queue.AddImage(stage, desc.cbuf_index, vk_image_view);
             rescaling.PushImage(texture_cache.IsRescaling(image_view));
         }
     }

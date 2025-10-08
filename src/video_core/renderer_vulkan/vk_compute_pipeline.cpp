@@ -76,7 +76,7 @@ ComputePipeline::ComputePipeline(const Device& device_, vk::PipelineCache& pipel
             os << "|";
             os << reinterpret_cast<u64>(*descriptor_update_template);
             builder.DumpInfo(os);
-            LOG_INFO(Render_Vulkan, "CreateDescriptorUpdateTemplate {}", os.str());
+            LOG_DBGSCP(Render_Vulkan, "CreateDescriptorUpdateTemplate {}", os.str());
         }
 
         std::scoped_lock lock{build_mutex};
@@ -104,7 +104,7 @@ void ComputePipeline::MakePipeline(const ComputePipelineCacheKey& key) {
         flags |= VK_PIPELINE_CREATE_CAPTURE_STATISTICS_BIT_KHR;
     }
     if (device.HasDebuggingToolAttached()) {
-        std::string label = fmt::format("Pipeline {:016x}", key.unique_hash);
+        std::string label = fmt::format("Pipeline {:016x} cs:{:016x}", key.Hash(), key.unique_hash);
         pipeline_layout.SetObjectNameEXT(label.c_str());
 
         printf("CreateComputePipeline %s\n", label.c_str());
@@ -129,7 +129,7 @@ void ComputePipeline::MakePipeline(const ComputePipelineCacheKey& key) {
         },
         *pipeline_cache);
     if (device.HasDebuggingToolAttached()) {
-        std::string label = fmt::format("Pipeline {:016x}", key.unique_hash);
+        std::string label = fmt::format("Pipeline {:016x} cs:{:016x}", key.Hash(), key.unique_hash);
         pipeline.SetObjectNameEXT(label.c_str());
     }
 
@@ -183,7 +183,7 @@ void ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
         os << fmt::format("{:016x}", cshash);
         os << "|";
         os << reinterpret_cast<u64>(*descriptor_update_template);
-        LOG_INFO(Render_Vulkan, "ConfigureBegin {}", os.str());
+        LOG_DBGSCP(Render_Vulkan, "ConfigureBegin {}", os.str());
     }
 
     guest_descriptor_queue.Acquire();
@@ -281,7 +281,7 @@ void ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
     RescalingPushConstant rescaling;
     const VideoCommon::SamplerId* samplers_it{samplers.data()};
     const VideoCommon::ImageViewInOut* views_it{views.data()};
-    PushImageDescriptors(texture_cache, guest_descriptor_queue, info, rescaling, samplers_it,
+    PushImageDescriptors(texture_cache, guest_descriptor_queue, static_cast<int>(Shader::Stage::Compute), info, rescaling, samplers_it,
                          views_it);
 
     if (log) {
@@ -294,7 +294,7 @@ void ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
         os << fmt::format("{:016x}", cshash);
         os << "|";
         os << reinterpret_cast<u64>(*descriptor_update_template);
-        LOG_INFO(Render_Vulkan, "ConfigureEnd {}", os.str());
+        LOG_DBGSCP(Render_Vulkan, "ConfigureEnd {}", os.str());
     }
 
     if (!is_built.load(std::memory_order::relaxed)) {
@@ -322,7 +322,8 @@ void ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
         auto&& cshash = key.unique_hash;
         u64 descTempl = reinterpret_cast<u64>(*descriptor_update_template);
         bool log = false;
-        DBGSCP_HOOK_VOID("Vulkan::ComputePipeline::UpdateDescriptorSet", log, pThis, cshash, descTempl);
+        bool skip = false;
+        DBGSCP_HOOK_VOID("Vulkan::ComputePipeline::UpdateDescriptorSet", log, skip, pThis, cshash, descTempl);
         if (log) {
             std::stringstream os;
             os << std::hex;
@@ -333,7 +334,10 @@ void ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
             os << fmt::format("{:016x}", cshash);
             os << "|";
             os << reinterpret_cast<u64>(*descriptor_update_template);
-            LOG_INFO(Render_Vulkan, "UpdateDescriptorSet {}", os.str());
+            LOG_DBGSCP(Render_Vulkan, "UpdateDescriptorSet {}", os.str());
+        }
+        if (skip) {
+            return;
         }
 
         const VkDescriptorSet descriptor_set{descriptor_allocator.Commit()};

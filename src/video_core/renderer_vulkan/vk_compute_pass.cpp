@@ -319,8 +319,8 @@ std::pair<VkBuffer, VkDeviceSize> Uint8Pass::Assemble(u32 num_vertices, VkBuffer
     const auto staging = staging_buffer_pool.Request(staging_size, MemoryUsage::DeviceLocal);
 
     compute_pass_descriptor_queue.Acquire();
-    compute_pass_descriptor_queue.AddBuffer(src_buffer, src_offset, num_vertices);
-    compute_pass_descriptor_queue.AddBuffer(staging.buffer, staging.offset, staging_size);
+    compute_pass_descriptor_queue.AddBuffer(-1, -1, src_buffer, src_offset, num_vertices);
+    compute_pass_descriptor_queue.AddBuffer(-1, -1, staging.buffer, staging.offset, staging_size);
     const void* const descriptor_data{compute_pass_descriptor_queue.UpdateData()};
 
     scheduler.RequestOutsideRenderPassOperationContext();
@@ -377,8 +377,8 @@ std::pair<VkBuffer, VkDeviceSize> QuadIndexedPass::Assemble(
     const auto staging = staging_buffer_pool.Request(staging_size, MemoryUsage::DeviceLocal);
 
     compute_pass_descriptor_queue.Acquire();
-    compute_pass_descriptor_queue.AddBuffer(src_buffer, src_offset, input_size);
-    compute_pass_descriptor_queue.AddBuffer(staging.buffer, staging.offset, staging_size);
+    compute_pass_descriptor_queue.AddBuffer(-1, -1, src_buffer, src_offset, input_size);
+    compute_pass_descriptor_queue.AddBuffer(-1, -1, staging.buffer, staging.offset, staging_size);
     const void* const descriptor_data{compute_pass_descriptor_queue.UpdateData()};
 
     scheduler.RequestOutsideRenderPassOperationContext();
@@ -418,8 +418,8 @@ void ConditionalRenderingResolvePass::Resolve(VkBuffer dst_buffer, VkBuffer src_
     const size_t compare_size = compare_to_zero ? 8 : 24;
 
     compute_pass_descriptor_queue.Acquire();
-    compute_pass_descriptor_queue.AddBuffer(src_buffer, src_offset, compare_size);
-    compute_pass_descriptor_queue.AddBuffer(dst_buffer, 0, sizeof(u32));
+    compute_pass_descriptor_queue.AddBuffer(-1, -1, src_buffer, src_offset, compare_size);
+    compute_pass_descriptor_queue.AddBuffer(-1, -1, dst_buffer, 0, sizeof(u32));
     const void* const descriptor_data{compute_pass_descriptor_queue.UpdateData()};
 
     scheduler.RequestOutsideRenderPassOperationContext();
@@ -474,9 +474,9 @@ void QueriesPrefixScanPass::Run(VkBuffer accumulation_buffer, VkBuffer dst_buffe
         size_t runs_to_do = std::min<size_t>(current_runs, DISPATCH_SIZE);
         current_runs -= runs_to_do;
         compute_pass_descriptor_queue.Acquire();
-        compute_pass_descriptor_queue.AddBuffer(src_buffer, 0, number_of_sums * sizeof(u64));
-        compute_pass_descriptor_queue.AddBuffer(dst_buffer, 0, number_of_sums * sizeof(u64));
-        compute_pass_descriptor_queue.AddBuffer(accumulation_buffer, 0, sizeof(u64));
+        compute_pass_descriptor_queue.AddBuffer(-1, -1, src_buffer, 0, number_of_sums * sizeof(u64));
+        compute_pass_descriptor_queue.AddBuffer(-1, -1, dst_buffer, 0, number_of_sums * sizeof(u64));
+        compute_pass_descriptor_queue.AddBuffer(-1, -1, accumulation_buffer, 0, sizeof(u64));
         const void* const descriptor_data{compute_pass_descriptor_queue.UpdateData()};
         size_t used_offset = offset;
         offset += runs_to_do;
@@ -581,9 +581,9 @@ void ASTCDecoderPass::Assemble(Image& image, const StagingBufferRef& map,
         const u32 num_dispatches_z = image.info.resources.layers;
 
         compute_pass_descriptor_queue.Acquire();
-        compute_pass_descriptor_queue.AddBuffer(map.buffer, input_offset,
+        compute_pass_descriptor_queue.AddBuffer(-1, -1, map.buffer, input_offset,
                                                 image.guest_size_bytes - swizzle.buffer_offset);
-        compute_pass_descriptor_queue.AddImage(image.StorageImageView(swizzle.level));
+        compute_pass_descriptor_queue.AddImage(-1, -1, image.StorageImageView(swizzle.level));
         const void* const descriptor_data{compute_pass_descriptor_queue.UpdateData()};
 
         // To unswizzle the ASTC data
@@ -686,10 +686,8 @@ void MSAACopyPass::CopyImage(Image& dst_image, Image& src_image,
         ASSERT(copy.dst_subresource.num_layers == 1);
 
         compute_pass_descriptor_queue.Acquire();
-        compute_pass_descriptor_queue.AddImage(
-            src_image.StorageImageView(copy.src_subresource.base_level));
-        compute_pass_descriptor_queue.AddImage(
-            dst_image.StorageImageView(copy.dst_subresource.base_level));
+        compute_pass_descriptor_queue.AddImage(-1, -1, src_image.StorageImageView(copy.src_subresource.base_level));
+        compute_pass_descriptor_queue.AddImage(-1, -1, dst_image.StorageImageView(copy.dst_subresource.base_level));
         const void* const descriptor_data{compute_pass_descriptor_queue.UpdateData()};
 
         const Common::Vec3<u32> num_dispatches = {

@@ -1,0 +1,2 @@
+/Users/dreaman/Documents/GitHub/SPIRV-Cross/build/spirv-cross -V vulkan_shader --output vulkan_glsl.vert/frag
+/Users/dreaman/Documents/GitHub/SPIRV-Cross/External/glslang-build/output/bin/glslang -V vulkan_glsl.vert/frag -o vulkan_shader.spv

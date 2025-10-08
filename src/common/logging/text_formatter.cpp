@@ -94,6 +94,9 @@ void PrintColoredMessage(const Entry& entry) {
     case Level::Critical: // Bright magenta
         color = ESC "[1;35m";
         break;
+    case Level::DbgScp: // Bright yellow
+        color = ESC "[1;32m";
+        break;
     case Level::Count:
         UNREACHABLE();
     }

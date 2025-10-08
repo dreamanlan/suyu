@@ -592,7 +592,7 @@ public:
 
     /// Returns true when a known debugging tool is attached.
     bool HasDebuggingToolAttached() const {
-#if __APPLE__
+#ifdef __APPLE__
         return Settings::values.renderer_debug || Settings::values.enable_renderdoc_hotkey;
 #endif
         return has_renderdoc || has_nsight_graphics || has_radeon_gpu_profiler;

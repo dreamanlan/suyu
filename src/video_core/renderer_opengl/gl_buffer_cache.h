@@ -31,7 +31,8 @@ public:
 
     void MarkUsage(u64 offset, u64 size) {}
 
-    [[nodiscard]] GLuint View(u32 offset, u32 size, VideoCore::Surface::PixelFormat format);
+    [[nodiscard]] GLuint View(size_t stage, u32 binding_index, u32 offset, u32 size,
+                              VideoCore::Surface::PixelFormat format);
 
     [[nodiscard]] GLuint64EXT HostGpuAddr() const noexcept {
         return address;
@@ -102,22 +103,22 @@ public:
 
     void BindUniformBuffer(size_t stage, u32 binding_index, Buffer& buffer, u32 offset, u32 size);
 
-    void BindComputeUniformBuffer(u32 binding_index, Buffer& buffer, u32 offset, u32 size);
+    void BindComputeUniformBuffer(int stage, int binding_index, Buffer& buffer, u32 offset, u32 size);
 
     void BindStorageBuffer(size_t stage, u32 binding_index, Buffer& buffer, u32 offset, u32 size,
                            bool is_written);
 
-    void BindComputeStorageBuffer(u32 binding_index, Buffer& buffer, u32 offset, u32 size,
+    void BindComputeStorageBuffer(int stage, int binding_index, Buffer& buffer, u32 offset, u32 size,
                                   bool is_written);
 
     void BindTransformFeedbackBuffer(u32 index, Buffer& buffer, u32 offset, u32 size);
 
     void BindTransformFeedbackBuffers(VideoCommon::HostBindings<Buffer>& bindings);
 
-    void BindTextureBuffer(Buffer& buffer, u32 offset, u32 size,
+    void BindTextureBuffer(size_t stage, u32 binding_index, Buffer& buffer, u32 offset, u32 size,
                            VideoCore::Surface::PixelFormat format);
 
-    void BindImageBuffer(Buffer& buffer, u32 offset, u32 size,
+    void BindImageBuffer(size_t stage, u32 binding_index, Buffer& buffer, u32 offset, u32 size,
                          VideoCore::Surface::PixelFormat format);
 
     void BindTransformFeedbackObject(GPUVAddr tfb_object_addr);

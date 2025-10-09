@@ -85,7 +85,8 @@ void Buffer::MakeResident(GLenum access) noexcept {
     glMakeNamedBufferResidentNV(buffer.handle, access);
 }
 
-GLuint Buffer::View(u32 offset, u32 size, PixelFormat format) {
+GLuint Buffer::View(size_t stage, u32 binding_index, u32 offset, u32 size, PixelFormat format) {
+    (void)stage, (void)binding_index;
     const auto it{std::ranges::find_if(views, [offset, size, format](const BufferView& view) {
         return offset == view.offset && size == view.size && format == view.format;
     })};
@@ -288,8 +289,9 @@ void BufferCacheRuntime::BindUniformBuffer(size_t stage, u32 binding_index, Buff
     }
 }
 
-void BufferCacheRuntime::BindComputeUniformBuffer(u32 binding_index, Buffer& buffer, u32 offset,
+void BufferCacheRuntime::BindComputeUniformBuffer(int stage, int binding_index, Buffer& buffer, u32 offset,
                                                   u32 size) {
+    (void)stage;
     if (use_assembly_shaders) {
         GLuint handle;
         if (offset != 0) {
@@ -327,7 +329,7 @@ void BufferCacheRuntime::BindStorageBuffer(size_t stage, u32 binding_index, Buff
     }
 }
 
-void BufferCacheRuntime::BindComputeStorageBuffer(u32 binding_index, Buffer& buffer, u32 offset,
+void BufferCacheRuntime::BindComputeStorageBuffer(int stage, int binding_index, Buffer& buffer, u32 offset,
                                                   u32 size, bool is_written) {
     if (use_storage_buffers) {
         if (size != 0) {
@@ -366,13 +368,15 @@ void BufferCacheRuntime::BindTransformFeedbackBuffers(VideoCommon::HostBindings<
                        reinterpret_cast<const GLsizeiptr*>(bindings.sizes.data()));
 }
 
-void BufferCacheRuntime::BindTextureBuffer(Buffer& buffer, u32 offset, u32 size,
+void BufferCacheRuntime::BindTextureBuffer(size_t stage, u32 binding_index, Buffer& buffer,
+                                           u32 offset, u32 size,
                                            PixelFormat format) {
-    *texture_handles++ = buffer.View(offset, size, format);
+    *texture_handles++ = buffer.View(stage, binding_index, offset, size, format);
 }
 
-void BufferCacheRuntime::BindImageBuffer(Buffer& buffer, u32 offset, u32 size, PixelFormat format) {
-    *image_handles++ = buffer.View(offset, size, format);
+void BufferCacheRuntime::BindImageBuffer(size_t stage, u32 binding_index, Buffer& buffer,
+                                         u32 offset, u32 size, PixelFormat format) {
+    *image_handles++ = buffer.View(stage, binding_index, offset, size, format);
 }
 
 void BufferCacheRuntime::BindTransformFeedbackObject(GPUVAddr tfb_object_addr) {

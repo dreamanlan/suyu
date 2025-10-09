@@ -67,6 +67,9 @@ void PrintColoredMessage(const Entry& entry) {
     case Level::Critical: // Bright magenta
         color = FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY;
         break;
+    case Level::DbgScp: // Bright magenta
+        color = FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY;
+        break;
     case Level::Count:
         UNREACHABLE();
     }

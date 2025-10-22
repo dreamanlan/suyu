@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string>
 #include <array>
+#include "DebugScriptExport.h"
 
 class DebugScriptGlobal
 {
@@ -20,18 +21,6 @@ public:
     static void Resume();
     static bool Load(const char* file);
 };
-
-class DebugScriptVM
-{
-public:
-    static int32_t FindHook(const char* name);
-    static bool CanRun();
-    static bool RunHookOnEnter(int32_t id, int32_t argc, int64_t argv[]);
-    static bool RunHookOnExit(int32_t id, int32_t argc, int64_t argv[]);
-};
-
-extern uint32_t g_DebugScriptSerialNum;
-extern bool g_DebugScriptStarted;
 
 namespace DebugScript
 {

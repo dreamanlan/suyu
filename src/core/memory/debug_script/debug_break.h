@@ -1,14 +1,12 @@
 #pragma once
 
-#if _MSC_VER
+#if defined(_MSC_VER)
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#if PLATFORM_WIN
-    __declspec(dllimport) BOOL __stdcall IsDebuggerPresent();
-#elif _WIN64
+#if defined(_WIN64) && _WIN64
     __declspec(dllimport) BOOL __stdcall IsDebuggerPresent();
 #else
     __declspec(dllimport) int __stdcall IsDebuggerPresent();
@@ -25,7 +23,7 @@ static inline bool IsDebuggerAttached_Native()
 
 #define DEBUG_BREAK() __debugbreak()
 
-#elif __ANDROID__
+#elif defined(__ANDROID__)
 
 #include <string.h>
 #include <fcntl.h>
@@ -79,7 +77,7 @@ int raise(int sig);
 #define DETAIL_BASELIB_SIGTRAP 5
 #define DEBUG_BREAK() raise(DETAIL_BASELIB_SIGTRAP)
 
-#elif __APPLE__
+#elif defined(__APPLE__)
 
 #include <sys/sysctl.h>
 #include <string.h>
@@ -99,7 +97,7 @@ static inline bool IsDebuggerAttached_Native()
 
 #define DEBUG_BREAK() __builtin_debugtrap()
 
-#elif __GNUC__
+#elif defined(__GNUC__)
 
 // Some versions of GCC do provide __builtin_debugtrap, but it seems to be unreliable.
 // See https://github.com/scottt/debugbreak/issues/13

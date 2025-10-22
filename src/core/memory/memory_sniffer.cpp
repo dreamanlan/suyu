@@ -14,9 +14,8 @@
 #include "core/memory.h"
 #include "core/memory/memory_sniffer.h"
 
-extern void LoadDbgScp(const std::string& log_path, const std::string& load_path);
-extern void PauseDbgScp();
-extern void ResumeDbgScp();
+#define DBGSCP_ON_MYUZU
+#include "core/memory/debug_script/DebugScriptEntry.h"
 
 namespace Core::Memory {
 

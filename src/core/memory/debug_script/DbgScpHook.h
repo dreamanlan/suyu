@@ -3,17 +3,17 @@
 #include <cstdio>
 #include <array>
 #include <type_traits>
-#include "DebugScriptVM.h"
+#include "DebugScriptExport.h"
 
 static inline void CheckFuncHook(const char* name, int32_t& hook_id, uint32_t& serial_num)
 {
-    if (g_DebugScriptStarted) {
-        if (serial_num < g_DebugScriptSerialNum) {
+    if (DebugScriptVM::IsStarted()) {
+        if (serial_num < DebugScriptVM::GetSerialNum()) {
             if (hook_id >= 0) {
                 hook_id = -1;
             }
             hook_id = DebugScriptVM::FindHook(name);
-            serial_num = g_DebugScriptSerialNum;
+            serial_num = DebugScriptVM::GetSerialNum();
         }
     }
 }
@@ -51,7 +51,7 @@ static inline HookWrap<ArgsT...> CreateHookWrap(bool& retry, int hookId, ArgsT&.
     return HookWrap<ArgsT...>(hookId, retry, args...);
 }
 
-#if PLATFORM_WIN || PLATFORM_WINRT || PLATFORM_XBOXONE || _MSC_VER || _WIN32 || _WIN64
+#if defined(_MSC_VER) || defined(_WIN32) || defined(_WIN64)
 #define HOOK_FUNC_SIG __FUNCSIG__
 #else
 #define HOOK_FUNC_SIG __PRETTY_FUNCTION__

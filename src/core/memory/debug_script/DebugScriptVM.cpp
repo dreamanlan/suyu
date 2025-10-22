@@ -16,17 +16,12 @@
 #include <fstream>
 #include <memory>
 
-#if defined(PLATFORM_WIN) //for unity
+#if defined(UNITY_WIN) && UNITY_WIN //for unity
 #include "Runtime/Threads/ReadWriteLock.h"
 #elif defined(_MSC_VER) && _MSC_VER >= 1939
 #include <shared_mutex>
 #define USE_STD_SHARED_MUTEX 1
-#elif defined(PLATFORM_WIN)
-    || defined(UNITY_APPLE)
-    || defined(PLATFORM_ANDROID)
-    || defined(PLATFORM_SWITCH)
-    || defined(PLATFORM_LUMIN)
-    || defined(PLATFORM_PLAYSTATION) // for unity
+#elif defined(UNITY_WIN) || defined(UNITY_APPLE) || defined(UNITY_ANDROID) || defined(UNITY_SWITCH) || defined(UNITY_LUMIN) || defined(UNITY_PLAYSTATION) // for unity
 #include "Runtime/Threads/ReadWriteLock.h"
 #else
 #include "rwlock.h"
@@ -4293,7 +4288,7 @@ namespace
         std::vector<HookData> m_HookDatas{};
 
         std::atomic_uint32_t m_RuntimeVersion{};
-#if USE_STD_SHARED_MUTEX
+#if defined(USE_STD_SHARED_MUTEX) && USE_STD_SHARED_MUTEX
         using read_write_lock = std::shared_mutex;
         using write_locker = std::lock_guard<std::shared_mutex>;
         struct read_locker
@@ -5039,6 +5034,16 @@ void DebugScriptGlobal::Resume()
 bool DebugScriptGlobal::Load(const char* file)
 {
     return GetDebugScriptGlobal()->Load(file);
+}
+
+uint32_t DebugScriptVM::GetSerialNum()
+{
+    return g_DebugScriptSerialNum;
+}
+
+bool DebugScriptVM::IsStarted()
+{
+    return g_DebugScriptStarted;
 }
 
 int32_t DebugScriptVM::FindHook(const char* name)

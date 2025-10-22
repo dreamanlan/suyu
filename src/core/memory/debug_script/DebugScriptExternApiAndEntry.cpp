@@ -7,32 +7,55 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include <string.h>
-#include "DbgScpHook.h"
 #include "core/core.h"
 
-#if defined(PLATFORM_WIN) || defined(_MSC_VER)
+#define DBGSCP_ON_MYUZU
+
+#include "DbgScpHook.h"
+#include "DebugScriptEntry.h"
+#include "DebugScriptVM.h"
+
+#if (defined(UE_BUILD_DEBUG) || defined(UE_BUILD_DEVELOPMENT) || defined(UE_BUILD_TEST) || defined(UE_BUILD_SHIPPING)) && defined(UE_SERVER) && !UE_SERVER
+
+#include "CoreMinimal.h"
+#include "HAL/PlatformFilemanager.h"
+#include "Misc/Paths.h"
+#include "Misc/FileHelper.h"
+
+#endif
+
+#if defined(_MSC_VER)
 #include "windows.h"
-#elif defined(PLATFORM_ANDROID) || defined(__ANDROID__)
+#elif defined(__ANDROID__)
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <unistd.h>
-#elif defined(UNITY_POSIX) || defined(__APPLE__)
+#include <dlfcn.h>
+#elif defined(__APPLE__)
 #include <pthread.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <dlfcn.h>
+#else
+#include <pthread.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <dlfcn.h>
 #endif
 
-#if defined(UNITY_APPLE) || defined(__APPLE__)
+#if defined(__APPLE__)
 #include <execinfo.h>
-#elif defined(PLATFORM_ANDROID)
+#elif defined(UNITY_ANDROID) && UNITY_ANDROID
 #include "PlatformDependent/AndroidPlayer/Source/AndroidBacktrace.h"
-#elif defined(PLATFORM_SWITCH)
+#elif defined(UNITY_SWITCH) && UNITY_SWITCH
 #include "PlatformDependent/Switch/Source/Diagnostics/SwitchBacktrace.h"
-#elif defined(PLATFORM_LUMIN)
+#elif defined(UNITY_LUMIN) && UNITY_LUMIN
 #include "PlatformDependent/Lumin/Source/LuminBacktrace.h"
-#elif defined(PLATFORM_PLAYSTATION)
+#elif defined(UNITY_PLAYSTATION) && UNITY_PLAYSTATION
 #include "PlatformDependent/SonyCommon/Player/Native/PlayStationStackTrace.h"
 #elif defined(__ANDROID__)
 #if __ANDROID_API__ >= 33
@@ -42,36 +65,36 @@
 
 #include <iomanip>
 #include <iostream>
-#include <dlfcn.h>
 #include <unwind.h>
 
 namespace {
-struct BacktraceState {
-    void** current;
-    void** end;
-};
-static _Unwind_Reason_Code unwindCallback(struct _Unwind_Context* context, void* arg) {
-    BacktraceState* state = static_cast<BacktraceState*>(arg);
-    uintptr_t pc = _Unwind_GetIP(context);
-    if (pc) {
-        if (state->current == state->end) {
-            return _URC_END_OF_STACK;
-        } else {
-            *state->current++ = reinterpret_cast<void*>(pc);
+    struct BacktraceState {
+        void** current;
+        void** end;
+    };
+    static _Unwind_Reason_Code unwindCallback(struct _Unwind_Context* context, void* arg) {
+        BacktraceState* state = static_cast<BacktraceState*>(arg);
+        uintptr_t pc = _Unwind_GetIP(context);
+        if (pc) {
+            if (state->current == state->end) {
+                return _URC_END_OF_STACK;
+            }
+            else {
+                *state->current++ = reinterpret_cast<void*>(pc);
+            }
         }
+        return _URC_NO_REASON;
     }
-    return _URC_NO_REASON;
-}
-int captureBacktrace(void** buffer, size_t max) {
-    BacktraceState state = {buffer, buffer + max};
-    _Unwind_Backtrace(unwindCallback, &state);
-    return static_cast<int>(state.current - buffer);
-}
+    int captureBacktrace(void** buffer, size_t max) {
+        BacktraceState state = { buffer, buffer + max };
+        _Unwind_Backtrace(unwindCallback, &state);
+        return static_cast<int>(state.current - buffer);
+    }
 } // namespace
 #endif
 #else
 #define BACKTRACE_UNIMPLEMENTED 1
-#if _MSC_VER
+#if defined(_MSC_VER)
 #include <dbghelp.h>
 #pragma comment(lib, "dbghelp.lib")
 // for old windows before vista
@@ -87,7 +110,7 @@ void captureStack(DWORD64 stackAddr[], int maxDepth) {
     STACKFRAME64 stackFrame;
     ZeroMemory(&stackFrame, sizeof(STACKFRAME64));
 
-#ifdef _M_IX86
+#if defined(_M_IX86)
     DWORD machineType = IMAGE_FILE_MACHINE_I386;
     stackFrame.AddrPC.Offset = context.Eip;
     stackFrame.AddrPC.Mode = AddrModeFlat;
@@ -95,7 +118,7 @@ void captureStack(DWORD64 stackAddr[], int maxDepth) {
     stackFrame.AddrFrame.Mode = AddrModeFlat;
     stackFrame.AddrStack.Offset = context.Esp;
     stackFrame.AddrStack.Mode = AddrModeFlat;
-#elif _M_X64
+#elif defined(_M_X64)
     DWORD machineType = IMAGE_FILE_MACHINE_AMD64;
     stackFrame.AddrPC.Offset = context.Rip;
     stackFrame.AddrPC.Mode = AddrModeFlat;
@@ -103,7 +126,7 @@ void captureStack(DWORD64 stackAddr[], int maxDepth) {
     stackFrame.AddrFrame.Mode = AddrModeFlat;
     stackFrame.AddrStack.Offset = context.Rsp;
     stackFrame.AddrStack.Mode = AddrModeFlat;
-#elif _M_IA64
+#elif defined(_M_IA64)
     DWORD machineType = IMAGE_FILE_MACHINE_IA64;
     stackFrame.AddrPC.Offset = context.StIIP;
     stackFrame.AddrPC.Mode = AddrModeFlat;
@@ -117,8 +140,7 @@ void captureStack(DWORD64 stackAddr[], int maxDepth) {
 
     int ix = 0;
     while (StackWalk64(machineType, process, thread, &stackFrame, &context, NULL,
-                       SymFunctionTableAccess64, SymGetModuleBase64, NULL) &&
-           ix < maxDepth) {
+        SymFunctionTableAccess64, SymGetModuleBase64, NULL) && ix < maxDepth) {
         stackAddr[ix++] = stackFrame.AddrPC.Offset;
     }
 
@@ -127,12 +149,9 @@ void captureStack(DWORD64 stackAddr[], int maxDepth) {
 #endif
 #endif
 
-#if defined(PLATFORM_WIN)
-|| defined(UNITY_APPLE) || defined(PLATFORM_ANDROID) || defined(PLATFORM_SWITCH) ||
-    defined(PLATFORM_LUMIN) ||
-    defined(PLATFORM_PLAYSTATION) // for unity
+#if defined(UNITY_WIN) || defined(UNITY_APPLE) || defined(UNITY_ANDROID) || defined(UNITY_SWITCH) || defined(UNITY_LUMIN) || defined(UNITY_PLAYSTATION) // for unity
 #include "Runtime/Logging/LogAssert.h"
-    int mylog_printf(const char* fmt, ...) {
+int mylog_printf(const char* fmt, ...) {
     va_list vl;
     va_start(vl, fmt);
     printf_consolev(kLogTypeWarning, fmt, vl);
@@ -176,7 +195,7 @@ void mylog_dump_callstack(const char* prefix, const char* file, int line) {
 
         mylog_printf(" #%02d %p %s\n", idx, addr, symbol);
     }
-#elif _MSC_VER
+#elif defined(_MSC_VER)
     const size_t kMaxDepth = 100;
 
     HANDLE process = GetCurrentProcess();
@@ -208,39 +227,46 @@ void mylog_dump_callstack(const char* prefix, const char* file, int line) {
 #endif
 }
 void mylog_assert(bool v) {
-#if defined(PLATFORM_WIN) // for unity
+#if defined(UNITY_WIN) && UNITY_WIN // for unity
     DebugAssert(v);
 #elif defined(_MSC_VER)
     _ASSERT(v);
 #elif defined(UNITY_APPLE)
-    || defined(PLATFORM_ANDROID) || defined(PLATFORM_SWITCH) || defined(PLATFORM_LUMIN) ||
-        defined(PLATFORM_PLAYSTATION) // for unity
+    || defined(UNITY_ANDROID)
+        || defined(UNITY_SWITCH)
+        || defined(UNITY_LUMIN)
+        || defined(UNITY_PLAYSTATION) // for unity
         DebugAssert(v);
 #else
     assert(v);
 #endif
 }
 
-static inline int64_t GetProcessId() {
-#if defined(PLATFORM_WIN) || defined(_MSC_VER)
+static inline int64_t GetProcessId()
+{
+#if defined(_MSC_VER)
     return static_cast<int64_t>(GetCurrentProcessId());
-#elif defined(__APPLE__) || defined(__ANDROID__) || defined(UNITY_POSIX)
+#elif defined(__APPLE__) || defined(__ANDROID__)
     return static_cast<int64_t>(getpid());
-#endif
+#else
     return 0;
+#endif
 }
-static inline int64_t GetThreadId() {
-#if defined(PLATFORM_WIN) || defined(_MSC_VER)
+static inline int64_t GetThreadId()
+{
+#if defined(_MSC_VER)
     return static_cast<int64_t>(GetCurrentThreadId());
-#elif defined(PLATFORM_ANDROID) || defined(__ANDROID__)
+#elif defined(__ANDROID__)
     return static_cast<int64_t>(gettid());
-#elif defined(UNITY_POSIX) || defined(__APPLE__)
+#elif defined(__APPLE__)
     return reinterpret_cast<int64_t>(pthread_self());
-#endif
+#else
     return 0;
+#endif
 }
 
-static void get_errno_message(int err, char* buf, size_t buflen) {
+static void get_errno_message(int err, char* buf, size_t buflen)
+{
     if (buflen == 0)
         return;
 #if defined(_WIN32)
@@ -254,7 +280,8 @@ static void get_errno_message(int err, char* buf, size_t buflen) {
     if (msg) {
         strncpy(buf, msg, buflen);
         buf[buflen - 1] = '\0';
-    } else {
+    }
+    else {
         snprintf(buf, buflen, "Unknown error %d", err);
     }
 #else
@@ -264,8 +291,8 @@ static void get_errno_message(int err, char* buf, size_t buflen) {
 #endif
 #endif
 }
-static FILE* open_file_with_error(const char* path, const char* mode, int& err, char* errbuf,
-                                  size_t errbufSize) {
+static FILE* open_file_with_error(const char* path, const char* mode, int& err, char* errbuf, size_t errbufSize)
+{
     err = 0;
     if (errbuf && errbufSize > 0)
         errbuf[0] = '\0';
@@ -292,18 +319,20 @@ static FILE* open_file_with_error(const char* path, const char* mode, int& err, 
 #endif
 }
 
-struct WatchPointCommandInfo {
-    short cmd;  // 0--nothing 1--add 2--remove
-    short flag; // 0--nothing 1--read 2--write 3--readwrite
+struct WatchPointCommandInfo
+{
+    short cmd;//0--nothing 1--add 2--remove
+    short flag;//0--nothing 1--read 2--write 3--readwrite
     int size;
     int64_t addr;
     int64_t tid;
 };
 
 static std::recursive_mutex g_WatchPointMutex{};
-WatchPointCommandInfo g_WatchPointCommandInfo{0, 0, 0, 0, 0};
+WatchPointCommandInfo g_WatchPointCommandInfo{ 0, 0, 0, 0, 0 };
 
-static void DbgScp_SetWatchPoint(short cmd, short flag, int size, int64_t addr, int64_t tid) {
+static void DbgScp_SetWatchPoint(short cmd, short flag, int size, int64_t addr, int64_t tid)
+{
     std::lock_guard<std::recursive_mutex> lock(g_WatchPointMutex);
 
     g_WatchPointCommandInfo.cmd = cmd;
@@ -312,7 +341,8 @@ static void DbgScp_SetWatchPoint(short cmd, short flag, int size, int64_t addr, 
     g_WatchPointCommandInfo.addr = addr;
     g_WatchPointCommandInfo.tid = tid;
 }
-static short DbgScp_GetWatchPoint(short& flag, int& size, int64_t& addr, int64_t& tid) {
+static short DbgScp_GetWatchPoint(short& flag, int& size, int64_t& addr, int64_t& tid)
+{
     std::lock_guard<std::recursive_mutex> lock(g_WatchPointMutex);
 
     flag = g_WatchPointCommandInfo.flag;
@@ -330,35 +360,39 @@ static int g_LogIndex = 0;
 static bool g_FirstLog = true;
 static uint64_t g_LogSize = 0;
 
-static inline std::vector<char>& GetSwapBufferRef() {
+static inline std::vector<char>& GetSwapBufferRef()
+{
     static std::vector<char> s_SwapBuffer(c_log_buffer_size);
     return s_SwapBuffer;
 }
-static inline std::stringstream& GetLogBufferRef() {
+static inline std::stringstream& GetLogBufferRef()
+{
     static std::stringstream s_LogBuffer;
     return s_LogBuffer;
 }
-static inline std::recursive_mutex& GetLogBufferMutexRef() {
+static inline std::recursive_mutex& GetLogBufferMutexRef()
+{
     static std::recursive_mutex s_LogBufferMutex;
     return s_LogBufferMutex;
 }
-static inline std::string* GetLogFilesRef() {
-    static std::string s_LogFile[c_max_log_file_num] = {"dbgscp_log_0.txt",
-                                                        "dbgscp_log_1.txt",
-                                                        "dbgscp_log_2.txt",
-                                                        "dbgscp_log_3.txt"
-                                                        "dbgscp_log_4.txt",
-                                                        "dbgscp_log_5.txt",
-                                                        "dbgscp_log_6.txt",
-                                                        "dbgscp_log_7.txt",
-                                                        "dbgscp_log_8.txt",
-                                                        "dbgscp_log_9.txt",
-                                                        "dbgscp_log_10.txt",
-                                                        "dbgscp_log_11.txt",
-                                                        "dbgscp_log_12.txt",
-                                                        "dbgscp_log_13.txt",
-                                                        "dbgscp_log_14.txt",
-                                                        "dbgscp_log_15.txt"};
+static inline std::string* GetLogFilesRef()
+{
+    static std::string s_LogFile[c_max_log_file_num] = { "dbgscp_log_0.txt",
+                                                    "dbgscp_log_1.txt",
+                                                    "dbgscp_log_2.txt",
+                                                    "dbgscp_log_3.txt"
+                                                    "dbgscp_log_4.txt",
+                                                    "dbgscp_log_5.txt",
+                                                    "dbgscp_log_6.txt",
+                                                    "dbgscp_log_7.txt",
+                                                    "dbgscp_log_8.txt",
+                                                    "dbgscp_log_9.txt",
+                                                    "dbgscp_log_10.txt",
+                                                    "dbgscp_log_11.txt",
+                                                    "dbgscp_log_12.txt",
+                                                    "dbgscp_log_13.txt",
+                                                    "dbgscp_log_14.txt",
+                                                    "dbgscp_log_15.txt" };
     return s_LogFile;
 }
 
@@ -366,8 +400,7 @@ static int DbgScp_FlushLog_NoLock(const char* pstr, size_t len) {
     int err = -1;
     if (g_LogIndex < c_max_log_file_num) {
         char errmsg[256];
-        FILE* fp = open_file_with_error(GetLogFilesRef()[g_LogIndex].c_str(),
-                                        g_FirstLog ? "wt" : "at", err, errmsg, sizeof(errmsg));
+        FILE* fp = open_file_with_error(GetLogFilesRef()[g_LogIndex].c_str(), g_FirstLog ? "wt" : "at", err, errmsg, sizeof(errmsg));
         if (fp) {
             auto&& pos = GetLogBufferRef().tellp();
             g_LogSize += pos;
@@ -397,19 +430,21 @@ static int DbgScp_FlushLog_NoLock(const char* pstr, size_t len) {
                 ++g_LogIndex;
                 g_LogSize = 0;
             }
-        } else {
-            mylog_printf("open file failed: %s, error:%s\n", GetLogFilesRef()[g_LogIndex].c_str(),
-                         errmsg);
+        }
+        else {
+            mylog_printf("open file failed: %s, error:%s\n", GetLogFilesRef()[g_LogIndex].c_str(), errmsg);
         }
     }
     return err;
 }
-static int DbgScp_FlushLog() {
+static int DbgScp_FlushLog()
+{
     std::lock_guard<std::recursive_mutex> lock(GetLogBufferMutexRef());
 
     return DbgScp_FlushLog_NoLock(nullptr, 0);
 }
-static int DbgScp_WriteLog(const std::string& str) {
+static int DbgScp_WriteLog(const std::string& str)
+{
     std::lock_guard<std::recursive_mutex> lock(GetLogBufferMutexRef());
 
     int r = 0;
@@ -417,13 +452,15 @@ static int DbgScp_WriteLog(const std::string& str) {
     size_t sizeInBuffer = pos + static_cast<std::streamoff>(str.length());
     if (sizeInBuffer > c_log_buffer_size) {
         r = DbgScp_FlushLog_NoLock(str.c_str(), str.length());
-    } else {
+    }
+    else {
         GetLogBufferRef() << str;
         r = static_cast<int>(sizeInBuffer);
     }
     return r;
 }
-static void DbgScp_LogCallstack(const char* prefix, const char* file, int line) {
+static void DbgScp_LogCallstack(const char* prefix, const char* file, int line)
+{
     const int c_buf_size = 1024 * 4 + 1;
     char buf[c_buf_size];
     snprintf(buf, c_buf_size, "%s%s:%d\n", prefix, file, line);
@@ -462,28 +499,33 @@ static void DbgScp_LogCallstack(const char* prefix, const char* file, int line) 
 #endif
 }
 
-static inline std::unordered_map<int64_t, int64_t>& GetMemoryFlagsRef() {
+static inline std::unordered_map<int64_t, int64_t>& GetMemoryFlagsRef()
+{
     static std::unordered_map<int64_t, int64_t> s_MemoryFlags;
     return s_MemoryFlags;
 }
-static inline std::recursive_mutex& GetMemoryFlagMutexRef() {
+static inline std::recursive_mutex& GetMemoryFlagMutexRef()
+{
     static std::recursive_mutex s_MemoryFlagMutex;
     return s_MemoryFlagMutex;
 }
 
-static inline bool DbgScp_AddMemoryFlag(int64_t addr, int64_t flag) {
+static inline bool DbgScp_AddMemoryFlag(int64_t addr, int64_t flag)
+{
     std::lock_guard<std::recursive_mutex> lock(GetMemoryFlagMutexRef());
 
     auto&& r = GetMemoryFlagsRef().insert(std::make_pair(addr, flag));
     return r.second;
 }
-static inline bool DbgScp_RemoveMemoryFlag(int64_t addr) {
+static inline bool DbgScp_RemoveMemoryFlag(int64_t addr)
+{
     std::lock_guard<std::recursive_mutex> lock(GetMemoryFlagMutexRef());
 
     auto&& r = GetMemoryFlagsRef().erase(addr);
     return r > 0;
 }
-static inline bool DbgScp_GetMemoryFlag(int64_t addr, int64_t& flag) {
+static inline bool DbgScp_GetMemoryFlag(int64_t addr, int64_t& flag)
+{
     std::lock_guard<std::recursive_mutex> lock(GetMemoryFlagMutexRef());
 
     bool r = false;
@@ -495,69 +537,73 @@ static inline bool DbgScp_GetMemoryFlag(int64_t addr, int64_t& flag) {
     return r;
 }
 
-extern "C" void FlushDbgScpLog() {
+extern "C" void FlushDbgScpLog()
+{
     DbgScp_FlushLog();
 }
 
 [[maybe_unused]]
-static inline void DbgScp_Set(int cmd, int a, double b, const char* c) {
+static inline void DbgScp_Set(int cmd, int a, double b, const char* c)
+{
     BEGIN_DBGSCP_HOOK_VOID()
 
-    mylog_printf("DbgScp_Set cmd:%d a:%d b:%f c:%s\n", cmd, a, b, c);
+        mylog_printf("DbgScp_Set cmd:%d a:%d b:%f c:%s\n", cmd, a, b, c);
 
     END_DBGSCP_HOOK_VOID("DbgScp_Set", cmd, a, b, c)
 }
 [[maybe_unused]]
-static inline int DbgScp_Get(int cmd, int a, double b, const char* c) {
+static inline int DbgScp_Get(int cmd, int a, double b, const char* c)
+{
     BEGIN_DBGSCP_HOOK()
 
-    mylog_printf("DbgScp_Get cmd:%d a:%d b:%f c:%s\n", cmd, a, b, c);
+        mylog_printf("DbgScp_Get cmd:%d a:%d b:%f c:%s\n", cmd, a, b, c);
     return 0;
 
     END_DBGSCP_HOOK("DbgScp_Get", int, cmd, a, b, c)
 }
 
 [[maybe_unused]]
-static inline int TestMacro1(int a, double b, const char* c) {
+static inline int TestMacro1(int a, double b, const char* c)
+{
     DBGSCP_HOOK("TestMacro1", int, a, b, c)
-    mylog_printf("TestMacro1 a:%d b:%f c:%s\n", a, b, c);
+        mylog_printf("TestMacro1 a:%d b:%f c:%s\n", a, b, c);
     return 0;
 }
 [[maybe_unused]]
-static inline int TestMacro2(int a, double b, const char* c) {
+static inline int TestMacro2(int a, double b, const char* c)
+{
     BEGIN_DBGSCP_HOOK()
-    mylog_printf("TestMacro2 a:%d b:%f c:%s\n", a, b, c);
+        mylog_printf("TestMacro2 a:%d b:%f c:%s\n", a, b, c);
     return 0;
     END_DBGSCP_HOOK("TestMacro2", int, a, b, c)
 }
 [[maybe_unused]]
-static inline void TestMacro3(int a, double b, const char* c) {
+static inline void TestMacro3(int a, double b, const char* c)
+{
     DBGSCP_HOOK_VOID("TestMacro3", a, b, c)
-    mylog_printf("TestMacro3 a:%d b:%f c:%s\n", a, b, c);
+        mylog_printf("TestMacro3 a:%d b:%f c:%s\n", a, b, c);
 }
 [[maybe_unused]]
-static inline void TestMacro4(int a, double b, const char* c) {
+static inline void TestMacro4(int a, double b, const char* c)
+{
     BEGIN_DBGSCP_HOOK_VOID()
-    mylog_printf("TestMacro4 a:%d b:%f c:%s\n", a, b, c);
+        mylog_printf("TestMacro4 a:%d b:%f c:%s\n", a, b, c);
     END_DBGSCP_HOOK_VOID("TestMacro4", a, b, c)
 }
 
-int TestFFI0(int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, float f1, float f2,
-             int64_t sv1, int64_t sv2) {
-    mylog_printf("%d %d %d %d %d %d %d %d %f %f %lld %lld\n", a1, a2, a3, a4, a5, a6, a7, a8, f1,
-                 f2, sv1, sv2);
+int TestFFI0(int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, float f1, float f2, int64_t sv1, int64_t sv2)
+{
+    mylog_printf("%d %d %d %d %d %d %d %d %f %f %lld %lld\n", a1, a2, a3, a4, a5, a6, a7, a8, f1, f2, sv1, sv2);
     return 0;
 }
-int64_t TestFFI1(int64_t a1, int64_t a2, int64_t a3, int64_t a4, int64_t a5, int64_t a6, int64_t a7,
-                 int64_t a8, double f1, double f2, int64_t sv1, int64_t sv2) {
-    mylog_printf("%lld %lld %lld %lld %lld %lld %lld %lld %f %f %lld %lld\n", a1, a2, a3, a4, a5,
-                 a6, a7, a8, f1, f2, sv1, sv2);
+int64_t TestFFI1(int64_t a1, int64_t a2, int64_t a3, int64_t a4, int64_t a5, int64_t a6, int64_t a7, int64_t a8, double f1, double f2, int64_t sv1, int64_t sv2)
+{
+    mylog_printf("%lld %lld %lld %lld %lld %lld %lld %lld %f %f %lld %lld\n", a1, a2, a3, a4, a5, a6, a7, a8, f1, f2, sv1, sv2);
     return 1;
 }
 
 [[maybe_unused]]
-static inline std::vector<std::string> string_split(const std::string& input, char delimiter,
-                                                    int max_fields) {
+static inline std::vector<std::string> string_split(const std::string& input, char delimiter, int max_fields) {
     std::istringstream input_stream(input);
     std::vector<std::string> tokens;
     std::string token;
@@ -574,25 +620,28 @@ static inline std::vector<std::string> string_split(const std::string& input, ch
     return tokens;
 }
 
-static inline size_t GetPagetSize() {
-#if defined(PLATFORM_WIN)
+static inline size_t GetPagetSize()
+{
+#if defined(_MSC_VER)
     SYSTEM_INFO sysInfo;
     GetSystemInfo(&sysInfo);
     return static_cast<size_t>(sysInfo.dwPageSize);
-#elif defined(__APPLE__) || defined(__ANDROID__) || defined(UNITY_POSIX)
+#elif defined(__APPLE__) || defined(__ANDROID__)
     return static_cast<size_t>(getpagesize());
 #else
     return 4096;
 #endif
 }
-static inline int64_t AlignToPageSize(int64_t addr, size_t pageSize) {
+static inline int64_t AlignToPageSize(int64_t addr, size_t pageSize)
+{
     return static_cast<int64_t>(static_cast<size_t>(addr) & ~(pageSize - 1));
 }
-static inline size_t RoundToPageSize(size_t size, size_t pageSize) {
+static inline size_t RoundToPageSize(size_t size, size_t pageSize)
+{
     return (size + pageSize - 1) & ~(pageSize - 1);
 }
-static inline void SetMemoryProtect(int64_t addr, size_t size, size_t pageSize, int32_t quickflag,
-                                    int32_t rawflag) {
+static inline void SetMemoryProtect(int64_t addr, size_t size, size_t pageSize, int32_t quickflag, int32_t rawflag)
+{
     addr = AlignToPageSize(addr, pageSize);
     size = RoundToPageSize(size, pageSize);
     /*
@@ -617,7 +666,7 @@ static inline void SetMemoryProtect(int64_t addr, size_t size, size_t pageSize, 
 #define PROT_GROWSDOWN 0x01000000
 #define PROT_GROWSUP 0x02000000
     */
-#if defined(PLATFORM_WIN) || defined(_MSC_VER)
+#if defined(_MSC_VER)
     DWORD flag = rawflag;
     if (quickflag >= 0) {
         switch (quickflag) {
@@ -637,7 +686,7 @@ static inline void SetMemoryProtect(int64_t addr, size_t size, size_t pageSize, 
     }
     DWORD oldProtect;
     VirtualProtect(reinterpret_cast<void*>(addr), size, flag, &oldProtect);
-#elif UNITY_POSIX
+#elif defined(__ANDROID__) || defined(__APPLE__)
     int flag = rawflag;
     if (quickflag >= 0) {
         switch (quickflag) {
@@ -659,7 +708,8 @@ static inline void SetMemoryProtect(int64_t addr, size_t size, size_t pageSize, 
 #endif
 }
 
-enum class ExternApiEnum {
+enum class ExternApiEnum
+{
     TestFFI = c_extern_api_start_id,
     GetPID,
     GetTID,
@@ -911,6 +961,91 @@ void CppDbgScp_CallExternApi(int api, int32_t stackBase, DebugScript::IntLocals&
     }
 }
 
+#if defined(UNITY_WIN) || defined(UNITY_ANDROID) || defined(UNITY_IOS) || defined(UNITY_IPHONE) || defined(UNITY_MAC)
+
+void LoadDbgScp(const core::string& log_path, const core::string& load_path)
+{
+    for (int i = 0; i < c_max_log_file_num; ++i) {
+        if (GetLogFilesRef()[i].empty()) {
+            auto&& path = Format("%s/dbgscp_log_%d.txt", log_path.c_str(), i);
+            GetLogFilesRef()[i] = path.c_str();
+            printf_console("LoadDbgScp, LogFile: %d %s\n", i, path.c_str());
+        }
+    }
+#if PLATFORM_ANDROID
+    const char* c_data_file = "/data/local/tmp/bytecode.dat";
+#else
+    auto&& dataPath = Format("%s/bytecode.dat", load_path.c_str());
+    const char* c_data_file = dataPath.c_str();
+#endif
+    DebugScriptGlobal::Reset();
+    bool r = DebugScriptGlobal::Load(c_data_file);
+    DebugScriptGlobal::Start();
+    printf_console("LoadDbgScp: %s %d\n", c_data_file, r ? 1 : 0);
+}
+void PauseDbgScp()
+{
+    DebugScriptGlobal::Pause();
+    printf_console("DebugScriptGlobal::Pause\n");
+}
+void ResumeDbgScp()
+{
+    DebugScriptGlobal::Resume();
+    printf_console("DebugScriptGlobal::Resume\n");
+}
+void DbgScp_Set_Extern(int cmd, int a, double b, const char* c)
+{
+    DbgScp_Set(cmd, a, b, c);
+}
+int DbgScp_Get_Extern(int cmd, int a, double b, const char* c)
+{
+    return DbgScp_Get(cmd, a, b, c);
+}
+
+#elif (defined(UE_BUILD_DEBUG) || defined(UE_BUILD_DEVELOPMENT) || defined(UE_BUILD_TEST) || defined(UE_BUILD_SHIPPING)) && defined(UE_SERVER) && !UE_SERVER
+
+void LoadDbgScp(const FString& log_path, const FString& load_path)
+{
+    for (int i = 0; i < c_max_log_file_num; ++i) {
+        if (GetLogFilesRef()[i].empty()) {
+            auto&& path = FString::Printf(TEXT("%s/dbgscp_log_%d.txt"), *log_path, i);
+            GetLogFilesRef()[i] = TCHAR_TO_UTF8(*path);
+            UE_LOG(LogTemp, Log, TEXT("LoadDbgScp, LogFile: %d %s\n"), i, TCHAR_TO_UTF8(*path));
+        }
+    }
+#if PLATFORM_ANDROID
+    const char* c_data_file = "/data/local/tmp/bytecode.dat";
+#else
+    auto&& dataPath = FString::Printf(TEXT("%s/bytecode.dat"), *load_path);
+    FTCHARToUTF8 Converter(*dataPath);
+    const char* c_data_file = Converter.Get();
+#endif
+    DebugScriptGlobal::Reset();
+    bool r = DebugScriptGlobal::Load(c_data_file);
+    DebugScriptGlobal::Start();
+    UE_LOG(LogTemp, Log, TEXT("LoadDbgScp: %s %d\n"), c_data_file, r ? 1 : 0);
+}
+void PauseDbgScp()
+{
+    DebugScriptGlobal::Pause();
+    UE_LOG(LogTemp, Log, TEXT("DebugScriptGlobal::Pause\n"));
+}
+void ResumeDbgScp()
+{
+    DebugScriptGlobal::Resume();
+    UE_LOG(LogTemp, Log, TEXT("DebugScriptGlobal::Resume\n"));
+}
+void DbgScp_Set_Extern(int cmd, int a, double b, const char* c)
+{
+    DbgScp_Set(cmd, a, b, c);
+}
+int DbgScp_Get_Extern(int cmd, int a, double b, const char* c)
+{
+    return DbgScp_Get(cmd, a, b, c);
+}
+
+#elif defined(DBGSCP_ON_MYUZU)
+
 void LoadDbgScp(const std::string& log_path, const std::string& load_path) {
     for (int i = 0; i < c_max_log_file_num; ++i) {
         if (GetLogFilesRef()[i].empty()) {
@@ -932,3 +1067,175 @@ void ResumeDbgScp() {
     DebugScriptGlobal::Resume();
     mylog_printf("DebugScriptGlobal::Resume\n");
 }
+void DbgScp_Set_Extern(int cmd, int a, double b, const char* c)
+{
+    DbgScp_Set(cmd, a, b, c);
+}
+int DbgScp_Get_Extern(int cmd, int a, double b, const char* c)
+{
+    return DbgScp_Get(cmd, a, b, c);
+}
+
+#else
+
+extern "C" {
+    __declspec(dllexport) void CppDbgScp_ResetVM()
+    {
+        DebugScriptGlobal::Reset();
+    }
+    __declspec(dllexport) void CppDbgScp_AllocConstInt(int64_t val)
+    {
+        DebugScriptGlobal::AllocConstInt(val);
+    }
+    __declspec(dllexport) void CppDbgScp_AllocConstFloat(double val)
+    {
+        DebugScriptGlobal::AllocConstFloat(val);
+    }
+    __declspec(dllexport) void CppDbgScp_AllocConstString(const char* val)
+    {
+        DebugScriptGlobal::AllocConstString(val);
+    }
+    __declspec(dllexport) void CppDbgScp_AllocGlobalInt(int64_t val)
+    {
+        DebugScriptGlobal::AllocGlobalInt(val);
+    }
+    __declspec(dllexport) void CppDbgScp_AllocGlobalFloat(double val)
+    {
+        DebugScriptGlobal::AllocGlobalFloat(val);
+    }
+    __declspec(dllexport) void CppDbgScp_AllocGlobalString(const char* val)
+    {
+        DebugScriptGlobal::AllocGlobalString(val);
+    }
+    __declspec(dllexport) int32_t CppDbgScp_AddHook(const char* name, int32_t* enterCodes, int enterCodeNum, int32_t* exitCodes, int exitCodeNum)
+    {
+        return DebugScriptGlobal::AddHook(name, enterCodes, enterCodeNum, exitCodes, exitCodeNum);
+    }
+    __declspec(dllexport) int32_t CppDbgScp_ShareWith(int32_t hookId, const char* other)
+    {
+        return DebugScriptGlobal::ShareWith(hookId, other);
+    }
+    __declspec(dllexport) void CppDbgScp_StartVM()
+    {
+        DebugScriptGlobal::Start();
+    }
+    __declspec(dllexport) void CppDbgScp_PauseVM()
+    {
+        DebugScriptGlobal::Pause();
+    }
+    __declspec(dllexport) void CppDbgScp_ResumeVM()
+    {
+        DebugScriptGlobal::Resume();
+    }
+
+    __declspec(dllexport) void CppDbgScp_Load(const char* file)
+    {
+        DebugScriptGlobal::Reset();
+        DebugScriptGlobal::Load(file);
+        DebugScriptGlobal::Start();
+    }
+
+    __declspec(dllexport) void DbgScp_Set_Export(int cmd, int a, double b, const char* c)
+    {
+        DbgScp_Set(cmd, a, b, c);
+    }
+    __declspec(dllexport) int DbgScp_Get_Export(int cmd, int a, double b, const char* c)
+    {
+        return DbgScp_Get(cmd, a, b, c);
+    }
+
+    __declspec(dllexport) int Test1_Export(int a, double b, const char* c)
+    {
+        thread_local static int32_t s_hook_id = -1;
+        thread_local static uint32_t s_serial_num = 0;
+        CheckFuncHook(__FUNCTION__, s_hook_id, s_serial_num);
+        int h_ret_val{};
+        auto&& placeHolder = CreateHookWrap(s_hook_id, h_ret_val, a, b, c);
+        if (placeHolder.IsBreak())
+            return h_ret_val;
+        mylog_printf("Test1 a:%d b:%f c:%s\n", a, b, c);
+        return 0;
+    }
+    __declspec(dllexport) int Test2_Export(int a, double b, const char* c)
+    {
+        auto f = [&]() {
+            mylog_printf("Test2 a:%d b:%f c:%s\n", a, b, c);
+            return 0;
+            };
+        thread_local static int32_t s_hook_id = -1;
+        thread_local static uint32_t s_serial_num = 0;
+        CheckFuncHook(__FUNCTION__, s_hook_id, s_serial_num);
+        bool retry{};
+        int h_ret_val{};
+        do
+        {
+            auto&& placeHolder = CreateHookWrap(retry, s_hook_id, h_ret_val, a, b, c);
+            if (placeHolder.IsBreak()) {
+                return h_ret_val;
+            }
+            else
+            {
+                h_ret_val = f();
+            }
+        }
+        while (false);
+        if (retry) {
+            h_ret_val = f();
+        }
+        return h_ret_val;
+    }
+    __declspec(dllexport) void Test3_Export(int a, double b, const char* c)
+    {
+        static int32_t s_hook_id = -1;
+        static uint32_t s_serial_num = 0;
+        CheckFuncHook(__FUNCTION__, s_hook_id, s_serial_num);
+        auto&& placeHolder = CreateHookWrap(s_hook_id, a, b, c);
+        if (placeHolder.IsBreak())
+            return;
+        mylog_printf("Test3 a:%d b:%f c:%s\n", a, b, c);
+    }
+    __declspec(dllexport) void Test4_Export(int a, double b, const char* c)
+    {
+        auto f = [&]() {
+            mylog_printf("Test4 a:%d b:%f c:%s\n", a, b, c);
+            };
+        static int32_t s_hook_id = -1;
+        static uint32_t s_serial_num = 0;
+        CheckFuncHook(__FUNCTION__, s_hook_id, s_serial_num);
+        bool retry{};
+        do
+        {
+            auto&& placeHolder = CreateHookWrap(retry, s_hook_id, a, b, c);
+            if (placeHolder.IsBreak()) {
+                return;
+            }
+            else
+            {
+                f();
+            }
+        }
+        while (false);
+        if (retry) {
+            f();
+        }
+    }
+
+    __declspec(dllexport) int TestMacro1_Export(int a, double b, const char* c)
+    {
+        return TestMacro1(a, b, c);
+    }
+    __declspec(dllexport) int TestMacro2_Export(int a, double b, const char* c)
+    {
+        return TestMacro2(a, b, c);
+    }
+    __declspec(dllexport) void TestMacro3_Export(int a, double b, const char* c)
+    {
+        TestMacro3(a, b, c);
+    }
+    __declspec(dllexport) void TestMacro4_Export(int a, double b, const char* c)
+    {
+        TestMacro4(a, b, c);
+    }
+}
+
+#endif

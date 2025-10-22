@@ -1142,6 +1142,8 @@ add_library(core STATIC
     memory/brace_script/brace_script_interpreter.h
     memory/brace_script/brace_script_interpreter.cpp
     memory/debug_script/DbgScpHook.h
+    memory/debug_script/DebugScriptExport.h
+    memory/debug_script/DebugScriptEntry.h
     memory/debug_script/DebugScriptVM.h
     memory/debug_script/DebugScriptVM.cpp
     memory/debug_script/DebugScriptExternApiAndEntry.cpp

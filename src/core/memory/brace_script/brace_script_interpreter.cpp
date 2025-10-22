@@ -14,6 +14,9 @@
 #include "brace_object.h"
 #include "math_api.h"
 
+#define DBGSCP_ON_MYUZU
+#include "core/memory/debug_script/DebugScriptEntry.h"
+
 namespace BraceScriptInterpreter {
 static std::chrono::time_point<std::chrono::high_resolution_clock> g_start_time_point;
 
@@ -8212,6 +8215,132 @@ protected:
         sniffer.AddLogInstruction(mask, value);
     }
 };
+class DbgScpSetExp final : public Brace::SimpleBraceApiBase {
+public:
+    DbgScpSetExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        if (argInfos.size() > 4 ||
+            (argInfos.size() >= 1 && (argInfos[0].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+                                      argInfos[0].Type > Brace::BRACE_DATA_TYPE_UINT64)) ||
+            (argInfos.size() >= 2 && (argInfos[1].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+                                      argInfos[1].Type > Brace::BRACE_DATA_TYPE_UINT64)) ||
+            (argInfos.size() >= 3 && (argInfos[2].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+                                      argInfos[2].Type > Brace::BRACE_DATA_TYPE_UINT64)) ||
+            (argInfos.size() == 4 && (argInfos[3].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+                                      argInfos[3].Type > Brace::BRACE_DATA_TYPE_UINT64))) {
+            // error
+            std::stringstream ss;
+            ss << "expected dbgscpset([int32 cmd, int32 a, double b, string c])," << data.GetId()
+               << " line " << data.GetLine();
+            LogError(ss.str());
+            return false;
+        }
+        resultInfo.Type = Brace::BRACE_DATA_TYPE_BOOL;
+        resultInfo.Name = GenTempVarName();
+        resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+        resultInfo.VarIndex =
+            AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+        return true;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        int cmd = 0;
+        if (argInfos.size() >= 1) {
+            auto&& argInfo1 = argInfos[0];
+            cmd = static_cast<int>(Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars,
+                                                    argInfo1.Type, argInfo1.VarIndex));
+        }
+        int a = 0;
+        if (argInfos.size() >= 2) {
+            auto&& argInfo2 = argInfos[1];
+            a = static_cast<int>(Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type,
+                                                  argInfo2.VarIndex));
+        }
+        double b = 0;
+        if (argInfos.size() >= 3) {
+            auto&& argInfo3 = argInfos[2];
+            b = Brace::VarGetF64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type,
+                                 argInfo3.VarIndex);
+        }
+        std::string c;
+        if (argInfos.size() == 4) {
+            auto&& argInfo4 = argInfos[3];
+            c = Brace::VarGetStr(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type,
+                                 argInfo4.VarIndex);
+        }
+
+        DbgScp_Set_Extern(cmd, a, b, c.c_str());
+        Brace::VarSetBool(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, true);
+    }
+};
+class DbgScpGetExp final : public Brace::SimpleBraceApiBase {
+public:
+    DbgScpGetExp(Brace::BraceScript& interpreter)
+        : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        if (argInfos.size() > 4 ||
+            (argInfos.size() >= 1 && (argInfos[0].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+                                      argInfos[0].Type > Brace::BRACE_DATA_TYPE_UINT64)) ||
+            (argInfos.size() >= 2 && (argInfos[1].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+                                      argInfos[1].Type > Brace::BRACE_DATA_TYPE_UINT64)) ||
+            (argInfos.size() >= 3 && (argInfos[2].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+                                      argInfos[2].Type > Brace::BRACE_DATA_TYPE_UINT64)) ||
+            (argInfos.size() == 4 && (argInfos[3].Type < Brace::BRACE_DATA_TYPE_INT8 ||
+                                      argInfos[3].Type > Brace::BRACE_DATA_TYPE_UINT64))) {
+            // error
+            std::stringstream ss;
+            ss << "expected dbgscpget([int32 cmd, int32 a, double b, string c]),"
+               << data.GetId() << " line " << data.GetLine();
+            LogError(ss.str());
+            return false;
+        }
+        resultInfo.Type = Brace::BRACE_DATA_TYPE_INT32;
+        resultInfo.Name = GenTempVarName();
+        resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+        resultInfo.VarIndex =
+            AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+        return true;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        int cmd = 0;
+        if (argInfos.size() >= 1) {
+            auto&& argInfo1 = argInfos[0];
+            cmd = static_cast<int>(Brace::VarGetI64(argInfo1.IsGlobal ? gvars : lvars,
+                                                    argInfo1.Type, argInfo1.VarIndex));
+        }
+        int a = 0;
+        if (argInfos.size() >= 2) {
+            auto&& argInfo2 = argInfos[1];
+            a = static_cast<int>(Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
+        }
+        double b = 0;
+        if (argInfos.size() >= 3) {
+            auto&& argInfo3 = argInfos[2];
+            b = Brace::VarGetF64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex);
+        }
+        std::string c;
+        if (argInfos.size() == 4) {
+            auto&& argInfo4 = argInfos[3];
+            c = Brace::VarGetStr(argInfo4.IsGlobal ? gvars : lvars, argInfo4.Type,
+                                   argInfo4.VarIndex);
+        }
+
+        uint64_t result = 0;
+        result = DbgScp_Get_Extern(cmd, a, b, c.c_str());
+        Brace::VarSetUInt64(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, result);
+    }
+};
 class ReplaceSourceShaderExp final : public Brace::SimpleBraceApiBase {
 public:
     ReplaceSourceShaderExp(Brace::BraceScript& interpreter)
@@ -11453,8 +11582,14 @@ inline void BraceScriptManager::InitBraceScript(Brace::BraceScript*& pBraceScrip
     pBraceScript->RegisterApi("isgamestarted", "isgamestarted(), check if game is started",
                               new Brace::BraceApiFactory<IsGameStartedExp>());
 
-    pBraceScript->RegisterApi("addloginst", "addloginst(mask, value), all type is int32",
+    pBraceScript->RegisterApi("addloginst", "addloginst(mask,value), all type is int32",
                               new Brace::BraceApiFactory<AddLogInstructionExp>());
+
+    pBraceScript->RegisterApi("dbgscpset", "dbgscpset([int_cmd,int_a,dbl_b,str_c]), communicate with debug script",
+                              new Brace::BraceApiFactory<DbgScpSetExp>());
+
+    pBraceScript->RegisterApi("dbgscpget", "dbgscpget([int_cmd,int_a,dbl_b,str_c]), return int, communicate with debug script",
+                              new Brace::BraceApiFactory<DbgScpGetExp>());
 
     pBraceScript->RegisterApi("replacesourceshader",
                               "replacesourceshader(hash,shader_type,shader_src_file), "

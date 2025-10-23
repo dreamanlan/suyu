@@ -28,6 +28,7 @@
 #endif
 
 #include "debug_break.h"
+#include "pragma_diag.h"
 
 extern int mylog_printf(const char* fmt, ...);
 extern void mylog_dump_callstack(const char* prefix, const char* file, int line);
@@ -2666,16 +2667,7 @@ namespace
         SetVarInt(isGlobal, index, g_DebugScriptSerialNum, stackBase, intLocals, intGlobals);
     }
 
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable: 4172)
-#elif defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wreturn-local-addr"
-#elif defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-stack-address"
-#endif
+PRAGMA_DIAG_PUSH_IGNORE_RETURN_LOCAL_ADDR()
 
     extern int64_t get_first_stack_arg_addr(int64_t r0, int64_t r1, int64_t r2, int64_t r3, int64_t r4, int64_t r5, int64_t r6, int64_t r7
         , int64_t r8, int64_t r9, int64_t r10, int64_t r11, int64_t r12, int64_t r13, int64_t r14, int64_t r15
@@ -2756,13 +2748,7 @@ namespace
 #endif
     }
 
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#elif defined(__GNUC__)
-#pragma GCC diagnostic pop
-#elif defined(__clang__)
-#pragma clang diagnostic pop
-#endif
+PRAGMA_DIAG_POP_IGNORE_RETURN_LOCAL_ADDR()
 
     template<typename... ArgsT>
     struct FFI_Auto

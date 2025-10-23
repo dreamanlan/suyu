@@ -178,7 +178,7 @@ int mylog_printf(const char* fmt, ...) {
 void mylog_dump_callstack(const char* prefix, const char* file, int line) {
     mylog_printf("%s%s:%d\n", prefix, file, line);
 
-#if BACKTRACE_UNIMPLEMENTED
+#if defined(BACKTRACE_UNIMPLEMENTED) && BACKTRACE_UNIMPLEMENTED
 #if defined(__ANDROID__)
     const size_t kMaxDepth = 100;
     void* buffer[kMaxDepth];
@@ -466,7 +466,7 @@ static void DbgScp_LogCallstack(const char* prefix, const char* file, int line)
     snprintf(buf, c_buf_size, "%s%s:%d\n", prefix, file, line);
     DbgScp_WriteLog(buf);
 
-#if BACKTRACE_UNIMPLEMENTED
+#if defined(BACKTRACE_UNIMPLEMENTED) && BACKTRACE_UNIMPLEMENTED
 #if defined(__ANDROID__)
     const size_t kMaxDepth = 100;
     void* buffer[kMaxDepth];

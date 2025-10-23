@@ -242,7 +242,13 @@ void MemorySniffer::InitAppPath(const std::string& yuzu_path, const std::string&
     impl->log_path = log_path;
     impl->mod_load_path = mod_load_path;
 
-    LoadDbgScp(log_path, mod_load_path);
+    auto&& dataPath = fmt::format("{}/bytecode.dat", mod_load_path);
+    std::ifstream CheckFile(dataPath.c_str(), std::ios::in | std::ios::binary);
+    if (CheckFile.good()) {
+        CheckFile.close();
+
+        LoadDbgScp(log_path, mod_load_path);
+    }
 }
 
 void MemorySniffer::ClearModuleMemoryParameters() {

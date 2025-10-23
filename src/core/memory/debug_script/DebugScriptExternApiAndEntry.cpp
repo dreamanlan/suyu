@@ -14,10 +14,9 @@
 #define DBGSCP_ON_MYUZU
 
 #include "DbgScpHook.h"
-#include "DebugScriptEntry.h"
 #include "DebugScriptVM.h"
 
-#if (defined(UE_BUILD_DEBUG) || defined(UE_BUILD_DEVELOPMENT) || defined(UE_BUILD_TEST) || defined(UE_BUILD_SHIPPING)) && defined(UE_SERVER) && !UE_SERVER
+#if defined(DBGSCP_ON_UNREAL)
 
 #include "CoreMinimal.h"
 #include "HAL/PlatformFilemanager.h"
@@ -149,7 +148,7 @@ void captureStack(DWORD64 stackAddr[], int maxDepth) {
 #endif
 #endif
 
-#if defined(UNITY_WIN) || defined(UNITY_APPLE) || defined(UNITY_ANDROID) || defined(UNITY_SWITCH) || defined(UNITY_LUMIN) || defined(UNITY_PLAYSTATION) // for unity
+#if defined(DBGSCP_ON_UNITY) // for unity
 #include "Runtime/Logging/LogAssert.h"
 int mylog_printf(const char* fmt, ...) {
     va_list vl;
@@ -158,7 +157,18 @@ int mylog_printf(const char* fmt, ...) {
     va_end(vl);
     return 1;
 }
-#else
+#elif defined(DBGSCP_ON_UNREAL)
+int mylog_printf(const char* fmt, ...) {
+    const int c_buf_size = 1024 * 4 + 1;
+    char buf[c_buf_size];
+    va_list vl;
+    va_start(vl, fmt);
+    int r = std::vsnprintf(buf, c_buf_size, fmt, vl);
+    va_end(vl);
+    UE_LOG(LogTemp, Warning, TEXT("%s"), UTF8_TO_TCHAR(buf));
+    return r;
+}
+#elif defined(DBGSCP_ON_MYUZU)
 int mylog_printf(const char* fmt, ...) {
     const int c_buf_size = 1024 * 4 + 1;
     char buf[c_buf_size];
@@ -171,6 +181,17 @@ int mylog_printf(const char* fmt, ...) {
     Core::g_MainThreadCaller.SyncLogToView(ss.str());
 
     LOG_INFO(Log, "{}", buf);
+    return r;
+}
+#else
+int mylog_printf(const char* fmt, ...) {
+    const int c_buf_size = 1024 * 4 + 1;
+    char buf[c_buf_size];
+    va_list vl;
+    va_start(vl, fmt);
+    int r = std::vsnprintf(buf, c_buf_size, fmt, vl);
+    va_end(vl);
+    printf("%s", buf);
     return r;
 }
 #endif
@@ -231,12 +252,8 @@ void mylog_assert(bool v) {
     DebugAssert(v);
 #elif defined(_MSC_VER)
     _ASSERT(v);
-#elif defined(UNITY_APPLE)
-    || defined(UNITY_ANDROID)
-        || defined(UNITY_SWITCH)
-        || defined(UNITY_LUMIN)
-        || defined(UNITY_PLAYSTATION) // for unity
-        DebugAssert(v);
+#elif defined(DBGSCP_ON_UNITY) // for unity
+    DebugAssert(v);
 #else
     assert(v);
 #endif
@@ -961,7 +978,7 @@ void CppDbgScp_CallExternApi(int api, int32_t stackBase, DebugScript::IntLocals&
     }
 }
 
-#if defined(UNITY_WIN) || defined(UNITY_ANDROID) || defined(UNITY_IOS) || defined(UNITY_IPHONE) || defined(UNITY_MAC)
+#if defined(DBGSCP_ON_UNITY)
 
 void LoadDbgScp(const core::string& log_path, const core::string& load_path)
 {
@@ -1002,7 +1019,7 @@ int DbgScp_Get_Extern(int cmd, int a, double b, const char* c)
     return DbgScp_Get(cmd, a, b, c);
 }
 
-#elif (defined(UE_BUILD_DEBUG) || defined(UE_BUILD_DEVELOPMENT) || defined(UE_BUILD_TEST) || defined(UE_BUILD_SHIPPING)) && defined(UE_SERVER) && !UE_SERVER
+#elif defined(DBGSCP_ON_UNREAL)
 
 void LoadDbgScp(const FString& log_path, const FString& load_path)
 {

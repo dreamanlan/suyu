@@ -3,6 +3,7 @@
 #include <string>
 #include <array>
 #include "DebugScriptExport.h"
+#include "DebugScriptEntry.h"
 
 class DebugScriptGlobal
 {

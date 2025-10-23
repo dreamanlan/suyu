@@ -1148,6 +1148,7 @@ add_library(core STATIC
     memory/debug_script/DebugScriptVM.cpp
     memory/debug_script/DebugScriptExternApiAndEntry.cpp
     memory/debug_script/debug_break.h
+    memory/debug_script/pragma_diag.h
     memory/debug_script/sema.h
     memory/debug_script/rwlock.h
     perf_stats.cpp

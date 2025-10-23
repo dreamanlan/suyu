@@ -21,7 +21,7 @@
 #elif defined(_MSC_VER) && _MSC_VER >= 1939
 #include <shared_mutex>
 #define USE_STD_SHARED_MUTEX 1
-#elif defined(UNITY_WIN) || defined(UNITY_APPLE) || defined(UNITY_ANDROID) || defined(UNITY_SWITCH) || defined(UNITY_LUMIN) || defined(UNITY_PLAYSTATION) // for unity
+#elif defined(DBGSCP_ON_UNITY) // for unity
 #include "Runtime/Threads/ReadWriteLock.h"
 #else
 #include "rwlock.h"

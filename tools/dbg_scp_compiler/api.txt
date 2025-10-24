@@ -35,8 +35,16 @@ defapi(memsave,int,noparams,[int,int,string]);
 defapi(memload,int,noparams,[int,int,string]);
 
 defexternapi(TestFFI,int,noparams,[int]);
+defexternapi(LoadLib,int,noparams,[string]);
+defexternapi(GetProc,int,noparams,[int,string]);
+defexternapi(LoadLibAndGetProc,int,noparams,[string,string]);
+defexternapi(FreeLib,int,noparams,[int]);
+defexternapi(FreeLibByPath,int,noparams,[string]);
 defexternapi(GetPID,int,noparams,[]);
 defexternapi(GetTID,int,noparams,[]);
+defexternapi(FindSegment,int,noparams,[int,string,string,int,string[3]]){
+	minparamnum(4);
+};
 defexternapi(MemoryProtect,void,noparams,[int,int,int,int]){
 	minparamnum(3);
 };

@@ -1,0 +1,13 @@
+struct(TestStru)
+{
+	start : int32;
+	end : int32;
+	count : int32;
+	size : int32;
+};
+struct(TestStru2)
+{
+	name : char[128];
+	size : int64;
+	ptest : ptr(TestStru);
+};

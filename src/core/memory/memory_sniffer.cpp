@@ -240,12 +240,21 @@ void MemorySniffer::InitAppPath(const std::string& yuzu_path, const std::string&
     impl->log_path = log_path;
     impl->mod_load_path = mod_load_path;
 
-    auto&& dataPath = fmt::format("{}/bytecode.dat", mod_load_path);
+#if defined(__APPLE__)
+    const char* dbgscp_path = "/Users/dreaman/Documents/GitHub/myuzu/tools/dbg_scp_compiler";
+#elif defined(_MSC_VER)
+    const char* dbgscp_path = "d:/GitHub/myuzu/tools/dbg_scp_compiler";
+#elif __ANDROID__
+    const char* dbgscp_path = "/data/local/tmp";
+#else
+    const char* dbgscp_path = mod_load_path.c_str();
+#endif
+    auto&& dataPath = fmt::format("{}/bytecode.dat", dbgscp_path);
     std::ifstream CheckFile(dataPath.c_str(), std::ios::in | std::ios::binary);
     if (CheckFile.good()) {
         CheckFile.close();
 
-        LoadDbgScp(log_path, mod_load_path);
+        LoadDbgScp(log_path, dbgscp_path);
     }
 }
 

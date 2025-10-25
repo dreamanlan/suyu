@@ -1,0 +1,219 @@
+
+@g_dir_chged : int = 0;
+@g_last_time : int = 0;
+@g_in_test : int = 0;
+@g_enable_watch_point : int = 0;
+@g_enable_mem_log : int = 0;
+
+//======test code begin======
+struct(TestStru3)
+{
+	count : int32;
+	ptest2 : TestStru2[12];
+};
+
+@ga : int = 123;
+@gb : int[3] = [3,5,1];
+@gc : int = 456;
+@gd : string = "this is a test";
+
+hook(CompileTest)
+{
+	onenter{
+		$a : int = 12;
+		$b : int = 13 * 17;
+		$d : int = ptrget(addr($a), 4);
+		$e : int[4] = [1,$a,3,$b];
+		$c : int;
+		$e[1] = $d + $e[2] * $c;
+		if ($a==12) {
+			$c = $a * $b;
+		};
+		while($c!=0){
+			$c = $c - 1;
+		};
+		loopi($c,0,3,1){
+			$d = $d + 1;
+		};
+		loopd($c,8,0,-2){
+			$d = $d + 1;
+			break;
+		};
+		if($a == 12){
+			$d = $d + 1;
+		}
+		else{
+			$d = $d - 1;
+		};
+		$c = addr($e) + argv(0);
+		$d = $c < 1 ? 2 : 3;
+		$e[0] = $d ?? 1;
+		$f : int = struct($d, ptr(ptr(TestStru3.ptest2).ptest).size);
+		$g : int = dumpcascadeptr(addr($e), 0x08, 0x08);
+		$h1 : int = offset(TestStru3.ptest2[3].size);
+		$h2 : int = size(TestStru3);
+		ffi(proto(void,noparams,[int,int],[],[]),0x1234,121,121);
+		ffi(proto(void,noparams,[int],[float],[]),0x1235,123,123.00);
+		return 0;
+	};
+};
+
+hook(TestMacro1)
+{
+	onenter{
+		$a:int = ptrget(argv(1),4);
+		$b:int = ptrget(argv(2),8);
+		$c:int = ptrget(argv(3),8);
+		printf("TestMacro1 enter time:%lld a:%d b:%f c:%s\n",time(),$a,$b,$c);
+		
+		ptrset(argv(0),4,1);
+		return 1;
+	};
+	onexit{
+		printf("TestMacro1 exit time:%lld\n",time());
+	};
+};
+hook(TestMacro2)
+{
+	onenter{
+		$a:int = ptrget(argv(1),4);
+		$b:int = ptrget(argv(2),8);
+		$c:int = ptrget(argv(3),8);
+		printf("TestMacro2 enter time:%lld a:%d b:%f c:%s\n",time(),$a,$b,$c);
+		
+		return 0;
+	};
+	onexit{
+		printf("TestMacro2 exit time:%lld\n",time());
+		ptrset(argv(0),4,2);
+	};
+};
+hook(TestMacro3)
+{
+	onenter{
+		$a:int = ptrget(argv(0),4);
+		$b:int = ptrget(argv(1),8);
+		$c:int = ptrget(argv(2),8);
+		printf("TestMacro3 enter time:%lld a:%d b:%f c:%s\n",time(),$a,$b,$c);
+		
+		if(platform()==0){
+			//test code on windows
+			dumpcascadeptr(argv(2),0);
+			if($a==123){
+				ptrset(argv(0),4,1);
+			}
+			else{ 
+				ptrset(argv(0),4,0);
+			};
+			$i:int = 0;
+			loop($i,0,10){
+				printf("+%d\n",$i);
+			};
+			$j:float = $i;
+			while($j>0){
+				printf("-%f\n",$j);
+				//$j=$j-1;
+				dec($j,2.0);
+			};
+			printf(">>> %f\n", $j);
+			printf(">>> %f\n", inc($j));
+			printf(">>> %f\n", inc($j, 2.0));
+			printf(">>> %f\n", inc($j, 3.0));
+			printf("%d %d %d\n", stkix(), hookid(), hookver());
+			printf("str contains %d %d\n", stringcontains("test","es","te"), stringnotcontains("test","es","fg"));
+			printf("str contains any %d %d\n", stringcontainsany("test","es","te"), stringnotcontainsany("test","es","fg"));
+			printf("str find %d %d\n", stringfind("test","es"), stringrfind("test","es"));
+			printf("str find2 %d %d\n", stringfind("test","es",1), stringrfind("test","es",0));
+			$addr:int = 0x800010004003;
+			printf("%llx\n", $addr & (~0x03));
+		};
+
+		return 1;
+	};
+	onexit{
+		printf("TestMacro3 exit time:%lld\n",time());
+	};
+};
+hook(TestMacro4)
+{
+	onenter{
+		$a:int = ptrget(argv(0),4);
+		$b:int = ptrget(argv(1),8);
+		$c:int = ptrget(argv(2),8);
+		printf("TestMacro4 enter time:%lld a:%d b:%f c:%s\n",time(),$a,$b,$c);
+		
+		return 0;
+	};
+	onexit{
+		printf("TestMacro4 exit time:%lld\n",time());
+	};
+};
+
+//======test code end======
+
+hook(DbgScp_Set)
+{
+	onenter{
+		$cmd:int = ptrget(argv(0),4);
+		$a:int = ptrget(argv(1),4);
+		$b:int = ptrget(argv(2),8);
+		$c:int = ptrget(argv(3),8);
+		printf("DbgScp_Set enter time:%lld cmd:%d a:%d b:%f c:%s\n",time(),$cmd,$a,$b,$c);
+		
+		return 1;
+	};
+	onexit{
+		printf("DbgScp_Set exit time:%lld\n",time());
+	};
+};
+hook(DbgScp_Get)
+{
+	onenter{
+		$cmd:int = ptrget(argv(1),4);
+		$a:int = ptrget(argv(2),4);
+		$b:int = ptrget(argv(3),8);
+		$c:int = ptrget(argv(4),8);
+		printf("DbgScp_Get enter time:%lld cmd:%d a:%d b:%f c:%s\n",time(),$cmd,$a,$b,$c);
+		
+		return 0;
+	};
+	onexit{
+		printf("DbgScp_Get exit time:%lld\n",time());
+		ptrset(argv(0),4,2);
+	};
+};
+
+//======extern code end======
+
+hook("dbgscpHookOnInitBitArray")
+{
+	onenter{
+		$this:int = ptrget(argv(0),8);
+		$data:int = ptrget(argv(1),8);
+		$size:int = ptrget(argv(2),8);
+		$capacity:int = ptrget(argv(3),8);
+
+		printf("dbgscpHookOnInitBitArray this:%llx data:%llx size:%lld capacity:%llx\n",$this,$data,$size,$capacity);
+	};
+};
+hook("dbgscpHookOnFinalizeBitArray")
+{
+	onenter{
+		$this:int = ptrget(argv(0),8);
+
+		printf("dbgscpHookOnFinalizeBitArray this:%llx\n",$this);
+	};
+};
+hook("dbgscpHookOnChangeBitArray")
+{
+	onenter{
+		$this:int = ptrget(argv(0),8);
+		$data:int = ptrget(argv(1),8);
+		$size:int = ptrget(argv(2),8);
+		$capacity:int = ptrget(argv(3),8);
+		$tag:int = ptrget(argv(4),4);
+		$func:string = ptrget(argv(5),8);
+
+		printf("dbgscpHookOnChangeBitArray this:%llx data:%llx size:%lld capacity:%llx tag:%d func:%s\n",$this,$data,$size,$capacity,$tag,$func);
+	};
+};

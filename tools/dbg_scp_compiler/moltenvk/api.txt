@@ -1,0 +1,62 @@
+defapi(platform,int,noparams,[]);
+defapi(assert,int,noparams,[int,string]){
+	minparamnum(1);
+};
+defapi(dumpstack,void,noparams,[string]);
+defapi(printf,int,printf,[string]);
+defapi(format,string,printf,[string]);
+defapi(time,int,noparams,[]);
+defapi(floattime,float,noparams,[]);
+defapi(dumpcascadeptr,int,ints,[int]);
+defapi(stringlength,int,noparams,[string]);
+defapi(stringcontains,int,strings,[string]);
+defapi(stringcontainsany,int,strings,[string]);
+defapi(stringnotcontains,int,strings,[string]);
+defapi(stringnotcontainsany,int,strings,[string]);
+defapi(stringfind,int,noparams,[string,string,int]){
+	minparamnum(2);
+};
+defapi(stringrfind,int,noparams,[string,string,int]){
+	minparamnum(2);
+};
+defapi(substring,string,noparams,[string,int,int]){
+	minparamnum(2);
+};
+defapi(cstrlen,int,noparams,[int]);
+defapi(cstrstr,int,noparams,[int,int]);
+defapi(cstrcmp,int,noparams,[int,int,int]){
+	minparamnum(2);
+};
+defapi(malloc,int,noparams,[int]);
+defapi(free,void,noparams,[int]);
+defapi(memcpy,int,noparams,[int,int,int]);
+defapi(memset,int,noparams,[int,int,int]);
+defapi(memsave,int,noparams,[int,int,string]);
+defapi(memload,int,noparams,[int,int,string]);
+
+defexternapi(TestFFI,int,noparams,[int]);
+defexternapi(LoadLib,int,noparams,[string]);
+defexternapi(GetProc,int,noparams,[int,string]);
+defexternapi(LoadLibAndGetProc,int,noparams,[string,string]);
+defexternapi(FreeLib,int,noparams,[int]);
+defexternapi(FreeLibByPath,int,noparams,[string]);
+defexternapi(GetPID,int,noparams,[]);
+defexternapi(GetTID,int,noparams,[]);
+defexternapi(FindSegment,int,noparams,[int,string,string,int,string[3]]){
+	minparamnum(4);
+};
+defexternapi(MemoryProtect,void,noparams,[int,int,int,int]){
+	minparamnum(3);
+};
+defexternapi(WriteLog,int,noparams,[string]);
+defexternapi(FlushLog,int,noparams,[]);
+defexternapi(LogStack,int,noparams,[string]);
+defexternapi(AddMemoryFlag,int,noparams,[int,int]);
+defexternapi(RemoveMemoryFlag,int,noparams,[int]);
+defexternapi(GetMemoryFlag,int,noparams,[int,int]){
+	minparamnum(1);
+};
+defexternapi(SetWatchPoint,void,noparams,[int,int,int,int,int]);
+defexternapi(GetWatchPoint,int,noparams,[int,int,int,int]){
+	minparamnum(0);
+};

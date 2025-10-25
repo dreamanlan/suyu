@@ -1227,137 +1227,142 @@ void CppDbgScp_CallExternApi(int api, int32_t stackBase, DebugScript::IntLocals&
 #if defined(DBGSCP_COMPILER_TEST)
 
 extern "C" {
-__declspec(dllexport) void CppDbgScp_ResetVM() {
-    DebugScriptGlobal::Reset();
-}
-__declspec(dllexport) void CppDbgScp_AllocConstInt(int64_t val) {
-    DebugScriptGlobal::AllocConstInt(val);
-}
-__declspec(dllexport) void CppDbgScp_AllocConstFloat(double val) {
-    DebugScriptGlobal::AllocConstFloat(val);
-}
-__declspec(dllexport) void CppDbgScp_AllocConstString(const char* val) {
-    DebugScriptGlobal::AllocConstString(val);
-}
-__declspec(dllexport) void CppDbgScp_AllocGlobalInt(int64_t val) {
-    DebugScriptGlobal::AllocGlobalInt(val);
-}
-__declspec(dllexport) void CppDbgScp_AllocGlobalFloat(double val) {
-    DebugScriptGlobal::AllocGlobalFloat(val);
-}
-__declspec(dllexport) void CppDbgScp_AllocGlobalString(const char* val) {
-    DebugScriptGlobal::AllocGlobalString(val);
-}
-__declspec(dllexport) int32_t CppDbgScp_AddHook(const char* name, int32_t* enterCodes,
-                                                int enterCodeNum, int32_t* exitCodes,
-                                                int exitCodeNum) {
-    return DebugScriptGlobal::AddHook(name, enterCodes, enterCodeNum, exitCodes, exitCodeNum);
-}
-__declspec(dllexport) int32_t CppDbgScp_ShareWith(int32_t hookId, const char* other) {
-    return DebugScriptGlobal::ShareWith(hookId, other);
-}
-__declspec(dllexport) void CppDbgScp_StartVM() {
-    DebugScriptGlobal::Start();
-}
-__declspec(dllexport) void CppDbgScp_PauseVM() {
-    DebugScriptGlobal::Pause();
-}
-__declspec(dllexport) void CppDbgScp_ResumeVM() {
-    DebugScriptGlobal::Resume();
-}
+    __declspec(dllexport) void CppDbgScp_ResetVM() {
+        DebugScriptGlobal::Reset();
+    }
+    __declspec(dllexport) void CppDbgScp_AllocConstInt(int64_t val) {
+        DebugScriptGlobal::AllocConstInt(val);
+    }
+    __declspec(dllexport) void CppDbgScp_AllocConstFloat(double val) {
+        DebugScriptGlobal::AllocConstFloat(val);
+    }
+    __declspec(dllexport) void CppDbgScp_AllocConstString(const char* val) {
+        DebugScriptGlobal::AllocConstString(val);
+    }
+    __declspec(dllexport) void CppDbgScp_AllocGlobalInt(int64_t val) {
+        DebugScriptGlobal::AllocGlobalInt(val);
+    }
+    __declspec(dllexport) void CppDbgScp_AllocGlobalFloat(double val) {
+        DebugScriptGlobal::AllocGlobalFloat(val);
+    }
+    __declspec(dllexport) void CppDbgScp_AllocGlobalString(const char* val) {
+        DebugScriptGlobal::AllocGlobalString(val);
+    }
+    __declspec(dllexport) int32_t CppDbgScp_AddHook(const char* name, int32_t* enterCodes,
+        int enterCodeNum, int32_t* exitCodes,
+        int exitCodeNum) {
+        return DebugScriptGlobal::AddHook(name, enterCodes, enterCodeNum, exitCodes, exitCodeNum);
+    }
+    __declspec(dllexport) int32_t CppDbgScp_ShareWith(int32_t hookId, const char* other) {
+        return DebugScriptGlobal::ShareWith(hookId, other);
+    }
+    __declspec(dllexport) void CppDbgScp_StartVM() {
+        DebugScriptGlobal::Start();
+    }
+    __declspec(dllexport) void CppDbgScp_PauseVM() {
+        DebugScriptGlobal::Pause();
+    }
+    __declspec(dllexport) void CppDbgScp_ResumeVM() {
+        DebugScriptGlobal::Resume();
+    }
 
-__declspec(dllexport) void CppDbgScp_Load(const char* file) {
-    DebugScriptGlobal::Reset();
-    DebugScriptGlobal::Load(file);
-    DebugScriptGlobal::Start();
-}
+    __declspec(dllexport) void CppDbgScp_Load(const char* file) {
+        DebugScriptGlobal::Reset();
+        DebugScriptGlobal::Load(file);
+        DebugScriptGlobal::Start();
+    }
 
-__declspec(dllexport) void DbgScp_Set_Export(int cmd, int a, double b, const char* c) {
-    DbgScp_Set(cmd, a, b, c);
-}
-__declspec(dllexport) int DbgScp_Get_Export(int cmd, int a, double b, const char* c) {
-    return DbgScp_Get(cmd, a, b, c);
-}
+    __declspec(dllexport) void DbgScp_Set_Export(int cmd, int a, double b, const char* c) {
+        DbgScp_Set(cmd, a, b, c);
+    }
+    __declspec(dllexport) int DbgScp_Get_Export(int cmd, int a, double b, const char* c) {
+        return DbgScp_Get(cmd, a, b, c);
+    }
 
-__declspec(dllexport) int Test1_Export(int a, double b, const char* c) {
-    thread_local static int32_t s_hook_id = -1;
-    thread_local static uint32_t s_serial_num = 0;
-    CheckFuncHook(__FUNCTION__, s_hook_id, s_serial_num);
-    int h_ret_val{};
-    auto&& placeHolder = CreateHookWrap(s_hook_id, h_ret_val, a, b, c);
-    if (placeHolder.IsBreak())
-        return h_ret_val;
-    mylog_printf("Test1 a:%d b:%f c:%s\n", a, b, c);
-    return 0;
-}
-__declspec(dllexport) int Test2_Export(int a, double b, const char* c) {
-    auto f = [&]() {
-        mylog_printf("Test2 a:%d b:%f c:%s\n", a, b, c);
-        return 0;
-    };
-    thread_local static int32_t s_hook_id = -1;
-    thread_local static uint32_t s_serial_num = 0;
-    CheckFuncHook(__FUNCTION__, s_hook_id, s_serial_num);
-    bool retry{};
-    int h_ret_val{};
-    do {
-        auto&& placeHolder = CreateHookWrap(retry, s_hook_id, h_ret_val, a, b, c);
-        if (placeHolder.IsBreak()) {
+    __declspec(dllexport) int Test1_Export(int a, double b, const char* c) {
+        thread_local static int32_t s_hook_id = -1;
+        thread_local static uint32_t s_serial_num = 0;
+        CheckFuncHook(__FUNCTION__, s_hook_id, s_serial_num);
+        int h_ret_val{};
+        auto&& placeHolder = CreateHookWrap(s_hook_id, h_ret_val, a, b, c);
+        if (placeHolder.IsBreak())
             return h_ret_val;
-        } else {
+        mylog_printf("Test1 a:%d b:%f c:%s\n", a, b, c);
+        return 0;
+    }
+    __declspec(dllexport) int Test2_Export(int a, double b, const char* c) {
+        auto f = [&]() {
+            mylog_printf("Test2 a:%d b:%f c:%s\n", a, b, c);
+            return 0;
+            };
+        thread_local static int32_t s_hook_id = -1;
+        thread_local static uint32_t s_serial_num = 0;
+        CheckFuncHook(__FUNCTION__, s_hook_id, s_serial_num);
+        bool retry{};
+        int h_ret_val{};
+        do {
+            auto&& placeHolder = CreateHookWrap(retry, s_hook_id, h_ret_val, a, b, c);
+            if (placeHolder.IsBreak()) {
+                return h_ret_val;
+            }
+            else {
+                h_ret_val = f();
+            }
+        }
+        while (false);
+        if (retry) {
             h_ret_val = f();
         }
-    } while (false);
-    if (retry) {
-        h_ret_val = f();
+        return h_ret_val;
     }
-    return h_ret_val;
-}
-__declspec(dllexport) void Test3_Export(int a, double b, const char* c) {
-    static int32_t s_hook_id = -1;
-    static uint32_t s_serial_num = 0;
-    CheckFuncHook(__FUNCTION__, s_hook_id, s_serial_num);
-    auto&& placeHolder = CreateHookWrap(s_hook_id, a, b, c);
-    if (placeHolder.IsBreak())
-        return;
-    mylog_printf("Test3 a:%d b:%f c:%s\n", a, b, c);
-}
-__declspec(dllexport) void Test4_Export(int a, double b, const char* c) {
-    auto f = [&]() { mylog_printf("Test4 a:%d b:%f c:%s\n", a, b, c); };
-    static int32_t s_hook_id = -1;
-    static uint32_t s_serial_num = 0;
-    CheckFuncHook(__FUNCTION__, s_hook_id, s_serial_num);
-    bool retry{};
-    do {
-        auto&& placeHolder = CreateHookWrap(retry, s_hook_id, a, b, c);
-        if (placeHolder.IsBreak()) {
+    __declspec(dllexport) void Test3_Export(int a, double b, const char* c) {
+        static int32_t s_hook_id = -1;
+        static uint32_t s_serial_num = 0;
+        CheckFuncHook(__FUNCTION__, s_hook_id, s_serial_num);
+        auto&& placeHolder = CreateHookWrap(s_hook_id, a, b, c);
+        if (placeHolder.IsBreak())
             return;
-        } else {
+        mylog_printf("Test3 a:%d b:%f c:%s\n", a, b, c);
+    }
+    __declspec(dllexport) void Test4_Export(int a, double b, const char* c) {
+        auto f = [&]() { mylog_printf("Test4 a:%d b:%f c:%s\n", a, b, c); };
+        static int32_t s_hook_id = -1;
+        static uint32_t s_serial_num = 0;
+        CheckFuncHook(__FUNCTION__, s_hook_id, s_serial_num);
+        bool retry{};
+        do {
+            auto&& placeHolder = CreateHookWrap(retry, s_hook_id, a, b, c);
+            if (placeHolder.IsBreak()) {
+                return;
+            }
+            else {
+                f();
+            }
+        }
+        while (false);
+        if (retry) {
             f();
         }
-    } while (false);
-    if (retry) {
-        f();
     }
-}
 
-__declspec(dllexport) int TestMacro1_Export(int a, double b, const char* c) {
-    return TestMacro1(a, b, c);
-}
-__declspec(dllexport) int TestMacro2_Export(int a, double b, const char* c) {
-    return TestMacro2(a, b, c);
-}
-__declspec(dllexport) void TestMacro3_Export(int a, double b, const char* c) {
-    TestMacro3(a, b, c);
-}
-__declspec(dllexport) void TestMacro4_Export(int a, double b, const char* c) {
-    TestMacro4(a, b, c);
-}
+    __declspec(dllexport) int TestMacro1_Export(int a, double b, const char* c) {
+        return TestMacro1(a, b, c);
+    }
+    __declspec(dllexport) int TestMacro2_Export(int a, double b, const char* c) {
+        return TestMacro2(a, b, c);
+    }
+    __declspec(dllexport) void TestMacro3_Export(int a, double b, const char* c) {
+        TestMacro3(a, b, c);
+    }
+    __declspec(dllexport) void TestMacro4_Export(int a, double b, const char* c) {
+        TestMacro4(a, b, c);
+    }
 }
 
 #elif defined(DBGSCP_ON_UNITY)
 
-void LoadDbgScp(const core::string& log_path, const core::string& load_path) {
+void LoadDbgScp(const core::string& log_path, const core::string& load_path)
+{
     for (int i = 0; i < c_max_log_file_num; ++i) {
         if (GetLogFilesRef()[i].empty()) {
             auto&& path = Format("%s/dbgscp_log_%d.txt", log_path.c_str(), i);
@@ -1376,24 +1381,29 @@ void LoadDbgScp(const core::string& log_path, const core::string& load_path) {
     DebugScriptGlobal::Start();
     printf_console("LoadDbgScp: %s %d\n", c_data_file, r ? 1 : 0);
 }
-void PauseDbgScp() {
+void PauseDbgScp()
+{
     DebugScriptGlobal::Pause();
     printf_console("DebugScriptGlobal::Pause\n");
 }
-void ResumeDbgScp() {
+void ResumeDbgScp()
+{
     DebugScriptGlobal::Resume();
     printf_console("DebugScriptGlobal::Resume\n");
 }
-void DbgScp_Set_Extern(int cmd, int a, double b, const char* c) {
+void DbgScp_Set_Extern(int cmd, int a, double b, const char* c)
+{
     DbgScp_Set(cmd, a, b, c);
 }
-int DbgScp_Get_Extern(int cmd, int a, double b, const char* c) {
+int DbgScp_Get_Extern(int cmd, int a, double b, const char* c)
+{
     return DbgScp_Get(cmd, a, b, c);
 }
 
 #elif defined(DBGSCP_ON_UNREAL)
 
-void LoadDbgScp(const FString& log_path, const FString& load_path) {
+void LoadDbgScp(const FString& log_path, const FString& load_path)
+{
     for (int i = 0; i < c_max_log_file_num; ++i) {
         if (GetLogFilesRef()[i].empty()) {
             auto&& path = FPaths::Combine(log_path, FString::Printf(TEXT("dbgscp_log_%d.txt"), i));
@@ -1413,24 +1423,29 @@ void LoadDbgScp(const FString& log_path, const FString& load_path) {
     DebugScriptGlobal::Start();
     UE_LOG(LogTemp, Log, TEXT("LoadDbgScp: %s %d\n"), c_data_file, r ? 1 : 0);
 }
-void PauseDbgScp() {
+void PauseDbgScp()
+{
     DebugScriptGlobal::Pause();
     UE_LOG(LogTemp, Log, TEXT("DebugScriptGlobal::Pause\n"));
 }
-void ResumeDbgScp() {
+void ResumeDbgScp()
+{
     DebugScriptGlobal::Resume();
     UE_LOG(LogTemp, Log, TEXT("DebugScriptGlobal::Resume\n"));
 }
-void DbgScp_Set_Extern(int cmd, int a, double b, const char* c) {
+void DbgScp_Set_Extern(int cmd, int a, double b, const char* c)
+{
     DbgScp_Set(cmd, a, b, c);
 }
-int DbgScp_Get_Extern(int cmd, int a, double b, const char* c) {
+int DbgScp_Get_Extern(int cmd, int a, double b, const char* c)
+{
     return DbgScp_Get(cmd, a, b, c);
 }
 
 #else
 
-void LoadDbgScp(const std::string& log_path, const std::string& load_path) {
+void LoadDbgScp(const std::string& log_path, const std::string& load_path)
+{
     const int c_path_capacity_max = 1025;
     for (int i = 0; i < c_max_log_file_num; ++i) {
         if (GetLogFilesRef()[i].empty()) {
@@ -1446,18 +1461,22 @@ void LoadDbgScp(const std::string& log_path, const std::string& load_path) {
     DebugScriptGlobal::Start();
     mylog_printf("LoadDbgScp: %s %d\n", data_file.c_str(), r ? 1 : 0);
 }
-void PauseDbgScp() {
+void PauseDbgScp()
+{
     DebugScriptGlobal::Pause();
     mylog_printf("DebugScriptGlobal::Pause\n");
 }
-void ResumeDbgScp() {
+void ResumeDbgScp()
+{
     DebugScriptGlobal::Resume();
     mylog_printf("DebugScriptGlobal::Resume\n");
 }
-void DbgScp_Set_Extern(int cmd, int a, double b, const char* c) {
+void DbgScp_Set_Extern(int cmd, int a, double b, const char* c)
+{
     DbgScp_Set(cmd, a, b, c);
 }
-int DbgScp_Get_Extern(int cmd, int a, double b, const char* c) {
+int DbgScp_Get_Extern(int cmd, int a, double b, const char* c)
+{
     return DbgScp_Get(cmd, a, b, c);
 }
 

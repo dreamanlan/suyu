@@ -9,9 +9,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#include "core/core.h"
-
-#define DBGSCP_ON_MYUZU
 
 #include "DbgScpHook.h"
 #include "DebugScriptVM.h"
@@ -1227,110 +1224,7 @@ void CppDbgScp_CallExternApi(int api, int32_t stackBase, DebugScript::IntLocals&
     }
 }
 
-#if defined(DBGSCP_ON_UNITY)
-
-void LoadDbgScp(const core::string& log_path, const core::string& load_path) {
-    for (int i = 0; i < c_max_log_file_num; ++i) {
-        if (GetLogFilesRef()[i].empty()) {
-            auto&& path = Format("%s/dbgscp_log_%d.txt", log_path.c_str(), i);
-            GetLogFilesRef()[i] = path.c_str();
-            printf_console("LoadDbgScp, LogFile: %d %s\n", i, path.c_str());
-        }
-    }
-#if PLATFORM_ANDROID
-    const char* c_data_file = "/data/local/tmp/bytecode.dat";
-#else
-    auto&& dataPath = Format("%s/bytecode.dat", load_path.c_str());
-    const char* c_data_file = dataPath.c_str();
-#endif
-    DebugScriptGlobal::Reset();
-    bool r = DebugScriptGlobal::Load(c_data_file);
-    DebugScriptGlobal::Start();
-    printf_console("LoadDbgScp: %s %d\n", c_data_file, r ? 1 : 0);
-}
-void PauseDbgScp() {
-    DebugScriptGlobal::Pause();
-    printf_console("DebugScriptGlobal::Pause\n");
-}
-void ResumeDbgScp() {
-    DebugScriptGlobal::Resume();
-    printf_console("DebugScriptGlobal::Resume\n");
-}
-void DbgScp_Set_Extern(int cmd, int a, double b, const char* c) {
-    DbgScp_Set(cmd, a, b, c);
-}
-int DbgScp_Get_Extern(int cmd, int a, double b, const char* c) {
-    return DbgScp_Get(cmd, a, b, c);
-}
-
-#elif defined(DBGSCP_ON_UNREAL)
-
-void LoadDbgScp(const FString& log_path, const FString& load_path) {
-    for (int i = 0; i < c_max_log_file_num; ++i) {
-        if (GetLogFilesRef()[i].empty()) {
-            auto&& path = FPaths::Combine(log_path, FString::Printf(TEXT("dbgscp_log_%d.txt"), i));
-            GetLogFilesRef()[i] = TCHAR_TO_UTF8(*path);
-            UE_LOG(LogTemp, Log, TEXT("LoadDbgScp, LogFile: %d %s\n"), i, TCHAR_TO_UTF8(*path));
-        }
-    }
-#if PLATFORM_ANDROID
-    const char* c_data_file = "/data/local/tmp/bytecode.dat";
-#else
-    auto&& dataPath = FPaths::Combine(load_path, TEXT("bytecode.dat"));
-    FTCHARToUTF8 Converter(*dataPath);
-    const char* c_data_file = Converter.Get();
-#endif
-    DebugScriptGlobal::Reset();
-    bool r = DebugScriptGlobal::Load(c_data_file);
-    DebugScriptGlobal::Start();
-    UE_LOG(LogTemp, Log, TEXT("LoadDbgScp: %s %d\n"), c_data_file, r ? 1 : 0);
-}
-void PauseDbgScp() {
-    DebugScriptGlobal::Pause();
-    UE_LOG(LogTemp, Log, TEXT("DebugScriptGlobal::Pause\n"));
-}
-void ResumeDbgScp() {
-    DebugScriptGlobal::Resume();
-    UE_LOG(LogTemp, Log, TEXT("DebugScriptGlobal::Resume\n"));
-}
-void DbgScp_Set_Extern(int cmd, int a, double b, const char* c) {
-    DbgScp_Set(cmd, a, b, c);
-}
-int DbgScp_Get_Extern(int cmd, int a, double b, const char* c) {
-    return DbgScp_Get(cmd, a, b, c);
-}
-
-#elif defined(DBGSCP_ON_MYUZU)
-
-void LoadDbgScp(const std::string& log_path, const std::string& load_path) {
-    for (int i = 0; i < c_max_log_file_num; ++i) {
-        if (GetLogFilesRef()[i].empty()) {
-            auto&& path = fmt::format("{}/dbgscp_log_{}.txt", log_path.c_str(), i);
-            GetLogFilesRef()[i] = path.c_str();
-        }
-    }
-    std::string data_file = load_path + "/bytecode.dat";
-    DebugScriptGlobal::Reset();
-    bool r = DebugScriptGlobal::Load(data_file.c_str());
-    DebugScriptGlobal::Start();
-    mylog_printf("LoadDbgScp: %s %d\n", data_file.c_str(), r ? 1 : 0);
-}
-void PauseDbgScp() {
-    DebugScriptGlobal::Pause();
-    mylog_printf("DebugScriptGlobal::Pause\n");
-}
-void ResumeDbgScp() {
-    DebugScriptGlobal::Resume();
-    mylog_printf("DebugScriptGlobal::Resume\n");
-}
-void DbgScp_Set_Extern(int cmd, int a, double b, const char* c) {
-    DbgScp_Set(cmd, a, b, c);
-}
-int DbgScp_Get_Extern(int cmd, int a, double b, const char* c) {
-    return DbgScp_Get(cmd, a, b, c);
-}
-
-#else
+#if defined(DBGSCP_COMPILER_TEST)
 
 extern "C" {
 __declspec(dllexport) void CppDbgScp_ResetVM() {
@@ -1459,6 +1353,112 @@ __declspec(dllexport) void TestMacro3_Export(int a, double b, const char* c) {
 __declspec(dllexport) void TestMacro4_Export(int a, double b, const char* c) {
     TestMacro4(a, b, c);
 }
+}
+
+#elif defined(DBGSCP_ON_UNITY)
+
+void LoadDbgScp(const core::string& log_path, const core::string& load_path) {
+    for (int i = 0; i < c_max_log_file_num; ++i) {
+        if (GetLogFilesRef()[i].empty()) {
+            auto&& path = Format("%s/dbgscp_log_%d.txt", log_path.c_str(), i);
+            GetLogFilesRef()[i] = path.c_str();
+            printf_console("LoadDbgScp, LogFile: %d %s\n", i, path.c_str());
+        }
+    }
+#if PLATFORM_ANDROID
+    const char* c_data_file = "/data/local/tmp/bytecode.dat";
+#else
+    auto&& dataPath = Format("%s/bytecode.dat", load_path.c_str());
+    const char* c_data_file = dataPath.c_str();
+#endif
+    DebugScriptGlobal::Reset();
+    bool r = DebugScriptGlobal::Load(c_data_file);
+    DebugScriptGlobal::Start();
+    printf_console("LoadDbgScp: %s %d\n", c_data_file, r ? 1 : 0);
+}
+void PauseDbgScp() {
+    DebugScriptGlobal::Pause();
+    printf_console("DebugScriptGlobal::Pause\n");
+}
+void ResumeDbgScp() {
+    DebugScriptGlobal::Resume();
+    printf_console("DebugScriptGlobal::Resume\n");
+}
+void DbgScp_Set_Extern(int cmd, int a, double b, const char* c) {
+    DbgScp_Set(cmd, a, b, c);
+}
+int DbgScp_Get_Extern(int cmd, int a, double b, const char* c) {
+    return DbgScp_Get(cmd, a, b, c);
+}
+
+#elif defined(DBGSCP_ON_UNREAL)
+
+void LoadDbgScp(const FString& log_path, const FString& load_path) {
+    for (int i = 0; i < c_max_log_file_num; ++i) {
+        if (GetLogFilesRef()[i].empty()) {
+            auto&& path = FPaths::Combine(log_path, FString::Printf(TEXT("dbgscp_log_%d.txt"), i));
+            GetLogFilesRef()[i] = TCHAR_TO_UTF8(*path);
+            UE_LOG(LogTemp, Log, TEXT("LoadDbgScp, LogFile: %d %s\n"), i, TCHAR_TO_UTF8(*path));
+        }
+    }
+#if PLATFORM_ANDROID
+    const char* c_data_file = "/data/local/tmp/bytecode.dat";
+#else
+    auto&& dataPath = FPaths::Combine(load_path, TEXT("bytecode.dat"));
+    FTCHARToUTF8 Converter(*dataPath);
+    const char* c_data_file = Converter.Get();
+#endif
+    DebugScriptGlobal::Reset();
+    bool r = DebugScriptGlobal::Load(c_data_file);
+    DebugScriptGlobal::Start();
+    UE_LOG(LogTemp, Log, TEXT("LoadDbgScp: %s %d\n"), c_data_file, r ? 1 : 0);
+}
+void PauseDbgScp() {
+    DebugScriptGlobal::Pause();
+    UE_LOG(LogTemp, Log, TEXT("DebugScriptGlobal::Pause\n"));
+}
+void ResumeDbgScp() {
+    DebugScriptGlobal::Resume();
+    UE_LOG(LogTemp, Log, TEXT("DebugScriptGlobal::Resume\n"));
+}
+void DbgScp_Set_Extern(int cmd, int a, double b, const char* c) {
+    DbgScp_Set(cmd, a, b, c);
+}
+int DbgScp_Get_Extern(int cmd, int a, double b, const char* c) {
+    return DbgScp_Get(cmd, a, b, c);
+}
+
+#else
+
+void LoadDbgScp(const std::string& log_path, const std::string& load_path) {
+    const int c_path_capacity_max = 1025;
+    for (int i = 0; i < c_max_log_file_num; ++i) {
+        if (GetLogFilesRef()[i].empty()) {
+            char strBuf[c_path_capacity_max];
+            int len = snprintf(strBuf, c_path_capacity_max, "%s/dbgscp_log_%d.txt", log_path.c_str(), i);
+            strBuf[len] = 0;
+            GetLogFilesRef()[i] = strBuf;
+        }
+    }
+    std::string data_file = load_path + "/bytecode.dat";
+    DebugScriptGlobal::Reset();
+    bool r = DebugScriptGlobal::Load(data_file.c_str());
+    DebugScriptGlobal::Start();
+    mylog_printf("LoadDbgScp: %s %d\n", data_file.c_str(), r ? 1 : 0);
+}
+void PauseDbgScp() {
+    DebugScriptGlobal::Pause();
+    mylog_printf("DebugScriptGlobal::Pause\n");
+}
+void ResumeDbgScp() {
+    DebugScriptGlobal::Resume();
+    mylog_printf("DebugScriptGlobal::Resume\n");
+}
+void DbgScp_Set_Extern(int cmd, int a, double b, const char* c) {
+    DbgScp_Set(cmd, a, b, c);
+}
+int DbgScp_Get_Extern(int cmd, int a, double b, const char* c) {
+    return DbgScp_Get(cmd, a, b, c);
 }
 
 #endif

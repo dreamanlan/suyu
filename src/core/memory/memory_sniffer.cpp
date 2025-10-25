@@ -13,8 +13,6 @@
 #include "core/core.h"
 #include "core/memory.h"
 #include "core/memory/memory_sniffer.h"
-
-#define DBGSCP_ON_MYUZU
 #include "core/memory/debug_script/DebugScriptEntry.h"
 
 namespace Core::Memory {

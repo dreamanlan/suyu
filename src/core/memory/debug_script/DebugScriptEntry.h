@@ -19,7 +19,7 @@ extern void LoadDbgScp(const core::string& log_path, const core::string& load_pa
 #endif
 extern void LoadDbgScp(const FString& log_path, const FString& load_path);
 
-#elif defined(DBGSCP_ON_MYUZU)
+#else
 
 extern void LoadDbgScp(const std::string& log_path, const std::string& load_path);
 

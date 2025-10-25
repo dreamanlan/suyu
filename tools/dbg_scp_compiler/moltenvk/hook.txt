@@ -185,6 +185,16 @@ hook(DbgScp_Get)
 
 //======extern code end======
 
+/*
+struct WatchPointCommandInfo {
+    short cmd;  // 0--nothing 1--add 2--remove
+    short flag; // 0--nothing 1--read 2--write 3--readwrite
+    int size;
+    int64_t addr;
+    int64_t tid;
+};
+*/
+
 hook("dbgscpHookOnInitBitArray")
 {
 	onenter{
@@ -193,7 +203,13 @@ hook("dbgscpHookOnInitBitArray")
 		$size:int = ptrget(argv(2),8);
 		$capacity:int = ptrget(argv(3),8);
 
-		printf("dbgscpHookOnInitBitArray this:%llx data:%llx size:%lld capacity:%llx\n",$this,$data,$size,$capacity);
+		printf("dbgscpHookOnInitBitArray this:%llx data:%llx size:%lld capacity:%llx tid:%d\n",$this,$data,$size,$capacity,GetTID());
+
+		if (($this & 0xfff) == 0xcb0) {
+			dumpstack("#onInit");
+			SetWatchPoint(1,2,8,$this,GetTID());
+			assert(0);
+		};
 	};
 };
 hook("dbgscpHookOnFinalizeBitArray")
@@ -202,6 +218,11 @@ hook("dbgscpHookOnFinalizeBitArray")
 		$this:int = ptrget(argv(0),8);
 
 		printf("dbgscpHookOnFinalizeBitArray this:%llx\n",$this);
+
+		if (($this & 0xfff) == 0xcb0) {
+			SetWatchPoint(2,2,8,$this,GetTID());
+			assert(0);
+		};
 	};
 };
 hook("dbgscpHookOnChangeBitArray")
@@ -214,6 +235,10 @@ hook("dbgscpHookOnChangeBitArray")
 		$tag:int = ptrget(argv(4),4);
 		$func:string = ptrget(argv(5),8);
 
-		printf("dbgscpHookOnChangeBitArray this:%llx data:%llx size:%lld capacity:%llx tag:%d func:%s\n",$this,$data,$size,$capacity,$tag,$func);
+		printf("dbgscpHookOnChangeBitArray this:%llx data:%llx size:%lld capacity:%llx tag:%d func:%s tid:%d\n",$this,$data,$size,$capacity,$tag,$func,GetTID());
+
+		if (($this & 0xffff) == 0xdcb0) {
+			dumpstack("#onChange");
+		};
 	};
 };

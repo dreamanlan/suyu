@@ -13,6 +13,8 @@
 #include "DbgScpHook.h"
 #include "DebugScriptVM.h"
 
+#define DBGSCP_ON_MYUZU
+
 #if defined(DBGSCP_ON_UNREAL)
 
 #include "CoreMinimal.h"
@@ -30,6 +32,9 @@
 #include <unistd.h>
 #include <dlfcn.h>
 #elif defined(__APPLE__)
+#include <mach/mach.h>
+#include <mach/thread_info.h>
+#include <mach/mach_init.h>
 #include <pthread.h>
 #include <sys/mman.h>
 #include <sys/types.h>
@@ -271,7 +276,32 @@ static inline int64_t GetThreadId() {
 #elif defined(__ANDROID__)
     return static_cast<int64_t>(gettid());
 #elif defined(__APPLE__)
-    return reinterpret_cast<int64_t>(pthread_self());
+    //thread_t mach_tid = mach_thread_self(); // returns a send right (thread_t)
+    //int64_t tid = static_cast<int64_t>(mach_tid);
+    //mach_port_deallocate(mach_task_self(), mach_tid);
+    //return tid;
+
+    //pthread_t pt = pthread_self();
+    //return static_cast<int64_t>(pthread_mach_thread_np(pt));
+
+    /*
+    thread_t mach_tid = mach_thread_self();
+    thread_identifier_info_data_t tidinfo;
+    mach_msg_type_number_t count = THREAD_IDENTIFIER_INFO_COUNT;
+    kern_return_t kr = thread_info(mach_tid, THREAD_IDENTIFIER_INFO,
+                                   reinterpret_cast<thread_info_t>(&tidinfo), &count);
+    uint64_t ti_thread_handle = 0, ti_thread_id = 0;
+    if (kr == KERN_SUCCESS) {
+        ti_thread_handle = tidinfo.thread_handle;
+        ti_thread_id = tidinfo.thread_id;
+    }
+    mach_port_deallocate(mach_task_self(), mach_tid);
+    return static_cast<int64_t>(ti_thread_id);
+    */
+
+    uint64_t pthread_uid = 0;
+    pthread_threadid_np(NULL, &pthread_uid);
+    return static_cast<int64_t>(pthread_uid);
 #else
     return 0;
 #endif

@@ -227,9 +227,3 @@ hook("dbgscpHookOnChangeBitArray")
 		//printf("dbgscpHookOnChangeBitArray this:%llx data:%llx size:%lld capacity:%llx tag:%d func:%s tid:%d\n",$this,$data,$size,$capacity,$tag,$func,GetTID());
 	};
 };
-hook("dbgscpHookOnSamplerIndexExceed")
-{
-	onenter{
-		assert(0);
-	};
-};

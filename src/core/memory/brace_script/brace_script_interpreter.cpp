@@ -13,8 +13,6 @@
 #include "ScriptableDslHelper.h"
 #include "brace_object.h"
 #include "math_api.h"
-
-#define DBGSCP_ON_MYUZU
 #include "core/memory/debug_script/DebugScriptEntry.h"
 
 namespace BraceScriptInterpreter {
@@ -2133,7 +2131,7 @@ protected:
             else
                 ss << str;
         }
-        LogInfo(ss.str());
+        LogWarn(ss.str());
     }
 };
 

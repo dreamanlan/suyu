@@ -237,7 +237,7 @@ hook("dbgscpHookOnChangeBitArray")
 
 		printf("dbgscpHookOnChangeBitArray this:%llx data:%llx size:%lld capacity:%llx tag:%d func:%s tid:%d\n",$this,$data,$size,$capacity,$tag,$func,GetTID());
 
-		if (($this & 0xffff) == 0xdcb0) {
+		if (($this & 0xfff) == 0xcb0) {
 			dumpstack("#onChange");
 		};
 	};

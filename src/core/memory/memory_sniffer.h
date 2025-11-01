@@ -13,6 +13,8 @@
 #include "common/common_types.h"
 #include "common/typed_address.h"
 
+extern void dbgscpHookOnFastmemCallback(bool& retry, u64 fcAddr, u64 thisAddr, u64& host_pc, int failType);
+
 namespace Kernel {
 class KProcess;
 }

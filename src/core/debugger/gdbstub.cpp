@@ -25,6 +25,7 @@
 #include "core/hle/kernel/k_thread.h"
 #include "core/loader/loader.h"
 #include "core/memory.h"
+#include "core/memory/debug_script/DbgScpHook.h"
 
 namespace Core {
 
@@ -129,6 +130,11 @@ void GDBStub::Stopped(Kernel::KThread* thread) {
 
 void GDBStub::Watchpoint(Kernel::KThread* thread, const Kernel::DebugWatchpoint& watch) {
     const auto status{arch->ThreadStatus(thread, GDB_STUB_SIGTRAP)};
+
+    const char* statusStr = status.c_str();
+    int type = static_cast<int>(watch.type);
+    u64 addr = GetInteger(watch.start_address);
+    DBGSCP_HOOK_VOID("GDBStub::Watchpoint", statusStr, type, addr);
 
     switch (watch.type) {
     case Kernel::DebugWatchpointType::Read:

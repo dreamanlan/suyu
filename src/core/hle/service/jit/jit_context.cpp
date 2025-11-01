@@ -14,6 +14,7 @@
 #include "common/elf.h"
 #include "common/logging/log.h"
 #include "core/hle/service/jit/jit_context.h"
+#include "core/memory/memory_sniffer.h"
 #include "core/memory.h"
 
 using namespace Common::ELF;
@@ -152,7 +153,7 @@ public:
             std::make_unique<DynarmicCallbacks64>(memory, local_memory, mapped_ranges, *this);
         user_config.callbacks = callbacks.get();
         jit = std::make_unique<Dynarmic::A64::Jit>(user_config);
-        jit->Initialize(0, 0, 0);
+        jit->Initialize(0, 0, 0, dbgscpHookOnFastmemCallback);
     }
 
     bool LoadNRO(std::span<const u8> data) {

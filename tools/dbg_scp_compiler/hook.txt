@@ -317,6 +317,35 @@ hook("TextureCacheRuntime::CopyImageFailedOnApple")
 	};
 };
 
+hook("GDBStub::Watchpoint")
+{
+	onenter{
+		$status:string = ptrget(argv(0),8);
+		$type:int = ptrget(argv(1),4);
+		$addr:int = ptrget(argv(2),8);
+
+		printf("GDBStub::Watchpoint status:%s type:%d addr:%llx", $status, $type, $addr);
+		assert(0);
+	};
+};
+hook("dbgscpHookOnFastmemCallback")
+{
+	onenter{
+		//$retry:int = ptrget(argv(0),1);
+		$fcAddr:int = ptrget(argv(1),8);
+		$thisAddr:int = ptrget(argv(2),8);
+		$hostPC:int = ptrget(argv(3),8);
+		$failType:int = ptrget(argv(4),4);
+		
+		if ($failType > 0) {
+			printf("dbgscpHookOnFastmemCallback fastcall addr:%llx this:%llx host pc:%llx fail type:%d", $fcAddr, $thisAddr, $hostPC, $failType);
+			dumpstack("dbgscpHookOnFastmemCallback");
+			ptrset(argv(0),1,1);
+			assert(0);
+		};
+	};
+};
+
 hook("ServiceContext::CreateEvent")
 {
 	onenter{

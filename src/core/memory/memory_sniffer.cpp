@@ -14,6 +14,12 @@
 #include "core/memory.h"
 #include "core/memory/memory_sniffer.h"
 #include "core/memory/debug_script/DebugScriptEntry.h"
+#include "core/memory/debug_script/DbgScpHook.h"
+
+void dbgscpHookOnFastmemCallback(bool& retry, u64 fcAddr, u64 thisAddr, u64& host_pc, int failType)
+{
+    DBGSCP_HOOK_VOID("dbgscpHookOnFastmemCallback", retry, fcAddr, thisAddr, host_pc, failType);
+}
 
 namespace Core::Memory {
 

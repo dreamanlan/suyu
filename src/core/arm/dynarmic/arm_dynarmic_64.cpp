@@ -374,7 +374,7 @@ void ArmDynarmic64::InitJitOnceOnlyAfterJitCtor(u64 traceScopeBegin, u64 traceSc
     if (!Settings::values.cpuopt_block_linking || !Settings::values.cpuopt_return_stack_buffer) {
         halt_reason_on_run = static_cast<u32>(PcCount);
     }
-    m_jit->Initialize(halt_reason_on_run, traceScopeBegin, traceScopeEnd);
+    m_jit->Initialize(halt_reason_on_run, traceScopeBegin, traceScopeEnd, dbgscpHookOnFastmemCallback);
 }
 
 HaltReason ArmDynarmic64::RunThread(Kernel::KThread* thread) {

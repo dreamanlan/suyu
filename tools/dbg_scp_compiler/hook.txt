@@ -317,6 +317,23 @@ hook("TextureCacheRuntime::CopyImageFailedOnApple")
 	};
 };
 
+hook("ArmInterface::MatchingWatchpoint")
+{
+	onenter{
+		//$ret:int = ptrget(argv(0),8);
+		$addr:int = ptrget(argv(1),8);
+		$size:int = ptrget(argv(2),8);
+		$sp:int = ptrget(argv(3),8);
+		$pc:int = ptrget(argv(4),8);
+		$type:int = ptrget(argv(5),4);
+		$saddr:int = ptrget(argv(6),8);
+		$eaddr:int = ptrget(argv(7),8);
+
+		printf("ArmInterface::MatchingWatchpoint addr:0x%llx size:0x%llx sp:0x%llx pc:0x%llx type:%d saddr:0x%llx eaddr:0x%llx", $addr, $size, $sp, $pc, $type, $saddr, $eaddr);
+		//dumpstack("ArmInterface::MatchingWatchpoint");
+		//assert(0);
+	};
+};
 hook("GDBStub::Watchpoint")
 {
 	onenter{
@@ -325,7 +342,7 @@ hook("GDBStub::Watchpoint")
 		$addr:int = ptrget(argv(2),8);
 
 		printf("GDBStub::Watchpoint status:%s type:%d addr:%llx", $status, $type, $addr);
-		assert(0);
+		//assert(0);
 	};
 };
 hook("dbgscpHookOnFastmemCallback")

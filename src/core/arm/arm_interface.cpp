@@ -6,6 +6,7 @@
 #include "core/arm/debug.h"
 #include "core/core.h"
 #include "core/hle/kernel/k_process.h"
+#include "core/memory/debug_script/DbgScpHook.h"
 
 namespace Core {
 
@@ -46,6 +47,15 @@ const Kernel::DebugWatchpoint* ArmInterface::MatchingWatchpoint(
             continue;
         }
 
+        Kernel::Svc::ThreadContext ctx;
+        this->GetContext(ctx);
+
+        u64 sp = ctx.sp;
+        u64 pc = ctx.pc;
+        int type = static_cast<int>(watch.type);
+        u64 saddr = GetInteger(watch.start_address);
+        u64 eaddr = GetInteger(watch.end_address);
+        DBGSCP_HOOK("ArmInterface::MatchingWatchpoint", const Kernel::DebugWatchpoint*, addr, size, sp, pc, type, saddr, eaddr);
         return &watch;
     }
 

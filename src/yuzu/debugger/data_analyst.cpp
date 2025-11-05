@@ -1220,7 +1220,7 @@ void DataAnalystWidget::SetSniffingScope(const std::string& sectionId) {
             std::stringstream ss;
             if (name == sectionId || id == sectionId) {
                 ss.str("");
-                ss << "0x" << std::hex << base;
+                ss << "0x" << std::hex << addr;
                 startAddrEdit->setText(tr(ss.str().c_str()));
 
                 ss.str("");

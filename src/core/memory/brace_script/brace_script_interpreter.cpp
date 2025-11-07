@@ -307,6 +307,7 @@ private:
 
         DslParser::DslFile parsedFile(*m_pBuffer);
         ScriptableDslHelper::ForBraceScript().SetCallbacks(parsedFile);
+        parsedFile.SetStringDelimiter("[[", "]]");
         parsedFile.Parse(scp.c_str());
         if (parsedFile.HasError()) {
             for (int i = 0; i < parsedFile.GetErrorNum(); ++i) {

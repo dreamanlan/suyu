@@ -449,6 +449,27 @@ private:
         }
         return ret;
     }
+    bool RunCallbackImpl(std::string&& msg) {
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4455)
+#endif
+        using std::operator""sv;
+        constexpr auto delim{" "sv};
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+        std::string msgId, msgStr;
+        SplitCmd(msg, msgId, msgStr);
+
+        MessageArgs args;
+        std::string_view strView{msgStr};
+        auto&& words = std::views::split(strView, delim);
+        for (auto&& word : words) {
+            args.push_back(std::string(word.begin(), word.end()));
+        }
+        return RunCallbackImpl(std::move(msgId), std::move(args));
+    }
 
 private:
     BraceScriptManager()
@@ -643,6 +664,13 @@ public:
         bool ret = false;
         if (nullptr != g_pBraceScriptManager) {
             ret = g_pBraceScriptManager->RunCallbackImpl(std::move(msg), std::move(args));
+        }
+        return ret;
+    }
+    static bool RunCallback(std::string&& msg) {
+        bool ret = false;
+        if (nullptr != g_pBraceScriptManager) {
+            ret = g_pBraceScriptManager->RunCallbackImpl(std::move(msg));
         }
         return ret;
     }
@@ -856,7 +884,7 @@ protected:
         if (hasError) {
             // error
             std::stringstream ss;
-            ss << "expected oncallback(msg)args($a:int,$b:int,...){...};" << funcData.GetId()
+            ss << "expected oncallback(msg)params($a:int,$b:int,...){...};" << funcData.GetId()
                << " line " << funcData.GetLine();
             LogError(ss.str());
         }
@@ -967,7 +995,7 @@ protected:
         if (hasError) {
             // error
             std::stringstream ss;
-            ss << "expected onmessage(msg[, pool_num])args($a:int,$b:int,...){...};"
+            ss << "expected onmessage(msg[, pool_num])params($a:int,$b:int,...){...};"
                << funcData.GetId() << " line " << funcData.GetLine();
             LogError(ss.str());
         }
@@ -1045,9 +1073,11 @@ protected:
         for (auto&& argInfo : argInfos) {
             const std::string& str =
                 (argInfo.IsGlobal ? gvars : lvars).StringVars[argInfo.VarIndex];
-            std::string cmd, arg;
-            SplitCmd(str, cmd, arg);
-            g_pApiProvider->ExecCommand(std::move(cmd), std::move(arg));
+            //std::string cmd, arg;
+            //SplitCmd(str, cmd, arg);
+            //g_pApiProvider->ExecCommand(std::move(cmd), std::move(arg));
+            std::string cmd_str = str;
+            Exec(std::move(cmd_str));
         }
     }
 };
@@ -11191,11 +11221,11 @@ inline void BraceScriptManager::InitBraceScript(Brace::BraceScript*& pBraceScrip
     /// register api
     if (isCallback) {
         pBraceScript->RegisterApi("oncallback",
-                                  "oncallback(msg)args($a:int,$b:int,...){...}; statement",
-                                  new Brace::BraceApiFactory<MessageHandlerExp>());
+                                  "oncallback(msg)params($a:int,$b:int,...){...}; statement",
+                                  new Brace::BraceApiFactory<CallbackHandlerExp>());
     } else {
         pBraceScript->RegisterApi(
-            "onmessage", "onmessage(msg[,pool_num])args($a:int,$b:int,...){...}; statement",
+            "onmessage", "onmessage(msg[,pool_num])params($a:int,$b:int,...){...}; statement",
             new Brace::BraceApiFactory<MessageHandlerExp>());
         pBraceScript->RegisterApi("clearmessages", "clearmessages() api",
                                   new Brace::BraceApiFactory<ClearMessagesExp>());
@@ -11962,6 +11992,9 @@ bool Exec(std::string&& cmdStr) {
             BraceScriptManager::LoadCallback(std::move(txt));
         }
         return true;
+    } else if (cmd == "callback") {
+        Prepare();
+        BraceScriptManager::RunCallback(std::move(arg));
     } else {
         bool handled = false;
         if (nullptr != g_pApiProvider) {
@@ -11986,9 +12019,10 @@ void Tick() {
     if (BraceScriptManager::ExistsCommands()) {
         std::string cmdStr{};
         if (BraceScriptManager::TryPopCommand(cmdStr)) {
-            std::string cmd, arg;
-            SplitCmd(cmdStr, cmd, arg);
-            g_pApiProvider->ExecCommand(std::move(cmd), std::move(arg));
+            //std::string cmd, arg;
+            //SplitCmd(cmdStr, cmd, arg);
+            //g_pApiProvider->ExecCommand(std::move(cmd), std::move(arg));
+            Exec(std::move(cmdStr));
         }
     }
     BraceScriptManager::Go();

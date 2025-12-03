@@ -11221,11 +11221,11 @@ inline void BraceScriptManager::InitBraceScript(Brace::BraceScript*& pBraceScrip
     /// register api
     if (isCallback) {
         pBraceScript->RegisterApi("oncallback",
-                                  "oncallback(msg)params($a:int,$b:int,...){...}; statement",
+                                  "oncallback(msg)params($a:int,$b:int,...){...}; statement are executed immediately in the separate script",
                                   new Brace::BraceApiFactory<CallbackHandlerExp>());
     } else {
         pBraceScript->RegisterApi(
-            "onmessage", "onmessage(msg[,pool_num])params($a:int,$b:int,...){...}; statement",
+            "onmessage", "onmessage(msg[,pool_num])params($a:int,$b:int,...){...}; statement are executed within a coroutine of the same script (wait must be called periodically)",
             new Brace::BraceApiFactory<MessageHandlerExp>());
         pBraceScript->RegisterApi("clearmessages", "clearmessages() api",
                                   new Brace::BraceApiFactory<ClearMessagesExp>());

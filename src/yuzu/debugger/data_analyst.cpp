@@ -132,18 +132,37 @@ namespace Core {
             });
         }
     }
+    std::vector<int64_t>* ReadThreadRegisters(const Kernel::KThread* pThread) {
+        auto&& ctx = pThread->GetContext();
+        auto* pRegs = new std::vector<int64_t>();
+        auto&& regs = *pRegs;
+        for (auto&& r : ctx.r) {
+            regs.push_back(r);
+        }
+        regs.push_back(ctx.fp);
+        regs.push_back(ctx.lr);
+        regs.push_back(ctx.sp);
+        regs.push_back(ctx.pc);
+        u64 pstate = ctx.pstate;
+        u64 padding = ctx.padding;
+        uint64_t pstate_and_padding = pstate | (padding << 32);
+        regs.push_back(pstate_and_padding);
+        for (auto&& v : ctx.v) {
+            u64 lv = v[0];
+            u64 hv = v[1];
+            regs.push_back(lv);
+            regs.push_back(hv);
+        }
+        u64 fpcr = ctx.fpcr;
+        u64 fpsr = ctx.fpsr;
+        uint64_t fpcr_and_fpsr = fpcr | (fpsr << 32);
+        regs.push_back(fpcr_and_fpsr);
+        regs.push_back(ctx.tpidr);
+        return pRegs;
+    }
     void MainThreadCaller::RequestSyncCallback(const Kernel::KThread* pThread) {
         if (impl) {
-            auto&& ctx = pThread->GetContext();
-            auto* pRegs = new std::vector<int64_t>();
-            auto&& regs = *pRegs;
-            for (auto&& r : ctx.r) {
-                regs.push_back(r);
-            }
-            regs.push_back(ctx.fp);
-            regs.push_back(ctx.lr);
-            regs.push_back(ctx.sp);
-            regs.push_back(ctx.pc);
+            auto* pRegs = ReadThreadRegisters(pThread);
             u64 fence = impl->RequestSyncOperation([pThread, pRegs]() {
                 uint64_t pthread = reinterpret_cast<uint64_t>(pThread);
                 BraceScriptInterpreter::MessageArgs args;
@@ -156,16 +175,7 @@ namespace Core {
     }
     void MainThreadCaller::RequestSyncCallback(int watchType, uint64_t addr, const Kernel::KThread* pThread) {
         if (impl) {
-            auto&& ctx = pThread->GetContext();
-            auto* pRegs = new std::vector<int64_t>();
-            auto&& regs = *pRegs;
-            for (auto&& r : ctx.r) {
-                regs.push_back(r);
-            }
-            regs.push_back(ctx.fp);
-            regs.push_back(ctx.lr);
-            regs.push_back(ctx.sp);
-            regs.push_back(ctx.pc);
+            auto* pRegs = ReadThreadRegisters(pThread);
             u64 fence = impl->RequestSyncOperation([watchType, addr, pThread, pRegs]() {
                 uint64_t pthread = reinterpret_cast<uint64_t>(pThread);
                 BraceScriptInterpreter::MessageArgs args;
@@ -180,16 +190,7 @@ namespace Core {
     }
     void MainThreadCaller::RequestSyncCallback(int watchType, uint64_t addr, std::size_t size, const Kernel::KThread* pThread) {
         if (impl) {
-            auto&& ctx = pThread->GetContext();
-            auto* pRegs = new std::vector<int64_t>();
-            auto&& regs = *pRegs;
-            for (auto&& r : ctx.r) {
-                regs.push_back(r);
-            }
-            regs.push_back(ctx.fp);
-            regs.push_back(ctx.lr);
-            regs.push_back(ctx.sp);
-            regs.push_back(ctx.pc);
+            auto* pRegs = ReadThreadRegisters(pThread);
             u64 fence = impl->RequestSyncOperation([watchType, addr, size, pThread, pRegs]() {
                 uint64_t pthread = reinterpret_cast<uint64_t>(pThread);
                 BraceScriptInterpreter::MessageArgs args;

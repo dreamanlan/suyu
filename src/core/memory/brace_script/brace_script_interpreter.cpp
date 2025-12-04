@@ -485,7 +485,7 @@ private:
             }
         }
         auto* pRegs = new std::vector<int64_t>();
-        for (int ix = 0; ix <= 32; ++ix) {
+        for (int ix = 0; ix < 100; ++ix) {
             pRegs->push_back(0);
         }
         args.push_back(std::shared_ptr<void>(pRegs));
@@ -1308,6 +1308,289 @@ protected:
     }
 private:
     int m_Type;
+};
+class FtoiExp final : public Brace::SimpleBraceApiBase {
+public:
+    FtoiExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        if (argInfos.size() == 1) {
+            auto& argInfo = argInfos[0];
+            if (argInfo.Type >= Brace::BRACE_DATA_TYPE_INT8 && argInfo.Type <= Brace::BRACE_DATA_TYPE_DOUBLE) {
+                resultInfo.Type = Brace::BRACE_DATA_TYPE_INT32;
+                resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+                resultInfo.Name = GenTempVarName();
+                resultInfo.VarIndex =
+                    AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+                return true;
+            }
+        }
+        std::stringstream ss;
+        ss << "expected ftoi(float) ! line: " << data.GetLine();
+        LogError(ss.str());
+        return false;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        auto& argInfo = argInfos[0];
+        double v =
+            Brace::VarGetF64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex);
+        float fv = static_cast<float>(v);
+        int iv = *reinterpret_cast<int*>(&fv);
+        Brace::VarSetInt32((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, iv);
+    }
+};
+class ItofExp final : public Brace::SimpleBraceApiBase {
+public:
+    ItofExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        if (argInfos.size() == 1) {
+            auto& argInfo = argInfos[0];
+            if (argInfo.Type >= Brace::BRACE_DATA_TYPE_INT8 &&
+                argInfo.Type <= Brace::BRACE_DATA_TYPE_DOUBLE) {
+                resultInfo.Type = Brace::BRACE_DATA_TYPE_FLOAT;
+                resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+                resultInfo.Name = GenTempVarName();
+                resultInfo.VarIndex =
+                    AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+                return true;
+            }
+        }
+        std::stringstream ss;
+        ss << "expected itof(int32) ! line: " << data.GetLine();
+        LogError(ss.str());
+        return false;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        auto& argInfo = argInfos[0];
+        int64_t v =
+            Brace::VarGetI64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex);
+        int iv = static_cast<int>(v);
+        float fv = *reinterpret_cast<float*>(&iv);
+        Brace::VarSetFloat((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, fv);
+    }
+};
+class FtouExp final : public Brace::SimpleBraceApiBase {
+public:
+    FtouExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        if (argInfos.size() == 1) {
+            auto& argInfo = argInfos[0];
+            if (argInfo.Type >= Brace::BRACE_DATA_TYPE_INT8 &&
+                argInfo.Type <= Brace::BRACE_DATA_TYPE_DOUBLE) {
+                resultInfo.Type = Brace::BRACE_DATA_TYPE_UINT32;
+                resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+                resultInfo.Name = GenTempVarName();
+                resultInfo.VarIndex =
+                    AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+                return true;
+            }
+        }
+        std::stringstream ss;
+        ss << "expected ftou(float) ! line: " << data.GetLine();
+        LogError(ss.str());
+        return false;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        auto& argInfo = argInfos[0];
+        double v =
+            Brace::VarGetF64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex);
+        float fv = static_cast<float>(v);
+        uint32_t uv = *reinterpret_cast<uint32_t*>(&fv);
+        Brace::VarSetUInt32((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, uv);
+    }
+};
+class UtofExp final : public Brace::SimpleBraceApiBase {
+public:
+    UtofExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        if (argInfos.size() == 1) {
+            auto& argInfo = argInfos[0];
+            if (argInfo.Type >= Brace::BRACE_DATA_TYPE_INT8 &&
+                argInfo.Type <= Brace::BRACE_DATA_TYPE_DOUBLE) {
+                resultInfo.Type = Brace::BRACE_DATA_TYPE_FLOAT;
+                resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+                resultInfo.Name = GenTempVarName();
+                resultInfo.VarIndex =
+                    AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+                return true;
+            }
+        }
+        std::stringstream ss;
+        ss << "expected utof(uint32) ! line: " << data.GetLine();
+        LogError(ss.str());
+        return false;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        auto& argInfo = argInfos[0];
+        uint64_t v =
+            Brace::VarGetU64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex);
+        uint32_t uv = static_cast<uint32_t>(v);
+        float fv = *reinterpret_cast<float*>(&uv);
+        Brace::VarSetFloat((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, fv);
+    }
+};
+class DtolExp final : public Brace::SimpleBraceApiBase {
+public:
+    DtolExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        if (argInfos.size() == 1) {
+            auto& argInfo = argInfos[0];
+            if (argInfo.Type >= Brace::BRACE_DATA_TYPE_INT8 &&
+                argInfo.Type <= Brace::BRACE_DATA_TYPE_DOUBLE) {
+                resultInfo.Type = Brace::BRACE_DATA_TYPE_INT64;
+                resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+                resultInfo.Name = GenTempVarName();
+                resultInfo.VarIndex =
+                    AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+                return true;
+            }
+        }
+        std::stringstream ss;
+        ss << "expected dtol(double) ! line: " << data.GetLine();
+        LogError(ss.str());
+        return false;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        auto& argInfo = argInfos[0];
+        double v =
+            Brace::VarGetF64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex);
+        int64_t iv = *reinterpret_cast<int64_t*>(&v);
+        Brace::VarSetInt64((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, iv);
+    }
+};
+class LtodExp final : public Brace::SimpleBraceApiBase {
+public:
+    LtodExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        if (argInfos.size() == 1) {
+            auto& argInfo = argInfos[0];
+            if (argInfo.Type >= Brace::BRACE_DATA_TYPE_INT8 &&
+                argInfo.Type <= Brace::BRACE_DATA_TYPE_DOUBLE) {
+                resultInfo.Type = Brace::BRACE_DATA_TYPE_DOUBLE;
+                resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+                resultInfo.Name = GenTempVarName();
+                resultInfo.VarIndex =
+                    AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+                return true;
+            }
+        }
+        std::stringstream ss;
+        ss << "expected ltod(int64) ! line: " << data.GetLine();
+        LogError(ss.str());
+        return false;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        auto& argInfo = argInfos[0];
+        int64_t v =
+            Brace::VarGetI64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex);
+        double dv = *reinterpret_cast<double*>(&v);
+        Brace::VarSetDouble((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, dv);
+    }
+};
+class DtouExp final : public Brace::SimpleBraceApiBase {
+public:
+    DtouExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        if (argInfos.size() == 1) {
+            auto& argInfo = argInfos[0];
+            if (argInfo.Type >= Brace::BRACE_DATA_TYPE_INT8 &&
+                argInfo.Type <= Brace::BRACE_DATA_TYPE_DOUBLE) {
+                resultInfo.Type = Brace::BRACE_DATA_TYPE_UINT64;
+                resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+                resultInfo.Name = GenTempVarName();
+                resultInfo.VarIndex =
+                    AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+                return true;
+            }
+        }
+        std::stringstream ss;
+        ss << "expected dtou(double) ! line: " << data.GetLine();
+        LogError(ss.str());
+        return false;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        auto& argInfo = argInfos[0];
+        double v =
+            Brace::VarGetF64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex);
+        uint64_t uv = *reinterpret_cast<uint64_t*>(&v);
+        Brace::VarSetUInt64((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, uv);
+    }
+};
+class UtodExp final : public Brace::SimpleBraceApiBase {
+public:
+    UtodExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
+
+protected:
+    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
+                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
+                               Brace::OperandLoadtimeInfo& resultInfo) override {
+        if (argInfos.size() == 1) {
+            auto& argInfo = argInfos[0];
+            if (argInfo.Type >= Brace::BRACE_DATA_TYPE_INT8 &&
+                argInfo.Type <= Brace::BRACE_DATA_TYPE_DOUBLE) {
+                resultInfo.Type = Brace::BRACE_DATA_TYPE_DOUBLE;
+                resultInfo.ObjectTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
+                resultInfo.Name = GenTempVarName();
+                resultInfo.VarIndex =
+                    AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
+                return true;
+            }
+        }
+        std::stringstream ss;
+        ss << "expected utod(uint64) ! line: " << data.GetLine();
+        LogError(ss.str());
+        return false;
+    }
+    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
+                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
+                         const Brace::OperandRuntimeInfo& resultInfo) const override {
+        auto& argInfo = argInfos[0];
+        uint64_t v =
+            Brace::VarGetU64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex);
+        double dv = *reinterpret_cast<double*>(&v);
+        Brace::VarSetDouble((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, dv);
+    }
 };
 class Int2CharExp final : public Brace::SimpleBraceApiBase {
 public:
@@ -11258,6 +11541,14 @@ inline void BraceScriptManager::InitBraceScript(Brace::BraceScript*& pBraceScrip
     pBraceScript->RegisterApi(
         "double", "double(exp) api",
         new Brace::BraceApiFactoryWithArgs<BaseTypeCastExp, int>(Brace::BRACE_DATA_TYPE_DOUBLE));
+    pBraceScript->RegisterApi("itof", "itof(val) api", new Brace::BraceApiFactory<ItofExp>());
+    pBraceScript->RegisterApi("ftoi", "ftoi(val) api", new Brace::BraceApiFactory<FtoiExp>());
+    pBraceScript->RegisterApi("utof", "utof(val) api", new Brace::BraceApiFactory<UtofExp>());
+    pBraceScript->RegisterApi("ftou", "ftou(val) api", new Brace::BraceApiFactory<FtouExp>());
+    pBraceScript->RegisterApi("ltod", "ltod(val) api", new Brace::BraceApiFactory<LtodExp>());
+    pBraceScript->RegisterApi("dtol", "dtol(val) api", new Brace::BraceApiFactory<DtolExp>());
+    pBraceScript->RegisterApi("utod", "utod(val) api", new Brace::BraceApiFactory<UtodExp>());
+    pBraceScript->RegisterApi("dtou", "dtou(val) api", new Brace::BraceApiFactory<DtouExp>());
     pBraceScript->RegisterApi("int2char", "int2char(val) api",
                               new Brace::BraceApiFactory<Int2CharExp>());
     pBraceScript->RegisterApi("char2int", "char2int(str) api",

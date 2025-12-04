@@ -25,6 +25,7 @@
 #include "core/memory/memory_sniffer.h"
 #include "core/memory/brace_script/brace_script_interpreter.h"
 #include "core/hle/service/acc/profile_manager.h"
+#include "core/hle/kernel/k_thread.h"
 #include "core/file_sys/savedata_factory.h"
 #include "video_core/gpu.h"
 #include "video_core/rasterizer_interface.h"
@@ -133,10 +134,21 @@ namespace Core {
     }
     void MainThreadCaller::RequestSyncCallback(const Kernel::KThread* pThread) {
         if (impl) {
-            u64 fence = impl->RequestSyncOperation([pThread]() {
+            auto&& ctx = pThread->GetContext();
+            auto* pRegs = new std::vector<int64_t>();
+            auto&& regs = *pRegs;
+            for (auto&& r : ctx.r) {
+                regs.push_back(r);
+            }
+            regs.push_back(ctx.fp);
+            regs.push_back(ctx.lr);
+            regs.push_back(ctx.sp);
+            regs.push_back(ctx.pc);
+            u64 fence = impl->RequestSyncOperation([pThread, pRegs]() {
                 uint64_t pthread = reinterpret_cast<uint64_t>(pThread);
                 BraceScriptInterpreter::MessageArgs args;
                 args.push_back(pthread);
+                args.push_back(std::shared_ptr<void>(pRegs));
                 BraceScriptInterpreter::RunCallback("breakpoint", std::move(args));
             });
             impl->WaitForSyncOperation(fence);
@@ -144,12 +156,23 @@ namespace Core {
     }
     void MainThreadCaller::RequestSyncCallback(int watchType, uint64_t addr, const Kernel::KThread* pThread) {
         if (impl) {
-            u64 fence = impl->RequestSyncOperation([watchType, addr, pThread]() {
+            auto&& ctx = pThread->GetContext();
+            auto* pRegs = new std::vector<int64_t>();
+            auto&& regs = *pRegs;
+            for (auto&& r : ctx.r) {
+                regs.push_back(r);
+            }
+            regs.push_back(ctx.fp);
+            regs.push_back(ctx.lr);
+            regs.push_back(ctx.sp);
+            regs.push_back(ctx.pc);
+            u64 fence = impl->RequestSyncOperation([watchType, addr, pThread, pRegs]() {
                 uint64_t pthread = reinterpret_cast<uint64_t>(pThread);
                 BraceScriptInterpreter::MessageArgs args;
                 args.push_back(watchType);
                 args.push_back(addr);
                 args.push_back(pthread);
+                args.push_back(std::shared_ptr<void>(pRegs));
                 BraceScriptInterpreter::RunCallback("watchpoint", std::move(args));
             });
             impl->WaitForSyncOperation(fence);
@@ -157,13 +180,24 @@ namespace Core {
     }
     void MainThreadCaller::RequestSyncCallback(int watchType, uint64_t addr, std::size_t size, const Kernel::KThread* pThread) {
         if (impl) {
-            u64 fence = impl->RequestSyncOperation([watchType, addr, size, pThread]() {
+            auto&& ctx = pThread->GetContext();
+            auto* pRegs = new std::vector<int64_t>();
+            auto&& regs = *pRegs;
+            for (auto&& r : ctx.r) {
+                regs.push_back(r);
+            }
+            regs.push_back(ctx.fp);
+            regs.push_back(ctx.lr);
+            regs.push_back(ctx.sp);
+            regs.push_back(ctx.pc);
+            u64 fence = impl->RequestSyncOperation([watchType, addr, size, pThread, pRegs]() {
                 uint64_t pthread = reinterpret_cast<uint64_t>(pThread);
                 BraceScriptInterpreter::MessageArgs args;
                 args.push_back(watchType);
                 args.push_back(addr);
                 args.push_back(size);
                 args.push_back(pthread);
+                args.push_back(std::shared_ptr<void>(pRegs));
                 BraceScriptInterpreter::RunCallback("watchpoint_range", std::move(args));
             });
             impl->WaitForSyncOperation(fence);

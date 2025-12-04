@@ -466,8 +466,29 @@ private:
         std::string_view strView{msgStr};
         auto&& words = std::views::split(strView, delim);
         for (auto&& word : words) {
-            args.push_back(std::string(word.begin(), word.end()));
+            std::string arg(word.begin(), word.end());
+            if (arg.length() > 0 && isdigit(arg[0])) {
+                if (arg.find('.') != std::string::npos) {
+                    double val = std::stod(arg, nullptr);
+                    args.push_back(val);
+                }
+                else {
+                    uint64_t val = std::stoull(arg, nullptr, 0);
+                    args.push_back(val);
+                }
+            }
+            else if (arg.length()>=2 && arg[0]==arg[arg.length()-1] && (arg[0]=='"' || arg[0]=='\'')) {
+                args.push_back(arg.substr(1,arg.length()-2));
+            }
+            else {
+                args.push_back(arg);
+            }
         }
+        auto* pRegs = new std::vector<int64_t>();
+        for (int ix = 0; ix <= 32; ++ix) {
+            pRegs->push_back(0);
+        }
+        args.push_back(std::shared_ptr<void>(pRegs));
         return RunCallbackImpl(std::move(msgId), std::move(args));
     }
 
@@ -535,7 +556,23 @@ private:
             std::string_view strView{msgStr};
             auto&& words = std::views::split(strView, delim);
             for (auto&& word : words) {
-                args.push_back(std::string(word.begin(), word.end()));
+                std::string arg(word.begin(), word.end());
+                if (arg.length() > 0 && isdigit(arg[0])) {
+                    if (arg.find('.') != std::string::npos) {
+                        double val = std::stod(arg, nullptr);
+                        args.push_back(val);
+                    }
+                    else {
+                        uint64_t val = std::stoull(arg, nullptr, 0);
+                        args.push_back(val);
+                    }
+                }
+                else if (arg.length()>=2 && arg[0]==arg[arg.length()-1] && (arg[0]=='"' || arg[0]=='\'')) {
+                    args.push_back(arg.substr(1,arg.length()-2));
+                }
+                else {
+                    args.push_back(arg);
+                }
             }
             it->second.push(std::move(args));
             ret = true;
@@ -2109,60 +2146,6 @@ protected:
                 ss << str;
         }
         Brace::VarSetString((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, ss.str());
-    }
-};
-class CsvDebugExp final : public Brace::SimpleBraceApiBase {
-public:
-    CsvDebugExp(Brace::BraceScript& interpreter) : Brace::SimpleBraceApiBase(interpreter) {}
-
-protected:
-    virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
-                               const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
-                               Brace::OperandLoadtimeInfo& resultInfo) override {
-        return true;
-    }
-    virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
-                         const std::vector<Brace::OperandRuntimeInfo>& argInfos,
-                         const Brace::OperandRuntimeInfo& resultInfo) const override {
-        std::stringstream ss;
-        bool first = true;
-        for (auto&& info : argInfos) {
-            std::string str;
-            if (Brace::IsFloatType(info.Type)) {
-                double dv;
-                if (info.IsGlobal)
-                    dv = Brace::VarGetF64(gvars, info.Type, info.VarIndex);
-                else
-                    dv = Brace::VarGetF64(lvars, info.Type, info.VarIndex);
-                std::stringstream tss;
-                tss << std::fixed << std::setprecision(3) << dv;
-                str = tss.str();
-            } else {
-                if (info.IsGlobal)
-                    str = Brace::VarGetStr(gvars, info.Type, info.VarIndex);
-                else
-                    str = Brace::VarGetStr(lvars, info.Type, info.VarIndex);
-            }
-            bool needQuote = false;
-            if (str.length() > 0 && str[0] != '"' && str[0] != '\'') {
-                for (auto c : str) {
-                    if (c == ' ' || c == '\t') {
-                        needQuote = true;
-                        break;
-                    }
-                }
-            }
-            if (first) {
-                first = false;
-            } else {
-                ss << ", ";
-            }
-            if (needQuote)
-                ss << '"' << str << '"';
-            else
-                ss << str;
-        }
-        LogWarn(ss.str());
     }
 };
 
@@ -11221,11 +11204,11 @@ inline void BraceScriptManager::InitBraceScript(Brace::BraceScript*& pBraceScrip
     /// register api
     if (isCallback) {
         pBraceScript->RegisterApi("oncallback",
-                                  "oncallback(msg)params($a:int,$b:int,...){...}; statement are executed immediately in the separate script",
+                                  "oncallback(msg)params($a:int,$b:int,...){...}; statement are executed immediately in the separate script. this statement defines a function and should be used in the global scope",
                                   new Brace::BraceApiFactory<CallbackHandlerExp>());
     } else {
         pBraceScript->RegisterApi(
-            "onmessage", "onmessage(msg[,pool_num])params($a:int,$b:int,...){...}; statement are executed within a coroutine of the same script (wait must be called periodically)",
+            "onmessage", "onmessage(msg[,pool_num])params($a:int,$b:int,...){...}; statement are executed within a coroutine of the same script (wait must be called periodically). this statement defines a function and should be used in the global scope",
             new Brace::BraceApiFactory<MessageHandlerExp>());
         pBraceScript->RegisterApi("clearmessages", "clearmessages() api",
                                   new Brace::BraceApiFactory<ClearMessagesExp>());
@@ -11314,8 +11297,6 @@ inline void BraceScriptManager::InitBraceScript(Brace::BraceScript*& pBraceScrip
                               new Brace::BraceApiFactory<CsvEchoExp>());
     pBraceScript->RegisterApi("csvconcat", "csvconcat(args) api",
                               new Brace::BraceApiFactory<CsvConcatExp>());
-    pBraceScript->RegisterApi("csvdebug", "csvdebug(args) api",
-                              new Brace::BraceApiFactory<CsvDebugExp>());
 
     pBraceScript->RegisterApi("fileexists", "fileexists(file) api",
                               new Brace::BraceApiFactory<FileExistsExp>());

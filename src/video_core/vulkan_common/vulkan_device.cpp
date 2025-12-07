@@ -466,6 +466,20 @@ Device::Device(VkInstance instance_, vk::PhysicalDevice physical_, VkSurfaceKHR 
     is_warp_potentially_bigger = !extensions.subgroup_size_control ||
                                  properties.subgroup_size_control.maxSubgroupSize > GuestWarpSize;
 
+    // MoltenVK (Mac) doesn't support BCn formats natively, even if it reports support
+    // Force disable BCn support to trigger software transcoding fallback
+    if (is_mvk) {
+        LOG_INFO(Render_Vulkan, "MoltenVK detected: BCn texture compression not supported by Metal, "
+                                "will use format fallback and software transcoding");
+        features.features.textureCompressionBC = VK_FALSE;
+
+        // Also check ASTC support more strictly on MoltenVK
+        if (!is_optimal_astc_supported) {
+            LOG_INFO(Render_Vulkan, "MoltenVK: ASTC format support limited, "
+                                    "will use format fallback and software transcoding");
+        }
+    }
+
     is_integrated = properties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
     is_virtual = properties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU;
     is_non_gpu = properties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_OTHER ||

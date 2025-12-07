@@ -2,10 +2,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #version 450 core
+#extension GL_EXT_shader_image_load_formatted : enable
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
+#ifdef VULKAN
+layout (binding = 0) uniform readonly restrict image2DMSArray msaa_in;
+layout (binding = 1) uniform writeonly restrict image2DArray output_img;
+#else
 layout (binding = 0, rgba8) uniform readonly restrict image2DMSArray msaa_in;
 layout (binding = 1, rgba8) uniform writeonly restrict image2DArray output_img;
+#endif
 
 void main() {
     const ivec3 coords = ivec3(gl_GlobalInvocationID);

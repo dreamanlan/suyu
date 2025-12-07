@@ -4,6 +4,7 @@
 #pragma once
 
 #include <array>
+#include <unordered_map>
 
 #include <sirit/sirit.h>
 
@@ -16,6 +17,12 @@
 namespace Shader::Backend::SPIRV {
 
 using Sirit::Id;
+
+enum class TextureOrganizationMode {
+    Combined,      // Traditional VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+    Separated,     // VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE + VK_DESCRIPTOR_TYPE_SAMPLER
+    Pooled,        // Texture pool with descriptor arrays (cross-platform)
+};
 
 class VectorTypes {
 public:
@@ -36,6 +43,17 @@ struct TextureDefinition {
     Id image_type;
     u32 count;
     bool is_multisample;
+    u32 sampler_index{};  // Index into samplers vector (used in Separated and Pooled modes)
+};
+
+// Sampler definition (used for both Metal separated samplers and texture pool)
+struct SamplerDefinition {
+    Id id;  // SPIR-V ID for the sampler
+    u32 cbuf_index;
+    u32 cbuf_offset;
+    u32 secondary_cbuf_index;
+    u32 secondary_cbuf_offset;
+    bool has_secondary;
 };
 
 struct TextureBufferDefinition {
@@ -253,6 +271,35 @@ public:
     std::vector<TextureDefinition> textures;
     std::vector<ImageDefinition> images;
 
+    // Texture organization mode (cross-platform)
+    TextureOrganizationMode texture_mode{TextureOrganizationMode::Combined};
+
+    // Texture pool definitions (for Pooled mode)
+    struct TexturePoolInfo {
+        Id id;                    // SPIR-V variable ID for the texture array
+        Id image_type;            // Base image type
+        Id pointer_type;          // Pointer type for array elements
+        u32 pool_size;            // Total number of textures in pool
+        u32 binding;              // Binding point
+        TextureType type;         // Texture type (2D, 3D, Cube, etc.)
+    };
+    std::vector<TexturePoolInfo> texture_pools;  // One pool per texture type
+    std::vector<SamplerDefinition> pooled_samplers;  // Samplers for pooled mode
+    u32 pooled_sampler_binding_base{};  // Starting binding for pooled samplers
+
+    // Separated samplers (used in Separated and Pooled modes)
+    std::vector<SamplerDefinition> samplers;
+    u32 sampler_binding_base{};
+
+    // Mapping from descriptor_index to (pool_index, offset_in_pool, sampler_index)
+    struct PooledTextureMapping {
+        u32 pool_index;      // Index into texture_pools
+        u32 pool_offset;     // Offset within the pool
+        u32 sampler_index;   // Index into pooled_samplers
+        bool is_multisample; // Whether this texture is multisampled
+    };
+    std::unordered_map<u32, PooledTextureMapping> pooled_texture_map;
+
     Id workgroup_id{};
     Id local_invocation_id{};
     Id invocation_id{};
@@ -372,6 +419,9 @@ private:
     void DefineTextureBuffers(const Info& info, u32& binding);
     void DefineImageBuffers(const Info& info, u32& binding);
     void DefineTextures(const Info& info, u32& binding, u32& scaling_index);
+    void DefineTexturesCombined(const Info& info, u32& binding, u32& scaling_index);
+    void DefineTexturesSeparated(const Info& info, u32& binding, u32& scaling_index);
+    void DefineTexturesPooled(const Info& info, u32& binding, u32& scaling_index);
     void DefineImages(const Info& info, u32& binding, u32& scaling_index);
     void DefineAttributeMemAccess(const Info& info);
     void DefineWriteStorageCasLoopFunction(const Info& info);

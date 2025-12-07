@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2021 yuzu Emulator Project
+﻿// SPDX-FileCopyrightText: Copyright 2021 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #pragma once
@@ -410,6 +410,10 @@ struct Values {
                                                   Category::RendererAdvanced};
     SwitchableSetting<bool> use_asynchronous_shaders{linkage, false, "use_asynchronous_shaders",
                                                      Category::RendererAdvanced};
+    SwitchableSetting<TexturePoolMode, true> texture_pool_mode{
+        linkage,               TexturePoolMode::Automatic, TexturePoolMode::Automatic,
+        TexturePoolMode::Pooled, "texture_pool_mode",         Category::RendererAdvanced,
+        Specialization::Default, true,                       true};
     SwitchableSetting<bool> use_fast_gpu_time{
         linkage, true, "use_fast_gpu_time", Category::RendererAdvanced, Specialization::Default,
         true,    true};

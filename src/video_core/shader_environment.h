@@ -75,12 +75,19 @@ protected:
     Tegra::Texture::TICEntry ReadTextureInfo(GPUVAddr tic_addr, u32 tic_limit,
                                              bool via_header_index, u32 raw);
 
+    Tegra::Texture::TSCEntry ReadTextureSamplerInfoDirect(GPUVAddr tsc_addr, u32 tsc_limit,
+                                                          u32 tsc_index);
+
+    static Shader::TextureSamplerInfo ConvertTSCEntryToTextureSamplerInfo(
+        const Tegra::Texture::TSCEntry& tsc_entry);
+
     Tegra::MemoryManager* gpu_memory{};
     GPUVAddr program_base{};
 
     std::vector<u64> code;
     std::unordered_map<u32, Shader::TextureType> texture_types;
     std::unordered_map<u32, Shader::TexturePixelFormat> texture_pixel_formats;
+    std::unordered_map<u32, Shader::TextureSamplerInfo> texture_sampler_infos;
     std::unordered_map<u64, u32> cbuf_values;
     std::unordered_map<u64, Shader::ReplaceConstant> cbuf_replacements;
 
@@ -124,6 +131,8 @@ public:
 
     std::optional<Shader::ReplaceConstant> GetReplaceConstBuffer(u32 bank, u32 offset) override;
 
+    std::optional<Shader::TextureSamplerInfo> ReadTextureSamplerInfo(u32 handle) override;
+
 private:
     Tegra::Engines::Maxwell3D* maxwell3d{};
     size_t stage_index{};
@@ -152,6 +161,8 @@ public:
         [[maybe_unused]] u32 bank, [[maybe_unused]] u32 offset) override {
         return std::nullopt;
     }
+
+    std::optional<Shader::TextureSamplerInfo> ReadTextureSamplerInfo(u32 handle) override;
 
 private:
     Tegra::Engines::KeplerCompute* kepler_compute{};
@@ -193,6 +204,8 @@ public:
     [[nodiscard]] std::optional<Shader::ReplaceConstant> GetReplaceConstBuffer(u32 bank,
                                                                                u32 offset) override;
 
+    [[nodiscard]] std::optional<Shader::TextureSamplerInfo> ReadTextureSamplerInfo(u32 handle) override;
+
     [[nodiscard]] bool HasHLEMacroState() const override {
         return cbuf_replacements.size() != 0;
     }
@@ -203,6 +216,7 @@ private:
     std::vector<u64> code;
     std::unordered_map<u32, Shader::TextureType> texture_types;
     std::unordered_map<u32, Shader::TexturePixelFormat> texture_pixel_formats;
+    std::unordered_map<u32, Shader::TextureSamplerInfo> texture_sampler_infos;
     std::unordered_map<u64, u32> cbuf_values;
     std::unordered_map<u64, Shader::ReplaceConstant> cbuf_replacements;
     std::array<u32, 3> workgroup_size{};

@@ -230,6 +230,7 @@ void GenericEnvironment::Serialize(std::ofstream& file) const {
     const u64 code_size{static_cast<u64>(CachedSizeBytes())};
     const u64 num_texture_types{static_cast<u64>(texture_types.size())};
     const u64 num_texture_pixel_formats{static_cast<u64>(texture_pixel_formats.size())};
+    const u64 num_texture_sampler_infos{static_cast<u64>(texture_sampler_infos.size())};
     const u64 num_cbuf_values{static_cast<u64>(cbuf_values.size())};
     const u64 num_cbuf_replacement_values{static_cast<u64>(cbuf_replacements.size())};
 
@@ -237,6 +238,8 @@ void GenericEnvironment::Serialize(std::ofstream& file) const {
         .write(reinterpret_cast<const char*>(&num_texture_types), sizeof(num_texture_types))
         .write(reinterpret_cast<const char*>(&num_texture_pixel_formats),
                sizeof(num_texture_pixel_formats))
+        .write(reinterpret_cast<const char*>(&num_texture_sampler_infos),
+               sizeof(num_texture_sampler_infos))
         .write(reinterpret_cast<const char*>(&num_cbuf_values), sizeof(num_cbuf_values))
         .write(reinterpret_cast<const char*>(&num_cbuf_replacement_values),
                sizeof(num_cbuf_replacement_values))
@@ -256,6 +259,10 @@ void GenericEnvironment::Serialize(std::ofstream& file) const {
     for (const auto& [key, format] : texture_pixel_formats) {
         file.write(reinterpret_cast<const char*>(&key), sizeof(key))
             .write(reinterpret_cast<const char*>(&format), sizeof(format));
+    }
+    for (const auto& [key, info] : texture_sampler_infos) {
+        file.write(reinterpret_cast<const char*>(&key), sizeof(key))
+            .write(reinterpret_cast<const char*>(&info), sizeof(info));
     }
     for (const auto& [key, type] : cbuf_values) {
         file.write(reinterpret_cast<const char*>(&key), sizeof(key))
@@ -312,6 +319,34 @@ Tegra::Texture::TICEntry GenericEnvironment::ReadTextureInfo(GPUVAddr tic_addr, 
     Tegra::Texture::TICEntry entry;
     gpu_memory->ReadBlock(descriptor_addr, &entry, sizeof(entry));
     return entry;
+}
+
+Shader::TextureSamplerInfo GenericEnvironment::ConvertTSCEntryToTextureSamplerInfo(
+    const Tegra::Texture::TSCEntry& tsc_entry) {
+    Shader::TextureSamplerInfo sampler_info{};
+    sampler_info.wrap_u = tsc_entry.wrap_u;
+    sampler_info.wrap_v = tsc_entry.wrap_v;
+    sampler_info.wrap_p = tsc_entry.wrap_p;
+    sampler_info.depth_compare_enabled = tsc_entry.depth_compare_enabled.Value() != 0;
+    sampler_info.depth_compare_func = tsc_entry.depth_compare_func;
+    sampler_info.srgb_conversion = tsc_entry.srgb_conversion.Value() != 0;
+    sampler_info.max_anisotropy = tsc_entry.max_anisotropy;
+    sampler_info.mag_filter = tsc_entry.mag_filter;
+    sampler_info.min_filter = tsc_entry.min_filter;
+    sampler_info.mipmap_filter = tsc_entry.mipmap_filter;
+    sampler_info.cubemap_anisotropy = tsc_entry.cubemap_anisotropy.Value() != 0;
+    sampler_info.cubemap_interface_filtering = tsc_entry.cubemap_interface_filtering.Value() != 0;
+    sampler_info.reduction_filter = tsc_entry.reduction_filter;
+    sampler_info.mip_lod_bias = static_cast<s32>(tsc_entry.mip_lod_bias);
+    sampler_info.float_coord_normalization = tsc_entry.float_coord_normalization.Value() != 0;
+    sampler_info.trilin_opt = tsc_entry.trilin_opt;
+    sampler_info.min_lod_clamp = tsc_entry.min_lod_clamp;
+    sampler_info.max_lod_clamp = tsc_entry.max_lod_clamp;
+    sampler_info.srgb_border_color_r = tsc_entry.srgb_border_color_r;
+    sampler_info.srgb_border_color_g = tsc_entry.srgb_border_color_g;
+    sampler_info.srgb_border_color_b = tsc_entry.srgb_border_color_b;
+    sampler_info.border_color = tsc_entry.border_color;
+    return sampler_info;
 }
 
 GraphicsEnvironment::GraphicsEnvironment(Tegra::Engines::Maxwell3D& maxwell3d_,
@@ -428,6 +463,28 @@ u32 GraphicsEnvironment::ReadViewportTransformState() {
     return viewport_transform_state;
 }
 
+std::optional<Shader::TextureSamplerInfo> GraphicsEnvironment::ReadTextureSamplerInfo(u32 handle) {
+    const auto& regs{maxwell3d->regs};
+    const bool via_header_index{regs.sampler_binding == Maxwell::SamplerBinding::ViaHeaderBinding};
+    const auto texture_handle{Tegra::Texture::TexturePair(handle, via_header_index)};
+
+    // second always contains the TSC index
+    const u32 tsc_index = texture_handle.second;
+
+    // Check if TSC index is within bounds
+    if (tsc_index > regs.tex_sampler.limit) {
+        return std::nullopt;
+    }
+
+    // Read TSC entry using Maxwell3D's GetTSCEntry method
+    const auto tsc_entry{maxwell3d->GetTSCEntry(tsc_index)};
+
+    // Convert TSCEntry to TextureSamplerInfo using the common conversion method
+    auto info = ConvertTSCEntryToTextureSamplerInfo(tsc_entry);
+    texture_sampler_infos.emplace(handle, info);
+    return info;
+}
+
 ComputeEnvironment::ComputeEnvironment(Tegra::Engines::KeplerCompute& kepler_compute_,
                                        Tegra::MemoryManager& gpu_memory_, GPUVAddr program_base_,
                                        u32 start_address_)
@@ -481,16 +538,41 @@ u32 ComputeEnvironment::ReadViewportTransformState() {
     return viewport_transform_state;
 }
 
+std::optional<Shader::TextureSamplerInfo> ComputeEnvironment::ReadTextureSamplerInfo(u32 handle) {
+    const auto& regs{kepler_compute->regs};
+    const auto& qmd{kepler_compute->launch_description};
+    const auto texture_handle{Tegra::Texture::TexturePair(handle, qmd.linked_tsc != 0)};
+
+    // second always contains the TSC index
+    const u32 tsc_index = texture_handle.second;
+
+    // Check if TSC index is within bounds
+    if (tsc_index > regs.tsc.limit) {
+        return std::nullopt;
+    }
+
+    // Read TSC entry using KeplerCompute's GetTSCEntry method
+    const auto tsc_entry{kepler_compute->GetTSCEntry(tsc_index)};
+
+    // Convert TSCEntry to TextureSamplerInfo using the common conversion method
+    auto info = ConvertTSCEntryToTextureSamplerInfo(tsc_entry);
+    texture_sampler_infos.emplace(handle, info);
+    return info;
+}
+
 void FileEnvironment::Deserialize(std::ifstream& file) {
     u64 code_size{};
     u64 num_texture_types{};
     u64 num_texture_pixel_formats{};
+    u64 num_texture_sampler_infos{};
     u64 num_cbuf_values{};
     u64 num_cbuf_replacement_values{};
     file.read(reinterpret_cast<char*>(&code_size), sizeof(code_size))
         .read(reinterpret_cast<char*>(&num_texture_types), sizeof(num_texture_types))
         .read(reinterpret_cast<char*>(&num_texture_pixel_formats),
               sizeof(num_texture_pixel_formats))
+        .read(reinterpret_cast<char*>(&num_texture_sampler_infos),
+              sizeof(num_texture_sampler_infos))
         .read(reinterpret_cast<char*>(&num_cbuf_values), sizeof(num_cbuf_values))
         .read(reinterpret_cast<char*>(&num_cbuf_replacement_values),
               sizeof(num_cbuf_replacement_values))
@@ -516,6 +598,13 @@ void FileEnvironment::Deserialize(std::ifstream& file) {
         file.read(reinterpret_cast<char*>(&key), sizeof(key))
             .read(reinterpret_cast<char*>(&format), sizeof(format));
         texture_pixel_formats.emplace(key, format);
+    }
+    for (size_t i = 0; i < num_texture_sampler_infos; ++i) {
+        u32 key;
+        Shader::TextureSamplerInfo info;
+        file.read(reinterpret_cast<char*>(&key), sizeof(key))
+            .read(reinterpret_cast<char*>(&info), sizeof(info));
+        texture_sampler_infos.emplace(key, info);
     }
     for (size_t i = 0; i < num_cbuf_values; ++i) {
         u64 key;
@@ -610,6 +699,14 @@ std::optional<Shader::ReplaceConstant> FileEnvironment::GetReplaceConstBuffer(u3
     const u64 key = (static_cast<u64>(bank) << 32) | static_cast<u64>(offset);
     auto it = cbuf_replacements.find(key);
     if (it == cbuf_replacements.end()) {
+        return std::nullopt;
+    }
+    return it->second;
+}
+
+std::optional<Shader::TextureSamplerInfo> FileEnvironment::ReadTextureSamplerInfo(u32 handle) {
+    const auto it{texture_sampler_infos.find(handle)};
+    if (it == texture_sampler_infos.end()) {
         return std::nullopt;
     }
     return it->second;

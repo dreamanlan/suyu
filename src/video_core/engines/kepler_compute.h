@@ -214,12 +214,14 @@ private:
 
     void ConsumeSinkImpl() override;
 
+public:
     /// Retrieves information about a specific TIC entry from the TIC buffer.
     Texture::TICEntry GetTICEntry(u32 tic_index) const;
 
     /// Retrieves information about a specific TSC entry from the TSC buffer.
     Texture::TSCEntry GetTSCEntry(u32 tsc_index) const;
 
+private:
     Core::System& system;
     MemoryManager& memory_manager;
     VideoCore::RasterizerInterface* rasterizer = nullptr;

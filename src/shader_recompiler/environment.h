@@ -41,6 +41,8 @@ public:
     [[nodiscard]] virtual std::optional<ReplaceConstant> GetReplaceConstBuffer(u32 bank,
                                                                                u32 offset) = 0;
 
+    [[nodiscard]] virtual std::optional<TextureSamplerInfo> ReadTextureSamplerInfo(u32 handle) = 0;
+
     virtual void Dump(u64 pipeline_hash, u64 shader_hash) = 0;
 
     [[nodiscard]] const ProgramHeader& SPH() const noexcept {

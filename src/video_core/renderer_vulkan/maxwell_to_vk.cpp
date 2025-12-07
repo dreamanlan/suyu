@@ -239,9 +239,14 @@ FormatInfo SurfaceFormat(const Device& device, FormatType format_type, bool with
                          PixelFormat pixel_format) {
     ASSERT(static_cast<size_t>(pixel_format) < std::size(tex_format_tuples));
     FormatTuple tuple = tex_format_tuples[static_cast<size_t>(pixel_format)];
+
+    // Strategy: Try hardware format fallback first (Method 1),
+    // if that fails, software transcoding will be used automatically (Method 2)
+
     // Transcode on hardware that doesn't support ASTC natively
     if (!device.IsOptimalAstcSupported() && VideoCore::Surface::IsPixelFormatASTC(pixel_format)) {
         const bool is_srgb = with_srgb && VideoCore::Surface::IsPixelFormatSRGB(pixel_format);
+        VkFormat original_format = tuple.format;
 
         switch (Settings::values.astc_recompression.GetValue()) {
         case Settings::AstcRecompression::Uncompressed:
@@ -251,33 +256,56 @@ FormatInfo SurfaceFormat(const Device& device, FormatType format_type, bool with
                 tuple.format = VK_FORMAT_A8B8G8R8_UNORM_PACK32;
                 tuple.usage |= Storage;
             }
+            LOG_DEBUG(Render_Vulkan, "ASTC format {} fallback to {} (Uncompressed RGBA8)",
+                      original_format, tuple.format);
             break;
         case Settings::AstcRecompression::Bc1:
             tuple.format = is_srgb ? VK_FORMAT_BC1_RGBA_SRGB_BLOCK : VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
+            LOG_DEBUG(Render_Vulkan, "ASTC format {} fallback to {} (BC1 recompression)",
+                      original_format, tuple.format);
             break;
         case Settings::AstcRecompression::Bc3:
             tuple.format = is_srgb ? VK_FORMAT_BC3_SRGB_BLOCK : VK_FORMAT_BC3_UNORM_BLOCK;
+            LOG_DEBUG(Render_Vulkan, "ASTC format {} fallback to {} (BC3 recompression)",
+                      original_format, tuple.format);
             break;
         }
     }
+
     // Transcode on hardware that doesn't support BCn natively
     if (!device.IsOptimalBcnSupported() && VideoCore::Surface::IsPixelFormatBCn(pixel_format)) {
         const bool is_srgb = with_srgb && VideoCore::Surface::IsPixelFormatSRGB(pixel_format);
+        VkFormat original_format = tuple.format;
+
         if (pixel_format == PixelFormat::BC4_SNORM) {
             tuple.format = VK_FORMAT_R8_SNORM;
+            LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to R8_SNORM (software decode will be used)",
+                      original_format);
         } else if (pixel_format == PixelFormat::BC4_UNORM) {
             tuple.format = VK_FORMAT_R8_UNORM;
+            LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to R8_UNORM (software decode will be used)",
+                      original_format);
         } else if (pixel_format == PixelFormat::BC5_SNORM) {
             tuple.format = VK_FORMAT_R8G8_SNORM;
+            LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to R8G8_SNORM (software decode will be used)",
+                      original_format);
         } else if (pixel_format == PixelFormat::BC5_UNORM) {
             tuple.format = VK_FORMAT_R8G8_UNORM;
+            LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to R8G8_UNORM (software decode will be used)",
+                      original_format);
         } else if (pixel_format == PixelFormat::BC6H_SFLOAT ||
                    pixel_format == PixelFormat::BC6H_UFLOAT) {
             tuple.format = VK_FORMAT_R16G16B16A16_SFLOAT;
+            LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to R16G16B16A16_SFLOAT (software decode will be used)",
+                      original_format);
         } else if (is_srgb) {
             tuple.format = VK_FORMAT_A8B8G8R8_SRGB_PACK32;
+            LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to A8B8G8R8_SRGB (software decode will be used)",
+                      original_format);
         } else {
             tuple.format = VK_FORMAT_A8B8G8R8_UNORM_PACK32;
+            LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to A8B8G8R8_UNORM (software decode will be used)",
+                      original_format);
         }
     }
     const bool attachable = (tuple.usage & Attachable) != 0;

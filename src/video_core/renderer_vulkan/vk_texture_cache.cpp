@@ -1270,6 +1270,19 @@ void TextureCacheRuntime::CopyImage(Image& dst, Image& src,
     const VkImageAspectFlags aspect_mask = dst.AspectMask();
     ASSERT(aspect_mask == src.AspectMask());
 
+// Check format compatibility for vkCmdCopyImage
+    const PixelFormat src_format = src.info.format;
+    const PixelFormat dst_format = dst.info.format;
+    const size_t src_bytes_per_block = BytesPerBlock(src_format);
+    const size_t dst_bytes_per_block = BytesPerBlock(dst_format);
+
+    // Vulkan spec requires size-compatible formats for vkCmdCopyImage
+    if (src_bytes_per_block != dst_bytes_per_block) {
+        LOG_WARNING(Render_Vulkan, "Skipping image copy due to format size incompatibility: src format {} ({} bytes), dst format {} ({} bytes)",
+                    static_cast<u32>(src_format), src_bytes_per_block, static_cast<u32>(dst_format), dst_bytes_per_block);
+        return;
+    }
+
     std::ranges::transform(copies, vk_copies.begin(), [aspect_mask](const auto& copy) {
         return MakeImageCopy(copy, aspect_mask);
     });
@@ -1279,10 +1292,8 @@ void TextureCacheRuntime::CopyImage(Image& dst, Image& src,
 #ifdef __APPLE__
     auto&& src_fmt = src.info.format;
     auto&& src_num_samples = src.info.num_samples;
-    auto&& src_bytes_per_block = BytesPerBlock(src_fmt);
     auto&& dst_fmt = dst.info.format;
     auto&& dst_num_samples = dst.info.num_samples;
-    auto&& dst_bytes_per_block = BytesPerBlock(dst_fmt);
 
     if (src_num_samples != dst_num_samples || src_bytes_per_block != dst_bytes_per_block) {
         bool skip = false;
@@ -1742,10 +1753,14 @@ ImageView::ImageView(TextureCacheRuntime& runtime, const VideoCommon::ImageViewI
         }
     }
     const auto format_info = MaxwellToVK::SurfaceFormat(*device, FormatType::Optimal, true, format);
+    VkImageUsageFlags usage = image.UsageFlags();
+    if (!format_info.storage) {
+        usage &= ~VK_IMAGE_USAGE_STORAGE_BIT;
+    }
     const VkImageViewUsageCreateInfo image_view_usage{
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_USAGE_CREATE_INFO,
         .pNext = nullptr,
-        .usage = image.UsageFlags(),
+        .usage = usage,
     };
     const VkImageViewCreateInfo create_info{
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -1922,6 +1937,10 @@ Sampler::Sampler(TextureCacheRuntime& runtime, const Tegra::Texture::TSCEntry& t
     const bool arbitrary_borders = runtime.device.IsExtCustomBorderColorSupported();
     const auto color = tsc.BorderColor();
 
+// Check if the border color can be represented by standard border colors
+    const bool can_use_standard_border = ConvertBorderColor(color) != VK_BORDER_COLOR_FLOAT_CUSTOM_EXT;
+    const bool should_use_custom_border = arbitrary_borders && !can_use_standard_border;
+
     const VkSamplerCustomBorderColorCreateInfoEXT border_ci{
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CUSTOM_BORDER_COLOR_CREATE_INFO_EXT,
         .pNext = nullptr,
@@ -1929,17 +1948,18 @@ Sampler::Sampler(TextureCacheRuntime& runtime, const Tegra::Texture::TSCEntry& t
         .customBorderColor = Common::BitCast<VkClearColorValue>(color),
         .format = VK_FORMAT_UNDEFINED,
     };
-    const void* pnext = nullptr;
-    if (arbitrary_borders) {
-        pnext = &border_ci;
-    }
+
     const VkSamplerReductionModeCreateInfoEXT reduction_ci{
         .sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT,
-        .pNext = pnext,
+        .pNext = should_use_custom_border ? &border_ci : nullptr,
         .reductionMode = MaxwellToVK::SamplerReduction(tsc.reduction_filter),
     };
+
+    const void* pnext = nullptr;
     if (runtime.device.IsExtSamplerFilterMinmaxSupported()) {
         pnext = &reduction_ci;
+    } else if (should_use_custom_border) {
+        pnext = &border_ci;
     } else if (reduction_ci.reductionMode != VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE_EXT) {
         LOG_WARNING(Render_Vulkan, "VK_EXT_sampler_filter_minmax is required");
     }

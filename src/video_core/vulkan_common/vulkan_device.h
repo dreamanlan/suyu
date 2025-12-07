@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2018 yuzu Emulator Project
+﻿// SPDX-FileCopyrightText: Copyright 2018 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #pragma once
@@ -43,6 +43,7 @@ VK_DEFINE_HANDLE(VmaAllocator)
     FEATURE(EXT, CustomBorderColor, CUSTOM_BORDER_COLOR, custom_border_color)                      \
     FEATURE(EXT, DepthBiasControl, DEPTH_BIAS_CONTROL, depth_bias_control)                         \
     FEATURE(EXT, DepthClipControl, DEPTH_CLIP_CONTROL, depth_clip_control)                         \
+    FEATURE(EXT, DescriptorIndexing, DESCRIPTOR_INDEXING, descriptor_indexing)                     \
     FEATURE(EXT, ExtendedDynamicState, EXTENDED_DYNAMIC_STATE, extended_dynamic_state)             \
     FEATURE(EXT, ExtendedDynamicState2, EXTENDED_DYNAMIC_STATE_2, extended_dynamic_state2)         \
     FEATURE(EXT, ExtendedDynamicState3, EXTENDED_DYNAMIC_STATE_3, extended_dynamic_state3)         \
@@ -412,6 +413,13 @@ public:
     /// Returns true if the device supports VK_KHR_uniform_buffer_standard_layout.
     bool IsKhrUniformBufferStandardLayoutSupported() const {
         return extensions.uniform_buffer_standard_layout;
+    }
+
+    /// Returns true if the device supports texture pooling (descriptor indexing).
+    bool IsTexturePoolSupported() const {
+        return features.descriptor_indexing.shaderSampledImageArrayNonUniformIndexing &&
+               features.descriptor_indexing.descriptorBindingPartiallyBound &&
+               features.descriptor_indexing.runtimeDescriptorArray;
     }
 
     /// Returns true if the device supports VK_KHR_push_descriptor.

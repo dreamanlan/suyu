@@ -563,7 +563,7 @@ void GraphicsPipeline::ConfigureImpl(bool is_indexed, bool line_mode) {
     const VideoCommon::ImageViewInOut* views_it{views.data()};
     const auto prepare_stage{[&](size_t stage) LAMBDA_FORCEINLINE {
         buffer_cache.BindHostStageBuffers(stage);
-        PushImageDescriptors(texture_cache, guest_descriptor_queue, static_cast<int>(stage), stage_infos[stage], rescaling,
+        PushImageDescriptors(texture_cache, guest_descriptor_queue, device, static_cast<int>(stage), stage_infos[stage], rescaling,
                              samplers_it, views_it);
         const auto& info{stage_infos[0]};
         if (info.uses_render_area) {

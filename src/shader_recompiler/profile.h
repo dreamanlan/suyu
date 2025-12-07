@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2021 yuzu Emulator Project
+﻿// SPDX-FileCopyrightText: Copyright 2021 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #pragma once
@@ -45,6 +45,7 @@ struct Profile {
     bool support_scaled_attributes{};
     bool support_multi_viewport{};
     bool support_geometry_streams{};
+    bool support_texture_pool{};  // VK_EXT_descriptor_indexing support
 
     bool warp_size_potentially_larger_than_guest{};
 

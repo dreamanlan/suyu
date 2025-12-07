@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2023 yuzu Emulator Project
+﻿// SPDX-FileCopyrightText: Copyright 2023 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #pragma once
@@ -129,6 +129,13 @@ ENUM(RendererBackend, OpenGL, Vulkan, Null);
 ENUM(ShaderBackend, Glsl, Glasm, SpirV);
 
 ENUM(GpuAccuracy, Normal, High, Extreme);
+
+// Texture organization mode for shader compilation
+// - Automatic: Auto-select best mode (Separated on Metal, Pooled if supported, else Combined)
+// - Combined: Traditional VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+// - Separated: Separate image and sampler (reduces sampler count, good for Metal)
+// - Pooled: Texture pools with dynamic indexing (requires VK_EXT_descriptor_indexing)
+ENUM(TexturePoolMode, Automatic, Combined, Separated, Pooled);
 
 ENUM(CpuBackend, Dynarmic, Nce);
 

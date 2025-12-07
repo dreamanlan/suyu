@@ -1,10 +1,13 @@
-// SPDX-FileCopyrightText: Copyright 2021 yuzu Emulator Project
+﻿// SPDX-FileCopyrightText: Copyright 2021 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include <algorithm>
 #include <array>
 #include <bit>
 #include <climits>
+#include <set>
+#include <map>
+#include <tuple>
 
 #include <boost/container/static_vector.hpp>
 
@@ -12,6 +15,7 @@
 
 #include "common/common_types.h"
 #include "common/div_ceil.h"
+#include "common/settings.h"
 #include "shader_recompiler/backend/spirv/emit_spirv.h"
 #include "shader_recompiler/backend/spirv/spirv_emit_context.h"
 
@@ -465,7 +469,76 @@ EmitContext::EmitContext(const Profile& profile_, const RuntimeInfo& runtime_inf
     u32& storage_binding{is_unified ? bindings.unified : bindings.storage_buffer};
     u32& texture_binding{is_unified ? bindings.unified : bindings.texture};
     u32& image_binding{is_unified ? bindings.unified : bindings.image};
+
+    // Determine texture organization mode based on configuration
+    const auto setting = Settings::values.texture_pool_mode.GetValue();
+    switch (setting) {
+    case Settings::TexturePoolMode::Automatic:
+        // Auto-select best mode based on platform and hardware
+        if (profile.support_texture_pool) {
+            texture_mode = TextureOrganizationMode::Pooled;
+        } else {
+#ifdef __APPLE__
+            texture_mode = TextureOrganizationMode::Separated;  // Metal: avoid 16-sampler limit
+#else
+            texture_mode = TextureOrganizationMode::Combined;   // Traditional
+#endif
+        }
+        break;
+    case Settings::TexturePoolMode::Combined:
+        texture_mode = TextureOrganizationMode::Combined;
+        break;
+    case Settings::TexturePoolMode::Separated:
+        texture_mode = TextureOrganizationMode::Separated;
+        break;
+    case Settings::TexturePoolMode::Pooled:
+        if (profile.support_texture_pool) {
+            texture_mode = TextureOrganizationMode::Pooled;
+        } else {
+            LOG_WARNING(Render_Vulkan, "Texture pool mode requested but not supported by hardware, falling back to separated mode");
+            texture_mode = TextureOrganizationMode::Separated;
+        }
+        break;
+    }
+
+    // Log selected texture organization mode
+    const char* mode_name = "Unknown";
+    const char* setting_name = "Unknown";
+    switch (texture_mode) {
+    case TextureOrganizationMode::Combined:
+        mode_name = "Combined";
+        break;
+    case TextureOrganizationMode::Separated:
+        mode_name = "Separated";
+        break;
+    case TextureOrganizationMode::Pooled:
+        mode_name = "Pooled";
+        break;
+    }
+    switch (setting) {
+    case Settings::TexturePoolMode::Automatic:
+        setting_name = "Automatic";
+        break;
+    case Settings::TexturePoolMode::Combined:
+        setting_name = "Combined";
+        break;
+    case Settings::TexturePoolMode::Separated:
+        setting_name = "Separated";
+        break;
+    case Settings::TexturePoolMode::Pooled:
+        setting_name = "Pooled";
+        break;
+    }
+    LOG_INFO(Render_Vulkan, "Texture organization mode: {} (config: {}, hardware support: pooled={})",
+             mode_name, setting_name, profile.support_texture_pool);
+
     AddCapability(spv::Capability::Shader);
+    if (texture_mode == TextureOrganizationMode::Pooled) {
+        // Enable descriptor indexing capabilities for texture pooling
+        AddCapability(spv::Capability::SampledImageArrayDynamicIndexing);
+        AddCapability(spv::Capability::RuntimeDescriptorArray);
+        AddExtension("SPV_EXT_descriptor_indexing");
+    }
     DefineCommonTypes(program.info);
     DefineCommonConstants();
     DefineInterfaces(program);
@@ -543,6 +616,8 @@ void EmitContext::DefineCommonTypes(const Info& info) {
 
     output_f32 = Name(TypePointer(spv::StorageClass::Output, F32[1]), "output_f32");
     output_u32 = Name(TypePointer(spv::StorageClass::Output, U32[1]), "output_u32");
+
+    image_u32 = Name(TypePointer(spv::StorageClass::Image, U32[1]), "image_u32");
 
     if (info.uses_int8 && profile.support_int8) {
         AddCapability(spv::Capability::Int8);
@@ -1355,6 +1430,138 @@ void EmitContext::DefineImageBuffers(const Info& info, u32& binding) {
 
 void EmitContext::DefineTextures(const Info& info, u32& binding, u32& scaling_index) {
     textures.reserve(info.texture_descriptors.size());
+
+    // Select texture organization mode based on configuration
+    switch (texture_mode) {
+    case TextureOrganizationMode::Pooled:
+        DefineTexturesPooled(info, binding, scaling_index);
+        return;
+    case TextureOrganizationMode::Separated:
+        DefineTexturesSeparated(info, binding, scaling_index);
+        return;
+    case TextureOrganizationMode::Combined:
+    default:
+        DefineTexturesCombined(info, binding, scaling_index);
+        return;
+    }
+}
+
+void EmitContext::DefineTexturesSeparated(const Info& info, u32& binding, u32& scaling_index) {
+    // Separated mode: Use VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE + VK_DESCRIPTOR_TYPE_SAMPLER
+    //
+    // Step 1: Collect unique samplers (CRITICAL: use std::set to match AddSeparatedTexturesAndSamplers order)
+    // Use a map to keep track of the first occurrence of each unique sampler info
+    // This allows us to preserve the cbuf information for the first instance
+    struct SamplerSource {
+        u32 cbuf_index;
+        u32 cbuf_offset;
+        u32 secondary_cbuf_index;
+        u32 secondary_cbuf_offset;
+        bool has_secondary;
+    };
+    std::map<TextureSamplerInfo, SamplerSource> unique_samplers;
+
+    for (const TextureDescriptor& desc : info.texture_descriptors) {
+        // Get sampler info from the sampler descriptors array
+        TextureSamplerInfo sampler_info{};
+        if (desc.sampler_index < info.sampler_descriptors.size() &&
+            info.sampler_descriptors[desc.sampler_index].has_value()) {
+            sampler_info = *info.sampler_descriptors[desc.sampler_index];
+        }
+
+        if (unique_samplers.find(sampler_info) == unique_samplers.end()) {
+            unique_samplers[sampler_info] = {
+                desc.cbuf_index,
+                desc.cbuf_offset,
+                desc.secondary_cbuf_index,
+                desc.secondary_cbuf_offset,
+                desc.has_secondary,
+            };
+        }
+    }
+
+    // Build sampler index map (Assign indices according to the sort order of the map keys)
+    std::map<TextureSamplerInfo, u32> sampler_map;
+    u32 sampler_idx = 0;
+    for (const auto& [key, source] : unique_samplers) {
+        sampler_map[key] = sampler_idx++;
+    }
+    // Step 2: Define separated textures (SAMPLED_IMAGE without sampler)
+    for (const TextureDescriptor& desc : info.texture_descriptors) {
+        const Id image_type{ImageType(*this, desc)};
+        const Id pointer_type{TypePointer(spv::StorageClass::UniformConstant, image_type)};
+        const Id desc_type{DescType(*this, image_type, pointer_type, desc.count)};
+        const Id id{AddGlobalVariable(desc_type, spv::StorageClass::UniformConstant)};
+        Decorate(id, spv::Decoration::Binding, binding);
+        Decorate(id, spv::Decoration::DescriptorSet, 0U);
+        Name(id, NameOf(stage, desc, "tex"));
+        // Find sampler index for this texture
+        TextureSamplerInfo sampler_info{};
+        if (desc.sampler_index < info.sampler_descriptors.size() &&
+            info.sampler_descriptors[desc.sampler_index].has_value()) {
+            sampler_info = *info.sampler_descriptors[desc.sampler_index];
+        }
+
+        sampler_idx = sampler_map.at(sampler_info);
+        textures.push_back({
+            .id = id,
+            .sampled_type = {},  // Not used in separated mode
+            .pointer_type = pointer_type,
+            .image_type = image_type,
+            .count = desc.count,
+            .is_multisample = desc.is_multisample,
+            .sampler_index = sampler_idx,
+        });
+        if (profile.supported_spirv >= 0x00010400) {
+            interfaces.push_back(id);
+        }
+        ++binding;
+        ++scaling_index;
+    }
+    // Step 3: Define shared samplers (CRITICAL: must iterate in same order as AddSeparatedTexturesAndSamplers)
+    sampler_binding_base = binding;
+    samplers.resize(unique_samplers.size());
+#ifdef __APPLE__
+    // Safety check: Ensure we don't exceed Metal's 16 sampler limit
+    if (unique_samplers.size() > 16) {
+        LOG_WARNING(Render_Vulkan,
+                   "Separated mode: {} unique samplers exceeds Metal's limit of 16! "
+                   "Some textures may not render correctly.",
+                   unique_samplers.size());
+    }
+#endif
+    // CRITICAL: Iterate in map order (same as AddSeparatedTexturesAndSamplers and PushImageDescriptors)
+    for (const auto& [key, source] : unique_samplers) {
+        const u32 idx = sampler_map.at(key);
+        const Id sampler_type = TypeSampler();
+        const Id pointer_type = TypePointer(spv::StorageClass::UniformConstant, sampler_type);
+        const Id id = AddGlobalVariable(pointer_type, spv::StorageClass::UniformConstant);
+        // CRITICAL: Use binding++ to match AddSeparatedTexturesAndSamplers, not binding + idx
+        Decorate(id, spv::Decoration::Binding, binding);
+        Decorate(id, spv::Decoration::DescriptorSet, 0U);
+        Name(id, fmt::format("sampler_{}", idx));
+        samplers[idx] = {
+            .id = id,
+            .cbuf_index = source.cbuf_index,
+            .cbuf_offset = source.cbuf_offset,
+            .secondary_cbuf_index = source.secondary_cbuf_index,
+            .secondary_cbuf_offset = source.secondary_cbuf_offset,
+            .has_secondary = source.has_secondary,
+        };
+        if (profile.supported_spirv >= 0x00010400) {
+            interfaces.push_back(id);
+        }
+        ++binding;  // Increment for each sampler
+    }
+    if (!unique_samplers.empty()) {
+        LOG_INFO(Render_Vulkan, "Separated mode: {} textures using {} unique samplers (saved {} samplers)",
+                 info.texture_descriptors.size(), unique_samplers.size(),
+                 info.texture_descriptors.size() - unique_samplers.size());
+    }
+}
+
+void EmitContext::DefineTexturesCombined(const Info& info, u32& binding, u32& scaling_index) {
+    // Combined mode: Traditional VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
     for (const TextureDescriptor& desc : info.texture_descriptors) {
         const Id image_type{ImageType(*this, desc)};
         const Id sampled_type{TypeSampledImage(image_type)};
@@ -1378,9 +1585,163 @@ void EmitContext::DefineTextures(const Info& info, u32& binding, u32& scaling_in
         ++binding;
         ++scaling_index;
     }
-    if (info.uses_atomic_image_u32) {
-        image_u32 = TypePointer(spv::StorageClass::Image, U32[1]);
+    if (!info.texture_descriptors.empty()) {
+        LOG_INFO(Render_Vulkan, "Combined mode: {} textures, {} bindings used",
+                 info.texture_descriptors.size(), info.texture_descriptors.size());
     }
+}
+
+void EmitContext::DefineTexturesPooled(const Info& info, u32& binding, u32& scaling_index) {
+    // Pooled mode: Organize textures by type into large arrays to minimize binding count
+    // This approach uses VK_EXT_descriptor_indexing for dynamic array indexing
+
+    if (info.texture_descriptors.empty()) {
+        return;
+    }
+
+    // Step 1: Collect unique samplers first (CRITICAL: use std::set to match AddPooledTextures order)
+    // Use a map to keep track of the first occurrence of each unique sampler info
+    struct SamplerSource {
+        u32 cbuf_index;
+        u32 cbuf_offset;
+        u32 secondary_cbuf_index;
+        u32 secondary_cbuf_offset;
+        bool has_secondary;
+    };
+    std::map<TextureSamplerInfo, SamplerSource> unique_sampler_keys;
+
+    for (const TextureDescriptor& desc : info.texture_descriptors) {
+        // Get sampler info from the sampler descriptors array
+        TextureSamplerInfo sampler_info{};
+        if (desc.sampler_index < info.sampler_descriptors.size() &&
+            info.sampler_descriptors[desc.sampler_index].has_value()) {
+            sampler_info = *info.sampler_descriptors[desc.sampler_index];
+        }
+
+        if (unique_sampler_keys.find(sampler_info) == unique_sampler_keys.end()) {
+            unique_sampler_keys[sampler_info] = {
+                desc.cbuf_index,
+                desc.cbuf_offset,
+                desc.secondary_cbuf_index,
+                desc.secondary_cbuf_offset,
+                desc.has_secondary,
+            };
+        }
+    }
+
+    // Build sampler index map (Assign indices according to the sort order of the map keys)
+    std::map<TextureSamplerInfo, u32> sampler_keys;
+    u32 sampler_idx = 0;
+    for (const auto& [key, source] : unique_sampler_keys) {
+        sampler_keys[key] = sampler_idx++;
+    }
+
+    // Step 2: Group textures by type, depth, and multisample
+    using TextureGroupKey = std::tuple<TextureType, bool, bool>;
+    std::map<TextureGroupKey, std::vector<std::pair<u32, const TextureDescriptor*>>> texture_groups;
+    for (size_t i = 0; i < info.texture_descriptors.size(); ++i) {
+        const auto& desc = info.texture_descriptors[i];
+        texture_groups[{desc.type, desc.is_depth, desc.is_multisample}].push_back(
+            {static_cast<u32>(i), &desc});
+    }
+
+    // Step 3: Create one texture pool per group and build mapping
+    for (const auto& [key, descriptors] : texture_groups) {
+        auto [tex_type, is_depth, is_multisample] = key;
+
+        // Calculate total pool size
+        u32 pool_size = 0;
+        for (const auto& pair : descriptors) {
+            pool_size += pair.second->count;
+        }
+
+        // Create image type for this texture type
+        const Id image_type{ImageType(*this, *descriptors[0].second)};
+        const Id image_array_type{TypeArray(image_type, Const(pool_size))};
+        const Id pointer_type{TypePointer(spv::StorageClass::UniformConstant, image_array_type)};
+        const Id id{AddGlobalVariable(pointer_type, spv::StorageClass::UniformConstant)};
+
+        Decorate(id, spv::Decoration::Binding, binding);
+        Decorate(id, spv::Decoration::DescriptorSet, 0U);
+        Name(id, fmt::format("tex_pool_{}_{}_{}", static_cast<u32>(tex_type), is_depth,
+                             is_multisample));
+
+        const u32 pool_index = static_cast<u32>(texture_pools.size());
+
+        // Store pool information
+        texture_pools.push_back({
+            .id = id,
+            .image_type = image_type,
+            .pointer_type = TypePointer(spv::StorageClass::UniformConstant, image_type),
+            .pool_size = pool_size,
+            .binding = binding,
+            .type = tex_type,
+        });
+
+        // Build mapping from descriptor_index to pool location
+        u32 pool_offset = 0;
+        for (const auto& [original_index, desc] : descriptors) {
+            // Find sampler index for this descriptor
+            TextureSamplerInfo sampler_info{};
+            if (desc->sampler_index < info.sampler_descriptors.size() &&
+                info.sampler_descriptors[desc->sampler_index].has_value()) {
+                sampler_info = *info.sampler_descriptors[desc->sampler_index];
+            }
+
+            sampler_idx = sampler_keys.at(sampler_info);
+
+            pooled_texture_map[original_index] = {
+                .pool_index = pool_index,
+                .pool_offset = pool_offset,
+                .sampler_index = sampler_idx,
+                .is_multisample = desc->is_multisample,
+            };
+
+            pool_offset += desc->count;
+        }
+
+        if (profile.supported_spirv >= 0x00010400) {
+            interfaces.push_back(id);
+        }
+
+        ++binding;
+        // Note: scaling_index is not incremented per texture in pooled mode
+    }
+
+    // Step 4: Create shared sampler pool (CRITICAL: must iterate in same order as AddPooledTextures)
+    pooled_sampler_binding_base = binding;
+    pooled_samplers.resize(unique_sampler_keys.size());
+
+    // CRITICAL: Iterate in map order (same as AddPooledTextures and PushImageDescriptorsPooled)
+    for (const auto& [key, source] : unique_sampler_keys) {
+        const u32 idx = sampler_keys.at(key);
+        const Id sampler_type{TypeSampler()};
+        const Id ptr_type{TypePointer(spv::StorageClass::UniformConstant, sampler_type)};
+        const Id id{AddGlobalVariable(ptr_type, spv::StorageClass::UniformConstant)};
+
+        // CRITICAL: Use binding++ to match AddPooledTextures, not binding + idx
+        Decorate(id, spv::Decoration::Binding, binding);
+        Decorate(id, spv::Decoration::DescriptorSet, 0U);
+        Name(id, fmt::format("pooled_sampler_{}", idx));
+
+        pooled_samplers[idx] = {
+            .id = id,
+            .cbuf_index = source.cbuf_index,
+            .cbuf_offset = source.cbuf_offset,
+            .secondary_cbuf_index = source.secondary_cbuf_index,
+            .secondary_cbuf_offset = source.secondary_cbuf_offset,
+            .has_secondary = source.has_secondary,
+        };
+
+        if (profile.supported_spirv >= 0x00010400) {
+            interfaces.push_back(id);
+        }
+        ++binding;  // Increment for each sampler
+    }
+
+    LOG_INFO(Render_Vulkan, "Texture pool mode: {} texture pools, {} samplers, {} total textures, {} bindings used",
+             texture_pools.size(), pooled_samplers.size(), info.texture_descriptors.size(),
+             texture_pools.size() + pooled_samplers.size());
 }
 
 void EmitContext::DefineImages(const Info& info, u32& binding, u32& scaling_index) {

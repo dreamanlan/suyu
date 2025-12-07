@@ -97,6 +97,9 @@ PixelFormat PixelFormatFromDepthFormat(Tegra::DepthFormat format) {
 PixelFormat PixelFormatFromRenderTargetFormat(Tegra::RenderTargetFormat format) {
 #ifdef __APPLE__
     bool isApple = true;
+    // Note: On Apple platforms (MoltenVK/Metal), integer formats (SINT/UINT) have limited support
+    // We automatically convert them to float formats as a fallback (Method 1: Hardware Format Fallback)
+    // This ensures compatibility while maintaining reasonable quality
 #else
     bool isApple = false;
 #endif

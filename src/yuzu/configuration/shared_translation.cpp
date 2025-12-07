@@ -200,6 +200,12 @@ std::unique_ptr<TranslationMap> InitializeTranslations(QWidget* parent) {
            tr("Enables asynchronous shader compilation, which may reduce shader stutter.\nThis "
               "feature "
               "is experimental."));
+    INSERT(Settings, texture_pool_mode, tr("Texture Pool Mode:"),
+           tr("Controls how textures are organized in Vulkan.\n"
+              "Automatic: Selects the best mode based on hardware support (Recommended).\n"
+              "Combined: Traditional mode, each texture has its own sampler.\n"
+              "Separated: Textures and samplers are separate, reduces sampler count.\n"
+              "Pooled: Uses texture pools with dynamic indexing for best performance (requires hardware support)."));
     INSERT(Settings, use_fast_gpu_time, tr("Use Fast GPU Time (Hack)"),
            tr("Enables Fast GPU Time. This option will force most games to run at their highest "
               "native resolution."));
@@ -346,6 +352,14 @@ std::unique_ptr<ComboboxTranslationMap> ComboboxEnumeration(QWidget* parent) {
                               PAIR(GpuAccuracy, High, tr("High")),
                               PAIR(GpuAccuracy, Extreme, tr("Extreme")),
                           }});
+    translations->insert(
+        {Settings::EnumMetadata<Settings::TexturePoolMode>::Index(),
+         {
+             PAIR(TexturePoolMode, Automatic, tr("Automatic (Recommended)")),
+             PAIR(TexturePoolMode, Combined, tr("Combined (Traditional)")),
+             PAIR(TexturePoolMode, Separated, tr("Separated (Reduced Samplers)")),
+             PAIR(TexturePoolMode, Pooled, tr("Pooled (Best Performance)")),
+         }});
     translations->insert(
         {Settings::EnumMetadata<Settings::CpuAccuracy>::Index(),
          {

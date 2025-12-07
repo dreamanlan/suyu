@@ -190,16 +190,73 @@ private:
 };
 
 Id Texture(EmitContext& ctx, IR::TextureInstInfo info, [[maybe_unused]] const IR::Value& index) {
-    const TextureDefinition& def{ctx.textures.at(info.descriptor_index)};
-    if (def.count > 1) {
-        const Id pointer{ctx.OpAccessChain(def.pointer_type, def.id, ctx.Def(index))};
-        return ctx.OpLoad(def.sampled_type, pointer);
-    } else {
-        return ctx.OpLoad(def.sampled_type, def.id);
+    using Shader::Backend::SPIRV::TextureOrganizationMode;
+
+    switch (ctx.texture_mode) {
+    case TextureOrganizationMode::Pooled: {
+        // Pooled mode: Use texture pools with dynamic indexing
+        const auto& mapping = ctx.pooled_texture_map.at(info.descriptor_index);
+        const auto& pool = ctx.texture_pools.at(mapping.pool_index);
+        const auto& sampler_def = ctx.pooled_samplers.at(mapping.sampler_index);
+
+        // Calculate pool index: base_offset + index (if array)
+        Id pool_index;
+        if (index.IsImmediate()) {
+            pool_index = ctx.Const(mapping.pool_offset + index.U32());
+        } else {
+            const Id base_offset = ctx.Const(mapping.pool_offset);
+            pool_index = ctx.OpIAdd(ctx.U32[1], base_offset, ctx.Def(index));
+        }
+
+        // Load image from pool
+        const Id pointer{ctx.OpAccessChain(pool.pointer_type, pool.id, pool_index)};
+        const Id image_id{ctx.OpLoad(pool.image_type, pointer)};
+
+        // Load sampler
+        const Id sampler_id{ctx.OpLoad(ctx.TypeSampler(), sampler_def.id)};
+
+        // Combine image and sampler
+        const Id sampled_type{ctx.TypeSampledImage(pool.image_type)};
+        return ctx.OpSampledImage(sampled_type, image_id, sampler_id);
+    }
+
+    case TextureOrganizationMode::Separated: {
+        // Separated mode: texture and sampler are separate descriptors
+        const TextureDefinition& def{ctx.textures.at(info.descriptor_index)};
+        Id image_id;
+        if (def.count > 1) {
+            const Id pointer{ctx.OpAccessChain(def.pointer_type, def.id, ctx.Def(index))};
+            image_id = ctx.OpLoad(def.image_type, pointer);
+        } else {
+            image_id = ctx.OpLoad(def.image_type, def.id);
+        }
+
+        // Load the corresponding sampler
+        const SamplerDefinition& sampler_def{ctx.samplers.at(def.sampler_index)};
+        const Id sampler_id{ctx.OpLoad(ctx.TypeSampler(), sampler_def.id)};
+
+        // Combine image and sampler to create sampled image
+        const Id sampled_type{ctx.TypeSampledImage(def.image_type)};
+        return ctx.OpSampledImage(sampled_type, image_id, sampler_id);
+    }
+
+    case TextureOrganizationMode::Combined:
+    default: {
+        // Combined mode: traditional combined image sampler
+        const TextureDefinition& def{ctx.textures.at(info.descriptor_index)};
+        if (def.count > 1) {
+            const Id pointer{ctx.OpAccessChain(def.pointer_type, def.id, ctx.Def(index))};
+            return ctx.OpLoad(def.sampled_type, pointer);
+        } else {
+            return ctx.OpLoad(def.sampled_type, def.id);
+        }
+    }
     }
 }
 
 Id TextureImage(EmitContext& ctx, IR::TextureInstInfo info, const IR::Value& index) {
+    using Shader::Backend::SPIRV::TextureOrganizationMode;
+
     if (!index.IsImmediate() || index.U32() != 0) {
         throw NotImplementedException("Indirect image indexing");
     }
@@ -209,12 +266,46 @@ Id TextureImage(EmitContext& ctx, IR::TextureInstInfo info, const IR::Value& ind
             throw NotImplementedException("Indirect texture sample");
         }
         return ctx.OpLoad(ctx.image_buffer_type, def.id);
-    } else {
+    }
+
+    switch (ctx.texture_mode) {
+    case TextureOrganizationMode::Pooled: {
+        // Pooled mode: Load image from texture pool
+        const auto& mapping = ctx.pooled_texture_map.at(info.descriptor_index);
+        const auto& pool = ctx.texture_pools.at(mapping.pool_index);
+
+        // Calculate pool index
+        const Id pool_index = ctx.Const(mapping.pool_offset + index.U32());
+
+        // Load and return image from pool
+        const Id pointer{ctx.OpAccessChain(pool.pointer_type, pool.id, pool_index)};
+        return ctx.OpLoad(pool.image_type, pointer);
+    }
+
+    case TextureOrganizationMode::Separated: {
+        // Separated mode: Load image directly (texture and sampler are separate)
         const TextureDefinition& def{ctx.textures.at(info.descriptor_index)};
         if (def.count > 1) {
             throw NotImplementedException("Indirect texture sample");
         }
+        return ctx.OpLoad(def.image_type, def.id);
+    }
+
+    case TextureOrganizationMode::Combined:
+    default: {
+        // Combined mode: Extract image from combined sampler
+        const TextureDefinition& def{ctx.textures.at(info.descriptor_index)};
+        if (def.count > 1) {
+            throw NotImplementedException("Indirect texture sample");
+        }
+#ifdef __APPLE__
+        // Metal mode: Load image directly (already separated)
+        return ctx.OpLoad(def.image_type, def.id);
+#else
+        // Non-Metal mode: Extract image from combined sampler
         return ctx.OpImage(def.image_type, ctx.OpLoad(def.sampled_type, def.id));
+#endif
+    }
     }
 }
 
@@ -232,9 +323,22 @@ std::pair<Id, bool> Image(EmitContext& ctx, const IR::Value& index, IR::TextureI
 }
 
 bool IsTextureMsaa(EmitContext& ctx, const IR::TextureInstInfo& info) {
+    using Shader::Backend::SPIRV::TextureOrganizationMode;
+
     if (info.type == TextureType::Buffer) {
         return false;
     }
+
+    // In Pooled mode, check the texture info from the pooled texture mapping
+    if (ctx.texture_mode == TextureOrganizationMode::Pooled) {
+        const auto it = ctx.pooled_texture_map.find(info.descriptor_index);
+        if (it != ctx.pooled_texture_map.end()) {
+            return it->second.is_multisample;
+        }
+        return false;
+    }
+
+    // For Combined and Separated modes, check the texture definition
     return ctx.textures.at(info.descriptor_index).is_multisample;
 }
 
@@ -592,11 +696,35 @@ Id EmitImageQueryLod(EmitContext& ctx, IR::Inst* inst, const IR::Value& index, I
 Id EmitImageGradient(EmitContext& ctx, IR::Inst* inst, const IR::Value& index, Id coords,
                      Id derivatives, const IR::Value& offset, Id lod_clamp) {
     const auto info{inst->Flags<IR::TextureInstInfo>()};
-    const auto operands = info.num_derivatives == 3
-                              ? ImageOperands(ctx, info.has_lod_clamp != 0, derivatives,
-                                              ctx.Def(offset), {}, lod_clamp)
-                              : ImageOperands(ctx, info.has_lod_clamp != 0, derivatives,
-                                              info.num_derivatives, offset, lod_clamp);
+    const bool has_lod_clamp{info.has_lod_clamp != 0};
+
+    const IR::Value& derivatives_val = inst->Arg(2);
+    IR::Type derivatives_type = derivatives_val.Type();
+    if (derivatives_type == IR::Type::Opaque) {
+        derivatives_type = derivatives_val.InstRecursive()->Type();
+    }
+    if (derivatives_type == IR::Type::U32x2) {
+        derivatives = ctx.OpBitcast(ctx.F32[2], derivatives);
+    } else if (derivatives_type == IR::Type::U32x4) {
+        derivatives = ctx.OpBitcast(ctx.F32[4], derivatives);
+    }
+
+    if (info.num_derivatives == 3) {
+        Id derivatives_2{ctx.Def(offset)};
+        IR::Type offset_type{offset.Type()};
+        if (offset_type == IR::Type::Opaque) {
+            offset_type = offset.InstRecursive()->Type();
+        }
+        if (offset_type == IR::Type::U32x2) {
+            derivatives_2 = ctx.OpBitcast(ctx.F32[2], derivatives_2);
+        }
+        const ImageOperands operands(ctx, has_lod_clamp, derivatives, derivatives_2, {}, lod_clamp);
+        return Emit(&EmitContext::OpImageSparseSampleExplicitLod,
+                    &EmitContext::OpImageSampleExplicitLod, ctx, inst, ctx.F32[4],
+                    Texture(ctx, info, index), coords, operands.Mask(), operands.Span());
+    }
+    const auto operands = ImageOperands(ctx, has_lod_clamp, derivatives, info.num_derivatives,
+                                        offset, lod_clamp);
     return Emit(&EmitContext::OpImageSparseSampleExplicitLod,
                 &EmitContext::OpImageSampleExplicitLod, ctx, inst, ctx.F32[4],
                 Texture(ctx, info, index), coords, operands.Mask(), operands.Span());

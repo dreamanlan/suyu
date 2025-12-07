@@ -281,7 +281,7 @@ void ComputePipeline::Configure(Tegra::Engines::KeplerCompute& kepler_compute,
     RescalingPushConstant rescaling;
     const VideoCommon::SamplerId* samplers_it{samplers.data()};
     const VideoCommon::ImageViewInOut* views_it{views.data()};
-    PushImageDescriptors(texture_cache, guest_descriptor_queue, static_cast<int>(Shader::Stage::Compute), info, rescaling, samplers_it,
+    PushImageDescriptors(texture_cache, guest_descriptor_queue, device, static_cast<int>(Shader::Stage::Compute), info, rescaling, samplers_it,
                          views_it);
 
     if (log) {

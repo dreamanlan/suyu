@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2019 yuzu Emulator Project
+﻿// SPDX-FileCopyrightText: Copyright 2019 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #pragma once
@@ -67,6 +67,17 @@ public:
         };
     }
 
+    // Add sampler separately (for separated texture/sampler and pooled modes)
+    void AddSampler(int stage, int binding_index, VkSampler sampler) {
+        LogAddSampler(stage, binding_index, sampler);
+
+        *(payload_cursor++) = VkDescriptorImageInfo{
+            .sampler = sampler,
+            .imageView = VK_NULL_HANDLE,
+            .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+        };
+    }
+
     void AddBuffer(int stage, int binding_index, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize size) {
         LogAddBuffer(stage, binding_index, buffer, offset, size);
 
@@ -86,6 +97,7 @@ public:
 private:
     void LogAddSampledImage(int stage, int binding_index, VkImageView image_view, VkSampler sampler);
     void LogAddImage(int stage, int binding_index, VkImageView image_view);
+    void LogAddSampler(int stage, int binding_index, VkSampler sampler);
     void LogAddBuffer(int stage, int binding_index, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize size);
     void LogAddTexelBuffer(int stage, int binding_index, VkBufferView texel_buffer);
 

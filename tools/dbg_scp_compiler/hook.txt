@@ -65,7 +65,7 @@ hook(TestMacro1)
 		$b:int = ptrget(argv(2),8);
 		$c:int = ptrget(argv(3),8);
 		printf("TestMacro1 enter time:%lld a:%d b:%f c:%s\n",time(),$a,$b,$c);
-		
+
 		ptrset(argv(0),4,1);
 		return 1;
 	};
@@ -80,7 +80,7 @@ hook(TestMacro2)
 		$b:int = ptrget(argv(2),8);
 		$c:int = ptrget(argv(3),8);
 		printf("TestMacro2 enter time:%lld a:%d b:%f c:%s\n",time(),$a,$b,$c);
-		
+
 		return 0;
 	};
 	onexit{
@@ -95,14 +95,14 @@ hook(TestMacro3)
 		$b:int = ptrget(argv(1),8);
 		$c:int = ptrget(argv(2),8);
 		printf("TestMacro3 enter time:%lld a:%d b:%f c:%s\n",time(),$a,$b,$c);
-		
+
 		if(platform()==0){
 			//test code on windows
 			dumpcascadeptr(argv(2),0);
 			if($a==123){
 				ptrset(argv(0),4,1);
 			}
-			else{ 
+			else{
 				ptrset(argv(0),4,0);
 			};
 			$i:int = 0;
@@ -141,7 +141,7 @@ hook(TestMacro4)
 		$b:int = ptrget(argv(1),8);
 		$c:int = ptrget(argv(2),8);
 		printf("TestMacro4 enter time:%lld a:%d b:%f c:%s\n",time(),$a,$b,$c);
-		
+
 		return 0;
 	};
 	onexit{
@@ -159,7 +159,7 @@ hook(DbgScp_Set)
 		$b:int = ptrget(argv(2),8);
 		$c:int = ptrget(argv(3),8);
 		printf("DbgScp_Set enter time:%lld cmd:%d a:%d b:%f c:%s\n",time(),$cmd,$a,$b,$c);
-		
+
 		return 1;
 	};
 	onexit{
@@ -174,7 +174,7 @@ hook(DbgScp_Get)
 		$b:int = ptrget(argv(3),8);
 		$c:int = ptrget(argv(4),8);
 		printf("DbgScp_Get enter time:%lld cmd:%d a:%d b:%f c:%s\n",time(),$cmd,$a,$b,$c);
-		
+
 		return 0;
 	};
 	onexit{
@@ -245,6 +245,8 @@ hook("Vulkan::GraphicsPipeline::UpdateDescriptorSet")
 			//skip
 			//ptrset(argv(1),1,1);
 		};
+		//log
+		//ptrset(argv(0),1,1);
 	};
 };
 hook("UpdateDescriptorQueue::LogAddSampledImage")
@@ -268,6 +270,18 @@ hook("UpdateDescriptorQueue::LogAddImage")
 		$stage:int = ptrget(argv(2),4);
 		$binding:int = ptrget(argv(3),4);
 		$imgview:int = ptrget(argv(4),8);
+
+		//ptrset(argv(0),1,1);
+	};
+};
+hook("UpdateDescriptorQueue::LogAddSampler")
+{
+	onenter{
+		//$log:int = ptrget(argv(0),1);
+		$this:int = ptrget(argv(1),8);
+		$stage:int = ptrget(argv(2),4);
+		$binding:int = ptrget(argv(3),4);
+		$sampler:int = ptrget(argv(4),8);
 
 		//ptrset(argv(0),1,1);
 	};
@@ -353,7 +367,7 @@ hook("dbgscpHookOnFastmemCallback")
 		$thisAddr:int = ptrget(argv(2),8);
 		$hostPC:int = ptrget(argv(3),8);
 		$failType:int = ptrget(argv(4),4);
-		
+
 		if ($failType > 0) {
 			printf("dbgscpHookOnFastmemCallback fastcall addr:%llx this:%llx host pc:%llx fail type:%d", $fcAddr, $thisAddr, $hostPC, $failType);
 			dumpstack("dbgscpHookOnFastmemCallback");
@@ -370,7 +384,7 @@ hook("ServiceContext::CreateEvent")
 		$event:int = ptrget(argv(2),8);
 		$id:int = ptrget(argv(3),8);
 		$name:string = ptrget(argv(4),8);
-		
+
 		//printf("ServiceContext::CreateEvent %llx %lld %s", $event, $id, $name);
 		//dumpstack("ServiceContext::CreateEvent");
 	};
@@ -381,7 +395,7 @@ hook("ServiceContext::CloseEvent")
 		$this:int = ptrget(argv(0),8);
 		$event:int = ptrget(argv(1),8);
 		$id:int = ptrget(argv(2),8);
-		
+
 		//printf("ServiceContext::CloseEvent %llx %lld", $event, $id);
 		//dumpstack("ServiceContext::CloseEvent");
 	};

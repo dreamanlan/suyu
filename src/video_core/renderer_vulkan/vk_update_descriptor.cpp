@@ -66,6 +66,16 @@ void UpdateDescriptorQueue::LogAddImage(int stage, int binding_index, VkImageVie
     }
 }
 
+void UpdateDescriptorQueue::LogAddSampler(int stage, int binding_index, VkSampler sampler) {
+    bool log = false;
+    auto&& pThis = this;
+    DBGSCP_HOOK_VOID("UpdateDescriptorQueue::LogAddSampler", log, pThis, stage, binding_index, sampler);
+
+    if (log) {
+        LOG_DBGSCP(Render_Vulkan, "stage:{} binding:{} sampler:{:016x}", stage, binding_index, reinterpret_cast<u64>(sampler));
+    }
+}
+
 void UpdateDescriptorQueue::LogAddBuffer(int stage, int binding_index, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize size) {
     bool log = false;
     auto&& pThis = this;

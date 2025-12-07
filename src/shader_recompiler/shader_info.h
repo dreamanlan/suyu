@@ -5,11 +5,14 @@
 
 #include <array>
 #include <bitset>
+#include <limits>
 #include <map>
+#include <tuple>
 
 #include "common/common_types.h"
 #include "shader_recompiler/frontend/ir/type.h"
 #include "shader_recompiler/varying_state.h"
+#include "video_core/textures/texture.h"
 
 #include <boost/container/small_vector.hpp>
 #include <boost/container/static_vector.hpp>
@@ -215,6 +218,7 @@ struct TextureDescriptor {
     u32 secondary_shift_left;
     u32 count;
     u32 size_shift;
+    u32 sampler_index{std::numeric_limits<u32>::max()};
 
     auto operator<=>(const TextureDescriptor&) const = default;
 };
@@ -234,6 +238,48 @@ struct ImageDescriptor {
     auto operator<=>(const ImageDescriptor&) const = default;
 };
 using ImageDescriptors = boost::container::small_vector<ImageDescriptor, 4>;
+
+struct TextureSamplerInfo {
+    Tegra::Texture::WrapMode wrap_u;
+    Tegra::Texture::WrapMode wrap_v;
+    Tegra::Texture::WrapMode wrap_p;
+    bool depth_compare_enabled;
+    Tegra::Texture::DepthCompareFunc depth_compare_func;
+    bool srgb_conversion;
+    u32 max_anisotropy;
+    Tegra::Texture::TextureFilter mag_filter;
+    Tegra::Texture::TextureFilter min_filter;
+    Tegra::Texture::TextureMipmapFilter mipmap_filter;
+    bool cubemap_anisotropy;
+    bool cubemap_interface_filtering;
+    Tegra::Texture::SamplerReduction reduction_filter;
+    s32 mip_lod_bias;
+    bool float_coord_normalization;
+    u32 trilin_opt;
+    u32 min_lod_clamp;
+    u32 max_lod_clamp;
+    u32 srgb_border_color_r;
+    u32 srgb_border_color_g;
+    u32 srgb_border_color_b;
+    std::array<f32, 4> border_color;
+
+    bool operator<(const TextureSamplerInfo& other) const {
+        return std::tie(wrap_u, wrap_v, wrap_p, depth_compare_enabled, depth_compare_func,
+                        srgb_conversion, max_anisotropy, mag_filter, min_filter, mipmap_filter,
+                        cubemap_anisotropy, cubemap_interface_filtering, reduction_filter,
+                        mip_lod_bias, float_coord_normalization, trilin_opt, min_lod_clamp,
+                        max_lod_clamp, srgb_border_color_r, srgb_border_color_g,
+                        srgb_border_color_b, border_color) <
+               std::tie(other.wrap_u, other.wrap_v, other.wrap_p, other.depth_compare_enabled,
+                        other.depth_compare_func, other.srgb_conversion, other.max_anisotropy,
+                        other.mag_filter, other.min_filter, other.mipmap_filter,
+                        other.cubemap_anisotropy, other.cubemap_interface_filtering,
+                        other.reduction_filter, other.mip_lod_bias, other.float_coord_normalization,
+                        other.trilin_opt, other.min_lod_clamp, other.max_lod_clamp,
+                        other.srgb_border_color_r, other.srgb_border_color_g,
+                        other.srgb_border_color_b, other.border_color);
+    }
+};
 
 struct Info {
     static constexpr size_t MAX_INDIRECT_CBUFS{14};
@@ -333,6 +379,7 @@ struct Info {
     ImageBufferDescriptors image_buffer_descriptors;
     TextureDescriptors texture_descriptors;
     ImageDescriptors image_descriptors;
+    std::vector<std::optional<TextureSamplerInfo>> sampler_descriptors; // Array of actual sampler configuration data
 };
 
 template <typename Descriptors>

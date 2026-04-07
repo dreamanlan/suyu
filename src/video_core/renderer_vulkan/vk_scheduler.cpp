@@ -105,6 +105,7 @@ void Scheduler::RequestRenderpass(const Framebuffer* framebuffer) {
     state.renderpass = renderpass;
     state.framebuffer = framebuffer_handle;
     state.render_area = render_area;
+    fprintf(stderr, "[YUZU-DBG] RequestRenderpass: fb_handle=%p\n", (void*)framebuffer_handle);
 
     Record([renderpass, framebuffer_handle, render_area](vk::CommandBuffer cmdbuf) {
         const VkRenderPassBeginInfo renderpass_bi{

@@ -612,10 +612,13 @@ void RasterizerVulkan::Draw(bool is_indexed, u32 instance_count) {
                             cb.address, cb_size,
                             VideoCommon::ObtainBufferSynchronize::FullSynchronize,
                             VideoCommon::ObtainBufferOperation::DoNothing);
+                        // Clamp size to prevent offset + size from exceeding buffer bounds.
+                        const u32 clamped_cb_size = std::min(
+                            cb_size, static_cast<u32>(cb_buffer->SizeBytes()) - cb_offset);
                         vs_extra_ubos.push_back({
                             cbuf_desc.index, cb_buffer->Handle(),
                             static_cast<VkDeviceSize>(cb_offset),
-                            static_cast<VkDeviceSize>(cb_size)});
+                            static_cast<VkDeviceSize>(clamped_cb_size)});
                         continue;
                     }
                 }
@@ -664,10 +667,13 @@ void RasterizerVulkan::Draw(bool is_indexed, u32 instance_count) {
                                 cb.address, cb_size,
                                 VideoCommon::ObtainBufferSynchronize::FullSynchronize,
                                 VideoCommon::ObtainBufferOperation::DoNothing);
+                            // Clamp size to prevent offset + size from exceeding buffer bounds.
+                            const u32 clamped_cb_size = std::min(
+                                cb_size, static_cast<u32>(cb_buffer->SizeBytes()) - cb_offset);
                             gs_extra_ubos.push_back({
                                 cbuf_desc.index, cb_buffer->Handle(),
                                 static_cast<VkDeviceSize>(cb_offset),
-                                static_cast<VkDeviceSize>(cb_size)});
+                                static_cast<VkDeviceSize>(clamped_cb_size)});
                             continue;
                         }
                     }

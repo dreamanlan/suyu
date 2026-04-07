@@ -118,6 +118,10 @@ public:
     const Settings::ResolutionScalingInfo& resolution;
     std::array<std::vector<VkFormat>, VideoCore::Surface::MaxPixelFormat> view_formats;
 
+    // Temporary framebuffers from CopyImage blit fallback paths.
+    // Destroyed in TickFrame after WaitWorker ensures vkQueueSubmit has completed.
+    std::vector<Framebuffer> pending_framebuffers;
+
     static constexpr size_t indexing_slots = 8 * sizeof(size_t);
     std::array<vk::Buffer, indexing_slots> buffers{};
 };

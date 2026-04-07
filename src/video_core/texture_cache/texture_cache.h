@@ -152,6 +152,7 @@ void TextureCache<P>::TickFrame() {
         RunGarbageCollector();
     }
     sentenced_images.Tick();
+    fprintf(stderr, "[YUZU-DBG] TickFrame: about to Tick sentenced_framebuffers (frame_tick=%llu)\n", (unsigned long long)frame_tick);
     sentenced_framebuffers.Tick();
     sentenced_image_view.Tick();
     TickAsyncDecode();

@@ -124,7 +124,11 @@ void RendererVulkan::Composite(std::span<const Tegra::FramebufferConfig> framebu
     present_manager.Present(frame);
 
     gpu.RendererFrameEndNotify();
+    fprintf(stderr, "[YUZU-DBG] Composite: WaitWorker start\n");
+    scheduler.WaitWorker();
+    fprintf(stderr, "[YUZU-DBG] Composite: WaitWorker done, TickFrame start\n");
     rasterizer.TickFrame();
+    fprintf(stderr, "[YUZU-DBG] Composite: TickFrame done\n");
 
     if (VideoCore::g_LineModeLogFrameIndex >= VideoCore::g_LineModeLogFrameCount) {
         VideoCore::g_LineModeLogFrameIndex = -1;

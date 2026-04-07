@@ -1545,6 +1545,7 @@ void TextureCacheRuntime::CopyImage(Image& dst, Image& src,
                                                 Tegra::Engines::Fermi2D::Filter::Point,
                                                 Tegra::Engines::Fermi2D::Operation::SrcCopy);
                 }
+                pending_framebuffers.emplace_back(std::move(dst_fb));
             }
             return;
         }
@@ -1617,6 +1618,7 @@ void TextureCacheRuntime::CopyImage(Image& dst, Image& src,
                                         dst_region, src_region,
                                         Tegra::Engines::Fermi2D::Filter::Point,
                                         Tegra::Engines::Fermi2D::Operation::SrcCopy);
+            pending_framebuffers.emplace_back(std::move(dst_fb));
         }
         return;
     }
@@ -1731,7 +1733,9 @@ bool TextureCacheRuntime::CanReportMemoryUsage() const {
     return device.CanReportMemoryUsage();
 }
 
-void TextureCacheRuntime::TickFrame() {}
+void TextureCacheRuntime::TickFrame() {
+    pending_framebuffers.clear();
+}
 
 Image::Image(TextureCacheRuntime& runtime_, const ImageInfo& info_, GPUVAddr gpu_addr_,
              VAddr cpu_addr_)

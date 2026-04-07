@@ -839,6 +839,9 @@ void BufferCache<P>::BindHostGraphicsUniformBuffer(size_t stage, u32 index, u32 
         return;
     }
     const u32 offset = buffer.Offset(device_addr);
+    // Clamp size to prevent offset + size from exceeding buffer bounds.
+    // This avoids Vulkan spec violation and Metal validation errors on macOS.
+    const u32 clamped_size = std::min(size, static_cast<u32>(buffer.SizeBytes()) - offset);
     if constexpr (IS_OPENGL) {
         // Fast buffer will be unbound
         channel_state->fast_bound_uniform_buffers[stage] &= ~(1U << binding_index);
@@ -848,13 +851,13 @@ void BufferCache<P>::BindHostGraphicsUniformBuffer(size_t stage, u32 index, u32 
         channel_state->dirty_uniform_buffers[stage] |= (is_copy_bind ? 1U : 0U) << index;
     }
     if constexpr (HAS_PERSISTENT_UNIFORM_BUFFER_BINDINGS) {
-        channel_state->uniform_buffer_binding_sizes[stage][binding_index] = size;
+        channel_state->uniform_buffer_binding_sizes[stage][binding_index] = clamped_size;
     }
-    buffer.MarkUsage(offset, size);
+    buffer.MarkUsage(offset, clamped_size);
     if constexpr (NEEDS_BIND_UNIFORM_INDEX) {
-        runtime.BindUniformBuffer(stage, binding_index, buffer, offset, size);
+        runtime.BindUniformBuffer(stage, binding_index, buffer, offset, clamped_size);
     } else {
-        runtime.BindUniformBuffer(static_cast<int>(stage), static_cast<int>(binding_index), buffer, offset, size);
+        runtime.BindUniformBuffer(static_cast<int>(stage), static_cast<int>(binding_index), buffer, offset, clamped_size);
     }
 }
 
@@ -962,12 +965,14 @@ void BufferCache<P>::BindHostComputeUniformBuffers() {
         SynchronizeBuffer(buffer, binding.device_addr, size);
 
         const u32 offset = buffer.Offset(binding.device_addr);
-        buffer.MarkUsage(offset, size);
+        // Clamp size to prevent offset + size from exceeding buffer bounds.
+        const u32 clamped_size = std::min(size, static_cast<u32>(buffer.SizeBytes()) - offset);
+        buffer.MarkUsage(offset, clamped_size);
         const Shader::Stage stage = Shader::Stage::Compute;
         if constexpr (NEEDS_BIND_UNIFORM_INDEX) {
-            runtime.BindComputeUniformBuffer(static_cast<int>(stage), static_cast<int>(binding_index), buffer, offset, size);
+            runtime.BindComputeUniformBuffer(static_cast<int>(stage), static_cast<int>(binding_index), buffer, offset, clamped_size);
         } else {
-            runtime.BindUniformBuffer(static_cast<int>(stage), static_cast<int>(binding_index), buffer, offset, size);
+            runtime.BindUniformBuffer(static_cast<int>(stage), static_cast<int>(binding_index), buffer, offset, clamped_size);
         }
         ++binding_index;
     });

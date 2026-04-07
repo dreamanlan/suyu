@@ -42,6 +42,7 @@ add_subdirectory(glad)
 # mbedtls
 set(ENABLE_PROGRAMS OFF CACHE BOOL "" FORCE)
 set(ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+set(GEN_FILES ON CACHE BOOL "" FORCE)
 add_subdirectory(mbedtls)
 target_include_directories(mbedtls PUBLIC ./mbedtls/include)
 if (NOT MSVC)

@@ -227,3 +227,42 @@ hook("dbgscpHookOnChangeBitArray")
 		//printf("dbgscpHookOnChangeBitArray this:%llx data:%llx size:%lld capacity:%llx tag:%d func:%s tid:%d\n",$this,$data,$size,$capacity,$tag,$func,GetTID());
 	};
 };
+hook("dbgscpHookOnNewTextureViewWithPixelFormat")
+{
+	onenter{
+		$viewPixFmt:int = ptrget(argv(0),4);
+		$texPixFmt:int = ptrget(argv(1),4);
+
+		if ($viewPixFmt!=$texPixFmt) {
+			printf("dbgscpHookOnNewTextureViewWithPixelFormat pixel_format:%d texture_format:%d tid:%d\n",$viewPixFmt,$texPixFmt,GetTID());
+			//dumpstack("dbgscpHookOnNewTextureViewWithPixelFormat");
+		};
+	};
+};
+hook("dbgscpHookOnConvertToMSL")
+{
+	onenter{
+		//$modified:int = ptrget(argv(0),1);
+		//$save_to_file:int = ptrget(argv(1),1);
+		$was_converted:int = ptrget(argv(2),1);
+		$result_info_addr:int = ptrget(argv(3),8);
+		$msl_str:string = ptrget(argv(4),8);
+		$result_str:string = ptrget(argv(5),8);
+		$debug_name:string = ptrget(argv(6),8);
+		$rep_msl_path:int = ptrget(argv(7),8);
+
+		if (stringcontains($debug_name, "327b52089f1a6094")) {
+			memset($rep_msl_path,32,1024);
+			ptrset($rep_msl_path+1024,1,0);
+
+			//$modified
+			ptrset(argv(0),1,1);
+			ptrset(argv(7),8,"/Users/dreaman/.local/share/yuzu/dump/spirv_shaders/test.msl");
+		};
+
+		//$save_to_file
+		//ptrset(argv(1),1,1);
+
+		printf("dbgscpHookOnConvertToMSL debug_name:%s was_converted:%d result:%s tid:%d\n",$debug_name,$was_converted,$result_str,GetTID());
+	};
+};

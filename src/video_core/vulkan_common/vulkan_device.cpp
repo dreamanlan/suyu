@@ -18,6 +18,7 @@
 #include "video_core/vulkan_common/vma.h"
 #include "video_core/vulkan_common/vulkan_device.h"
 #include "video_core/vulkan_common/vulkan_wrapper.h"
+#include "core/memory/debug_script/DbgScpHook.h"
 
 #if defined(ANDROID) && defined(ARCHITECTURE_arm64)
 #include <adrenotools/bcenabler.h>
@@ -478,6 +479,9 @@ Device::Device(VkInstance instance_, vk::PhysicalDevice physical_, VkSurfaceKHR 
             LOG_INFO(Render_Vulkan, "MoltenVK: ASTC format support limited, "
                                     "will use format fallback and software transcoding");
         }
+    } else if (!Settings::values.use_hardware_bcn) {
+        LOG_INFO(Render_Vulkan, "hardware BCn texture compression disabled");
+        features.features.textureCompressionBC = VK_FALSE;
     }
 
     is_integrated = properties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
@@ -723,6 +727,13 @@ Device::Device(VkInstance instance_, vk::PhysicalDevice physical_, VkSurfaceKHR 
     if (is_turnip) {
         LOG_WARNING(Render_Vulkan, "Turnip requires higher-than-reported binding limits");
         properties.properties.limits.maxVertexInputBindings = 32;
+    }
+
+    if (is_mvk && extensions.extended_dynamic_state && !extensions.extended_dynamic_state2) {
+        LOG_INFO(Render_Vulkan,
+                 "Removing extendedDynamicState due to missing extendedDynamicState2 on MoltenVK");
+        RemoveExtensionFeature(extensions.extended_dynamic_state, features.extended_dynamic_state,
+                               VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME);
     }
 
     if (!extensions.extended_dynamic_state && extensions.extended_dynamic_state2) {

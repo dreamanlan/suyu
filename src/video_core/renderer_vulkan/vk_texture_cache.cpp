@@ -1,8 +1,13 @@
 // SPDX-FileCopyrightText: Copyright 2019 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#include <fstream>
 #include <algorithm>
 #include <array>
+#include <bit>
+#include <chrono>
+#include <cmath>
+#include <cstring>
 #include <span>
 #include <vector>
 #include <boost/container/small_vector.hpp>
@@ -10,6 +15,10 @@
 #include "common/bit_cast.h"
 #include "common/bit_util.h"
 #include "common/settings.h"
+#include "common/stb.h"
+#include "common/fs/fs.h"
+#include "common/fs/path_util.h"
+#include "common/logging/log.h"
 
 #include "video_core/renderer_vulkan/vk_texture_cache.h"
 
@@ -23,6 +32,9 @@
 #include "video_core/texture_cache/formatter.h"
 #include "video_core/texture_cache/samples_helper.h"
 #include "video_core/texture_cache/util.h"
+#include "video_core/texture_cache/dds_writer.h"
+#include "video_core/textures/decoders.h"
+#include "video_core/compatible_formats.h"
 #include "video_core/vulkan_common/vulkan_device.h"
 #include "video_core/vulkan_common/vulkan_memory_allocator.h"
 #include "video_core/vulkan_common/vulkan_wrapper.h"
@@ -40,6 +52,7 @@ using VideoCommon::ImageType;
 using VideoCommon::SubresourceRange;
 using VideoCore::Surface::BytesPerBlock;
 using VideoCore::Surface::IsPixelFormatASTC;
+using VideoCore::Surface::IsPixelFormatBCn;
 using VideoCore::Surface::IsPixelFormatInteger;
 using VideoCore::Surface::SurfaceType;
 
@@ -96,6 +109,68 @@ constexpr VkBorderColor ConvertBorderColor(const std::array<float, 4>& color) {
     }
 }
 
+[[nodiscard]] bool IsCompressedFormat(VkFormat format) {
+    switch (format) {
+    case VK_FORMAT_BC1_RGB_UNORM_BLOCK:
+    case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
+    case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
+    case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
+    case VK_FORMAT_BC2_UNORM_BLOCK:
+    case VK_FORMAT_BC2_SRGB_BLOCK:
+    case VK_FORMAT_BC3_UNORM_BLOCK:
+    case VK_FORMAT_BC3_SRGB_BLOCK:
+    case VK_FORMAT_BC4_UNORM_BLOCK:
+    case VK_FORMAT_BC4_SNORM_BLOCK:
+    case VK_FORMAT_BC5_UNORM_BLOCK:
+    case VK_FORMAT_BC5_SNORM_BLOCK:
+    case VK_FORMAT_BC6H_UFLOAT_BLOCK:
+    case VK_FORMAT_BC6H_SFLOAT_BLOCK:
+    case VK_FORMAT_BC7_UNORM_BLOCK:
+    case VK_FORMAT_BC7_SRGB_BLOCK:
+    case VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK:
+    case VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK:
+    case VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK:
+    case VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK:
+    case VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK:
+    case VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK:
+    case VK_FORMAT_EAC_R11_UNORM_BLOCK:
+    case VK_FORMAT_EAC_R11_SNORM_BLOCK:
+    case VK_FORMAT_EAC_R11G11_UNORM_BLOCK:
+    case VK_FORMAT_EAC_R11G11_SNORM_BLOCK:
+    case VK_FORMAT_ASTC_4x4_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_4x4_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_5x4_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_5x4_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_5x5_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_5x5_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_6x5_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_6x5_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_6x6_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_6x6_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_8x5_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_8x5_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_8x6_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_8x6_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_8x8_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_8x8_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_10x5_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_10x5_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_10x6_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_10x6_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_10x8_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_10x8_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_10x10_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_12x10_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_12x10_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_12x12_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_12x12_SRGB_BLOCK:
+        return true;
+    default:
+        return false;
+    }
+}
+
 [[nodiscard]] VkImageUsageFlags ImageUsageFlags(const MaxwellToVK::FormatInfo& info,
                                                 PixelFormat format) {
     VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
@@ -139,7 +214,8 @@ constexpr VkBorderColor ConvertBorderColor(const std::array<float, 4>& color) {
         flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
         // Force usage to be VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT only on MoltenVK
         if (device.IsMoltenVK()) {
-            usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+            //usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+            usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         }
     }
     const auto [samples_x, samples_y] = VideoCommon::SamplesLog2(info.num_samples);
@@ -172,19 +248,65 @@ constexpr VkBorderColor ConvertBorderColor(const std::array<float, 4>& color) {
         return vk::Image{};
     }
     VkImageCreateInfo image_ci = MakeImageCreateInfo(device, info);
+    const bool is_main_compressed = IsCompressedFormat(image_ci.format);
+    // Filter view_formats for Vulkan compatibility:
+    // - Compressed image: keep all formats, set BLOCK_TEXEL_VIEW_COMPATIBLE_BIT if mixed
+    // - Uncompressed image: remove compressed formats (not class-compatible in Vulkan)
+    boost::container::small_vector<VkFormat, 16> filtered_formats;
+    if (!is_main_compressed) {
+        for (const auto fmt : view_formats) {
+            if (!IsCompressedFormat(fmt)) {
+                filtered_formats.push_back(fmt);
+            }
+        }
+    }
+    const auto effective_formats = is_main_compressed
+                                       ? view_formats
+                                       : std::span<const VkFormat>(filtered_formats);
     const VkImageFormatListCreateInfo image_format_list = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO,
         .pNext = nullptr,
-        .viewFormatCount = static_cast<u32>(view_formats.size()),
-        .pViewFormats = view_formats.data(),
+        .viewFormatCount = static_cast<u32>(effective_formats.size()),
+        .pViewFormats = effective_formats.data(),
     };
-    if (view_formats.size() > 1) {
+    if (effective_formats.size() > 1) {
         image_ci.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
         if (device.IsKhrImageFormatListSupported()) {
             image_ci.pNext = &image_format_list;
         }
+        if (is_main_compressed) {
+            const bool any_uncompressed = std::ranges::any_of(
+                effective_formats, [](VkFormat format) { return !IsCompressedFormat(format); });
+            if (any_uncompressed) {
+                image_ci.flags |= VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT;
+            }
+        }
     }
     return allocator.CreateImage(image_ci);
+}
+
+[[nodiscard]] VkFormat ConvertStorageFormat(VkFormat format) {
+    switch (format) {
+    case VK_FORMAT_A8B8G8R8_SRGB_PACK32:
+    case VK_FORMAT_A8B8G8R8_UNORM_PACK32:
+        return VK_FORMAT_R8G8B8A8_UNORM;
+    case VK_FORMAT_A8B8G8R8_SNORM_PACK32:
+        return VK_FORMAT_R8G8B8A8_SNORM;
+    case VK_FORMAT_A8B8G8R8_UINT_PACK32:
+        return VK_FORMAT_R8G8B8A8_UINT;
+    case VK_FORMAT_A8B8G8R8_SINT_PACK32:
+        return VK_FORMAT_R8G8B8A8_SINT;
+    case VK_FORMAT_B8G8R8A8_SRGB:
+        return VK_FORMAT_B8G8R8A8_UNORM;
+    case VK_FORMAT_R8G8B8A8_SRGB:
+        return VK_FORMAT_R8G8B8A8_UNORM;
+    case VK_FORMAT_R8G8_SRGB:
+        return VK_FORMAT_R8G8_UNORM;
+    case VK_FORMAT_R8_SRGB:
+        return VK_FORMAT_R8_UNORM;
+    default:
+        return format;
+    }
 }
 
 [[nodiscard]] vk::ImageView MakeStorageView(const vk::Device& device, u32 level, VkImage image,
@@ -859,6 +981,20 @@ TextureCacheRuntime::TextureCacheRuntime(const Device& device_, Scheduler& sched
         astc_decoder_pass.emplace(device, scheduler, descriptor_pool, staging_buffer_pool,
                                   compute_pass_descriptor_queue, memory_allocator);
     }
+    // Initialize BCn GPU decoder if enabled (Gpu mode)
+    const auto bcn_mode = Settings::values.bcn_decode_mode.GetValue();
+    if (bcn_mode == Settings::BcnDecodeMode::Gpu) {
+        if (!device.IsOptimalBcnSupported()) {
+            bcn_decoder_pass.emplace(device, scheduler, descriptor_pool, staging_buffer_pool,
+                                     compute_pass_descriptor_queue, memory_allocator);
+
+            // Initialize specialized BC6H and BC7 decoders
+            bc6h_decoder_pass.emplace(device, scheduler, descriptor_pool, staging_buffer_pool,
+                                      compute_pass_descriptor_queue, memory_allocator);
+            bc7_decoder_pass.emplace(device, scheduler, descriptor_pool, staging_buffer_pool,
+                                     compute_pass_descriptor_queue, memory_allocator);
+        }
+    }
     if (device.IsStorageImageMultisampleSupported()) {
         msaa_copy_pass = std::make_unique<MSAACopyPass>(
             device, scheduler, descriptor_pool, staging_buffer_pool, compute_pass_descriptor_queue);
@@ -871,6 +1007,17 @@ TextureCacheRuntime::TextureCacheRuntime(const Device& device_, Scheduler& sched
         if (IsPixelFormatASTC(image_format) && !device.IsOptimalAstcSupported()) {
             view_formats[index_a].push_back(VK_FORMAT_A8B8G8R8_UNORM_PACK32);
         }
+        // Add view format for BCn GPU decoding
+        if (IsPixelFormatBCn(image_format) && !device.IsOptimalBcnSupported()) {
+            if (bcn_mode == Settings::BcnDecodeMode::Gpu) {
+                if (image_format == PixelFormat::BC6H_UFLOAT ||
+                    image_format == PixelFormat::BC6H_SFLOAT) {
+                    view_formats[index_a].push_back(VK_FORMAT_R16G16B16A16_SFLOAT);
+                } else {
+                    view_formats[index_a].push_back(VK_FORMAT_A8B8G8R8_UNORM_PACK32);
+                }
+            }
+        }
         for (size_t index_b = 0; index_b < VideoCore::Surface::MaxPixelFormat; index_b++) {
             const auto view_format = static_cast<PixelFormat>(index_b);
             if (VideoCore::Surface::IsViewCompatible(image_format, view_format, false, true)) {
@@ -880,6 +1027,14 @@ TextureCacheRuntime::TextureCacheRuntime(const Device& device_, Scheduler& sched
             }
         }
     }
+}
+
+bool TextureCacheRuntime::HasBrokenTextureViewFormats() const noexcept {
+#if __APPLE__
+    if (Settings::values.enable_broken_views)
+        return true;
+#endif
+    return false;
 }
 
 void TextureCacheRuntime::Finish() {
@@ -965,9 +1120,11 @@ void TextureCacheRuntime::ReinterpretImage(Image& dst, Image& src,
     const VkBuffer copy_buffer = GetTemporaryBuffer(total_size);
     const VkImage dst_image = dst.Handle();
     const VkImage src_image = src.Handle();
+    const bool src_is_3d = src.info.type == ImageType::e3D;
+    const bool dst_is_3d = dst.info.type == ImageType::e3D;
     scheduler.RequestOutsideRenderPassOperationContext();
     scheduler.Record([dst_image, src_image, copy_buffer, src_aspect_mask, dst_aspect_mask,
-                      vk_in_copies, vk_out_copies](vk::CommandBuffer cmdbuf) {
+                      vk_in_copies, vk_out_copies, src_is_3d, dst_is_3d](vk::CommandBuffer cmdbuf) {
         RangedBarrierRange dst_range;
         RangedBarrierRange src_range;
         for (const VkBufferImageCopy& copy : vk_in_copies) {
@@ -976,6 +1133,16 @@ void TextureCacheRuntime::ReinterpretImage(Image& dst, Image& src,
         for (const VkBufferImageCopy& copy : vk_out_copies) {
             dst_range.AddLayers(copy.imageSubresource);
         }
+
+        auto src_subresource_range = src_range.SubresourceRange(src_aspect_mask);
+        if (src_is_3d) {
+            src_subresource_range.layerCount = VK_REMAINING_ARRAY_LAYERS;
+        }
+        auto dst_subresource_range = dst_range.SubresourceRange(dst_aspect_mask);
+        if (dst_is_3d) {
+            dst_subresource_range.layerCount = VK_REMAINING_ARRAY_LAYERS;
+        }
+
         static constexpr VkMemoryBarrier READ_BARRIER{
             .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
             .pNext = nullptr,
@@ -1001,7 +1168,7 @@ void TextureCacheRuntime::ReinterpretImage(Image& dst, Image& src,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .image = src_image,
-                .subresourceRange = src_range.SubresourceRange(src_aspect_mask),
+                .subresourceRange = src_subresource_range,
             },
         };
         const std::array middle_in_barrier{
@@ -1015,7 +1182,7 @@ void TextureCacheRuntime::ReinterpretImage(Image& dst, Image& src,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .image = src_image,
-                .subresourceRange = src_range.SubresourceRange(src_aspect_mask),
+                .subresourceRange = src_subresource_range,
             },
         };
         const std::array middle_out_barrier{
@@ -1031,7 +1198,7 @@ void TextureCacheRuntime::ReinterpretImage(Image& dst, Image& src,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .image = dst_image,
-                .subresourceRange = dst_range.SubresourceRange(dst_aspect_mask),
+                .subresourceRange = dst_subresource_range,
             },
         };
         const std::array post_barriers{
@@ -1050,7 +1217,7 @@ void TextureCacheRuntime::ReinterpretImage(Image& dst, Image& src,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .image = dst_image,
-                .subresourceRange = dst_range.SubresourceRange(dst_aspect_mask),
+                .subresourceRange = dst_subresource_range,
             },
         };
         cmdbuf.PipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -1220,6 +1387,20 @@ void TextureCacheRuntime::ConvertImage(Framebuffer* dst, ImageView& dst_view, Im
         if (src_view.format == PixelFormat::D32_FLOAT) {
             return blit_image_helper.ConvertD32FToABGR8(dst, src_view);
         }
+        if (src_view.format == PixelFormat::R8_UNORM) {
+            const Region2D src_region{
+                .start = {0, 0},
+                .end = {static_cast<s32>(src_view.size.width), static_cast<s32>(src_view.size.height)},
+            };
+            const Region2D dst_region{
+                .start = {0, 0},
+                .end = {static_cast<s32>(dst_view.size.width), static_cast<s32>(dst_view.size.height)},
+            };
+            return blit_image_helper.BlitColor(dst, src_view.Handle(Shader::TextureType::Color2D),
+                                               dst_region, src_region,
+                                               Tegra::Engines::Fermi2D::Filter::Point,
+                                               Tegra::Engines::Fermi2D::Operation::SrcCopy);
+        }
         break;
     case PixelFormat::B8G8R8A8_SRGB:
         if (src_view.format == PixelFormat::D32_FLOAT) {
@@ -1261,7 +1442,24 @@ void TextureCacheRuntime::ConvertImage(Framebuffer* dst, ImageView& dst_view, Im
     default:
         break;
     }
-    UNIMPLEMENTED_MSG("Unimplemented format copy from {} to {}", src_view.format, dst_view.format);
+
+    if (VideoCore::Surface::GetFormatType(dst_view.format) == VideoCore::Surface::SurfaceType::ColorTexture &&
+        VideoCore::Surface::GetFormatType(src_view.format) == VideoCore::Surface::SurfaceType::ColorTexture) {
+        const Region2D src_region{
+            .start = {0, 0},
+            .end = {static_cast<s32>(src_view.size.width), static_cast<s32>(src_view.size.height)},
+        };
+        const Region2D dst_region{
+            .start = {0, 0},
+            .end = {static_cast<s32>(dst_view.size.width), static_cast<s32>(dst_view.size.height)},
+        };
+        return blit_image_helper.BlitColor(dst, src_view.Handle(Shader::TextureType::Color2D),
+                                           dst_region, src_region,
+                                           Tegra::Engines::Fermi2D::Filter::Point,
+                                           Tegra::Engines::Fermi2D::Operation::SrcCopy);
+    }
+
+    LOG_WARNING(Render_Vulkan, "Unimplemented format copy from {} to {}", src_view.format, dst_view.format);
 }
 
 void TextureCacheRuntime::CopyImage(Image& dst, Image& src,
@@ -1273,13 +1471,92 @@ void TextureCacheRuntime::CopyImage(Image& dst, Image& src,
 // Check format compatibility for vkCmdCopyImage
     const PixelFormat src_format = src.info.format;
     const PixelFormat dst_format = dst.info.format;
-    const size_t src_bytes_per_block = BytesPerBlock(src_format);
-    const size_t dst_bytes_per_block = BytesPerBlock(dst_format);
+    size_t src_bytes_per_block = BytesPerBlock(src_format);
+    size_t dst_bytes_per_block = BytesPerBlock(dst_format);
+
+#ifdef __APPLE__
+    // On Apple, BCn formats are software-decoded to smaller actual VkImage formats.
+    // Use actual pixel size instead of logical block size for compatibility check.
+    if (!device.IsOptimalBcnSupported()) {
+        auto actual_bpb = [](PixelFormat fmt, size_t logical) -> size_t {
+            if (!VideoCore::Surface::IsPixelFormatBCn(fmt)) return logical;
+            if (fmt == PixelFormat::BC6H_SFLOAT || fmt == PixelFormat::BC6H_UFLOAT)
+                return 8; // decoded to R16G16B16A16_SFLOAT
+            return 4; // decoded to A8B8G8R8_UNORM_PACK32
+        };
+        src_bytes_per_block = actual_bpb(src_format, src_bytes_per_block);
+        dst_bytes_per_block = actual_bpb(dst_format, dst_bytes_per_block);
+    }
+#endif
 
     // Vulkan spec requires size-compatible formats for vkCmdCopyImage
     if (src_bytes_per_block != dst_bytes_per_block) {
+        const bool is_depth_conversion =
+            (src_format == PixelFormat::D24_UNORM_S8_UINT && dst_format == PixelFormat::D32_FLOAT_S8_UINT) ||
+            (src_format == PixelFormat::D32_FLOAT_S8_UINT && dst_format == PixelFormat::D24_UNORM_S8_UINT);
+
+        const bool is_color_conversion =
+            (src_format == PixelFormat::R8G8_UNORM && dst_format == PixelFormat::A8B8G8R8_UNORM) ||
+            (src_format == PixelFormat::R8G8_UNORM && dst_format == PixelFormat::A8B8G8R8_SRGB) ||
+            (src_format == PixelFormat::A8B8G8R8_UNORM && dst_format == PixelFormat::R8G8_UNORM) ||
+            (src_format == PixelFormat::A8B8G8R8_SRGB && dst_format == PixelFormat::R8G8_UNORM) ||
+            (src_format == PixelFormat::A4B4G4R4_UNORM && dst_format == PixelFormat::A8B8G8R8_UNORM) ||
+            (src_format == PixelFormat::R5G6B5_UNORM && dst_format == PixelFormat::A8B8G8R8_UNORM) ||
+            (src_format == PixelFormat::A1R5G5B5_UNORM && dst_format == PixelFormat::A8B8G8R8_UNORM);
+
+        if (is_depth_conversion || is_color_conversion) {
+            for (const auto& copy : copies) {
+                VideoCommon::ImageViewInfo src_view_info(VideoCommon::ImageViewType::e2D, src_format);
+                src_view_info.range.base.level = copy.src_subresource.base_level;
+                src_view_info.range.base.layer = copy.src_subresource.base_layer;
+                src_view_info.range.extent.levels = 1;
+                src_view_info.range.extent.layers = 1;
+                ImageView src_view(*this, src_view_info, ImageId{}, src);
+
+                VideoCommon::ImageViewInfo dst_view_info(VideoCommon::ImageViewType::e2D, dst_format);
+                dst_view_info.range.base.level = copy.dst_subresource.base_level;
+                dst_view_info.range.base.layer = copy.dst_subresource.base_layer;
+                dst_view_info.range.extent.levels = 1;
+                dst_view_info.range.extent.layers = 1;
+                ImageView dst_view(*this, dst_view_info, ImageId{}, dst);
+
+                const u32 dst_width = std::max(1u, dst.info.size.width >> copy.dst_subresource.base_level);
+                const u32 dst_height = std::max(1u, dst.info.size.height >> copy.dst_subresource.base_level);
+                Framebuffer dst_fb(*this, &dst_view, nullptr, VkExtent2D{dst_width, dst_height}, false);
+
+                const Region2D src_region{
+                    .start = {copy.src_offset.x, copy.src_offset.y},
+                    .end = {copy.src_offset.x + static_cast<s32>(copy.extent.width), copy.src_offset.y + static_cast<s32>(copy.extent.height)},
+                };
+                const Region2D dst_region{
+                    .start = {copy.dst_offset.x, copy.dst_offset.y},
+                    .end = {copy.dst_offset.x + static_cast<s32>(copy.extent.width), copy.dst_offset.y + static_cast<s32>(copy.extent.height)},
+                };
+
+                if (is_depth_conversion) {
+                    blit_image_helper.BlitDepthStencil(&dst_fb, src_view.DepthView(),
+                                                       src_view.StencilView(),
+                                                       dst_region, src_region,
+                                                       Tegra::Engines::Fermi2D::Filter::Point,
+                                                       Tegra::Engines::Fermi2D::Operation::SrcCopy);
+                } else {
+                    blit_image_helper.BlitColor(&dst_fb, src_view.Handle(Shader::TextureType::Color2D),
+                                                dst_region, src_region,
+                                                Tegra::Engines::Fermi2D::Filter::Point,
+                                                Tegra::Engines::Fermi2D::Operation::SrcCopy);
+                }
+            }
+            return;
+        }
+
         LOG_WARNING(Render_Vulkan, "Skipping image copy due to format size incompatibility: src format {} ({} bytes), dst format {} ({} bytes)",
                     static_cast<u32>(src_format), src_bytes_per_block, static_cast<u32>(dst_format), dst_bytes_per_block);
+        return;
+    }
+
+    if (src.info.num_samples != dst.info.num_samples) {
+        LOG_WARNING(Render_Vulkan, "Skipping image copy due to sample count mismatch: src samples {}, dst samples {}",
+                    src.info.num_samples, dst.info.num_samples);
         return;
     }
 
@@ -1288,6 +1565,8 @@ void TextureCacheRuntime::CopyImage(Image& dst, Image& src,
     });
     const VkImage dst_image = dst.Handle();
     const VkImage src_image = src.Handle();
+    const bool src_is_3d = src.info.type == ImageType::e3D;
+    const bool dst_is_3d = dst.info.type == ImageType::e3D;
 
 #ifdef __APPLE__
     auto&& src_fmt = src.info.format;
@@ -1295,23 +1574,72 @@ void TextureCacheRuntime::CopyImage(Image& dst, Image& src,
     auto&& dst_fmt = dst.info.format;
     auto&& dst_num_samples = dst.info.num_samples;
 
-    if (src_num_samples != dst_num_samples || src_bytes_per_block != dst_bytes_per_block) {
-        bool skip = false;
+    if (src_fmt != dst_fmt && !VideoCore::Surface::IsViewCompatible(src_fmt, dst_fmt, false, false)) {
+        bool skip = false;//Important: skip==true may result in some objects not being rendered.
         DBGSCP_HOOK_VOID("TextureCacheRuntime::CopyImageFailedOnApple", skip, src_fmt, dst_fmt, src_num_samples, dst_num_samples, src_bytes_per_block, dst_bytes_per_block);
         if (skip) {
             return;
         }
+        // Fallback to blit for incompatible formats instead of risking vkCmdCopyImage failure
+        LOG_WARNING(Render_Vulkan, "Image copy on Apple, format mismatch: {} -> {}, using blit fallback",
+                    static_cast<u32>(src_fmt), static_cast<u32>(dst_fmt));
+        for (const auto& copy : copies) {
+            VideoCommon::ImageViewInfo src_view_info(VideoCommon::ImageViewType::e2D, src_format);
+            src_view_info.range.base.level = copy.src_subresource.base_level;
+            src_view_info.range.base.layer = copy.src_subresource.base_layer;
+            src_view_info.range.extent.levels = 1;
+            src_view_info.range.extent.layers = 1;
+            ImageView src_view(*this, src_view_info, ImageId{}, src);
+
+            VideoCommon::ImageViewInfo dst_view_info(VideoCommon::ImageViewType::e2D, dst_format);
+            dst_view_info.range.base.level = copy.dst_subresource.base_level;
+            dst_view_info.range.base.layer = copy.dst_subresource.base_layer;
+            dst_view_info.range.extent.levels = 1;
+            dst_view_info.range.extent.layers = 1;
+            ImageView dst_view(*this, dst_view_info, ImageId{}, dst);
+
+            const u32 dst_width = std::max(1u, dst.info.size.width >> copy.dst_subresource.base_level);
+            const u32 dst_height = std::max(1u, dst.info.size.height >> copy.dst_subresource.base_level);
+            Framebuffer dst_fb(*this, &dst_view, nullptr, VkExtent2D{dst_width, dst_height}, false);
+
+            const Region2D src_region{
+                .start = {copy.src_offset.x, copy.src_offset.y},
+                .end = {copy.src_offset.x + static_cast<s32>(copy.extent.width),
+                        copy.src_offset.y + static_cast<s32>(copy.extent.height)},
+            };
+            const Region2D dst_region{
+                .start = {copy.dst_offset.x, copy.dst_offset.y},
+                .end = {copy.dst_offset.x + static_cast<s32>(copy.extent.width),
+                        copy.dst_offset.y + static_cast<s32>(copy.extent.height)},
+            };
+
+            blit_image_helper.BlitColor(&dst_fb, src_view.Handle(Shader::TextureType::Color2D),
+                                        dst_region, src_region,
+                                        Tegra::Engines::Fermi2D::Filter::Point,
+                                        Tegra::Engines::Fermi2D::Operation::SrcCopy);
+        }
+        return;
     }
 #endif
 
     scheduler.RequestOutsideRenderPassOperationContext();
-    scheduler.Record([dst_image, src_image, aspect_mask, vk_copies](vk::CommandBuffer cmdbuf) {
+    scheduler.Record([dst_image, src_image, aspect_mask, vk_copies, src_is_3d, dst_is_3d](vk::CommandBuffer cmdbuf) {
         RangedBarrierRange dst_range;
         RangedBarrierRange src_range;
         for (const VkImageCopy& copy : vk_copies) {
             dst_range.AddLayers(copy.dstSubresource);
             src_range.AddLayers(copy.srcSubresource);
         }
+
+        auto src_subresource_range = src_range.SubresourceRange(aspect_mask);
+        if (src_is_3d) {
+            src_subresource_range.layerCount = VK_REMAINING_ARRAY_LAYERS;
+        }
+        auto dst_subresource_range = dst_range.SubresourceRange(aspect_mask);
+        if (dst_is_3d) {
+            dst_subresource_range.layerCount = VK_REMAINING_ARRAY_LAYERS;
+        }
+
         const std::array pre_barriers{
             VkImageMemoryBarrier{
                 .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -1325,7 +1653,7 @@ void TextureCacheRuntime::CopyImage(Image& dst, Image& src,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .image = src_image,
-                .subresourceRange = src_range.SubresourceRange(aspect_mask),
+                .subresourceRange = src_subresource_range,
             },
             VkImageMemoryBarrier{
                 .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -1339,7 +1667,7 @@ void TextureCacheRuntime::CopyImage(Image& dst, Image& src,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .image = dst_image,
-                .subresourceRange = dst_range.SubresourceRange(aspect_mask),
+                .subresourceRange = dst_subresource_range,
             },
         };
         const std::array post_barriers{
@@ -1353,7 +1681,7 @@ void TextureCacheRuntime::CopyImage(Image& dst, Image& src,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .image = src_image,
-                .subresourceRange = src_range.SubresourceRange(aspect_mask),
+                .subresourceRange = src_subresource_range,
             },
             VkImageMemoryBarrier{
                 .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -1370,7 +1698,7 @@ void TextureCacheRuntime::CopyImage(Image& dst, Image& src,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .image = dst_image,
-                .subresourceRange = dst_range.SubresourceRange(aspect_mask),
+                .subresourceRange = dst_subresource_range,
             },
         };
         cmdbuf.PipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -1429,7 +1757,11 @@ Image::Image(TextureCacheRuntime& runtime_, const ImageInfo& info_, GPUVAddr gpu
         flags |= VideoCommon::ImageFlagBits::Converted;
         flags |= VideoCommon::ImageFlagBits::CostlyLoad;
     }
+    const auto bcn_mode = Settings::values.bcn_decode_mode.GetValue();
     if (IsPixelFormatBCn(info.format) && !runtime->device.IsOptimalBcnSupported()) {
+        if (bcn_mode == Settings::BcnDecodeMode::Gpu && info.size.depth == 1) {
+            flags |= VideoCommon::ImageFlagBits::AcceleratedUpload;
+        }
         flags |= VideoCommon::ImageFlagBits::Converted;
         flags |= VideoCommon::ImageFlagBits::CostlyLoad;
     }
@@ -1445,6 +1777,23 @@ Image::Image(TextureCacheRuntime& runtime_, const ImageInfo& info_, GPUVAddr gpu
         for (s32 level = 0; level < info.resources.levels; ++level) {
             storage_image_views[level] =
                 MakeStorageView(device, level, *original_image, VK_FORMAT_A8B8G8R8_UNORM_PACK32);
+        }
+    }
+    // Create storage image views for BCn GPU decoding
+    if (IsPixelFormatBCn(info.format) && !runtime->device.IsOptimalBcnSupported()) {
+        if (bcn_mode == Settings::BcnDecodeMode::Gpu) {
+            const auto& device = runtime->device.GetLogical();
+            VkFormat storage_format = VK_FORMAT_A8B8G8R8_UNORM_PACK32;
+            if (info.format == PixelFormat::BC6H_UFLOAT ||
+                info.format == PixelFormat::BC6H_SFLOAT) {
+                storage_format = VK_FORMAT_R16G16B16A16_SFLOAT;
+            }
+            for (s32 level = 0; level < info.resources.levels; ++level) {
+                if (!storage_image_views[level]) {
+                    storage_image_views[level] =
+                        MakeStorageView(device, level, *original_image, storage_format);
+                }
+            }
         }
     }
 }
@@ -1580,8 +1929,9 @@ VkImageView Image::StorageImageView(s32 level) noexcept {
     if (!view) {
         const auto format_info =
             MaxwellToVK::SurfaceFormat(runtime->device, FormatType::Optimal, true, info.format);
-        view = MakeStorageView(runtime->device.GetLogical(), level, *(this->*current_image),
-                               format_info.format);
+        VkFormat format = ConvertStorageFormat(format_info.format);
+
+        view = MakeStorageView(runtime->device.GetLogical(), level, *(this->*current_image), format);
     }
     return *view;
 }
@@ -1736,7 +2086,6 @@ ImageView::ImageView(TextureCacheRuntime& runtime, const VideoCommon::ImageViewI
       device{&runtime.device}, image_handle{image.Handle()},
       samples(ConvertSampleCount(image.info.num_samples)) {
     using Shader::TextureType;
-
     const VkImageAspectFlags aspect_mask = ImageViewAspectMask(info);
     std::array<SwizzleSource, 4> swizzle{
         SwizzleSource::R,
@@ -1889,7 +2238,16 @@ VkImageView ImageView::StorageView(Shader::TextureType texture_type,
         return VK_NULL_HANDLE;
     }
     if (image_format == Shader::ImageFormat::Typeless) {
-        return Handle(texture_type);
+        if (!storage_views) {
+            storage_views = std::make_unique<StorageViews>();
+        }
+        auto& view = storage_views->identity[static_cast<size_t>(texture_type)];
+        if (view) {
+            return *view;
+        }
+        const auto format_info = MaxwellToVK::SurfaceFormat(*device, FormatType::Optimal, true, format);
+        view = MakeView(format_info.format, VK_IMAGE_ASPECT_COLOR_BIT);
+        return *view;
     }
     const bool is_signed{image_format == Shader::ImageFormat::R8_SINT ||
                          image_format == Shader::ImageFormat::R16_SINT};
@@ -1941,7 +2299,7 @@ Sampler::Sampler(TextureCacheRuntime& runtime, const Tegra::Texture::TSCEntry& t
     const bool can_use_standard_border = ConvertBorderColor(color) != VK_BORDER_COLOR_FLOAT_CUSTOM_EXT;
     const bool should_use_custom_border = arbitrary_borders && !can_use_standard_border;
 
-    const VkSamplerCustomBorderColorCreateInfoEXT border_ci{
+    VkSamplerCustomBorderColorCreateInfoEXT border_ci{
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CUSTOM_BORDER_COLOR_CREATE_INFO_EXT,
         .pNext = nullptr,
         // TODO: Make use of std::bit_cast once libc++ supports it.
@@ -1949,18 +2307,22 @@ Sampler::Sampler(TextureCacheRuntime& runtime, const Tegra::Texture::TSCEntry& t
         .format = VK_FORMAT_UNDEFINED,
     };
 
-    const VkSamplerReductionModeCreateInfoEXT reduction_ci{
+    VkSamplerReductionModeCreateInfoEXT reduction_ci{
         .sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT,
-        .pNext = should_use_custom_border ? &border_ci : nullptr,
+        .pNext = nullptr,
         .reductionMode = MaxwellToVK::SamplerReduction(tsc.reduction_filter),
     };
 
-    const void* pnext = nullptr;
+    void* pnext = nullptr;
     if (runtime.device.IsExtSamplerFilterMinmaxSupported()) {
+        reduction_ci.pNext = pnext;
         pnext = &reduction_ci;
-    } else if (should_use_custom_border) {
+    }
+    if (should_use_custom_border) {
+        border_ci.pNext = pnext;
         pnext = &border_ci;
-    } else if (reduction_ci.reductionMode != VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE_EXT) {
+    } else if (reduction_ci.reductionMode != VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE_EXT &&
+               !runtime.device.IsExtSamplerFilterMinmaxSupported()) {
         LOG_WARNING(Render_Vulkan, "VK_EXT_sampler_filter_minmax is required");
     }
     // Some games have samplers with garbage. Sanitize them here.
@@ -1984,8 +2346,8 @@ Sampler::Sampler(TextureCacheRuntime& runtime, const Tegra::Texture::TSCEntry& t
             .compareOp = MaxwellToVK::Sampler::DepthCompareFunction(tsc.depth_compare_func),
             .minLod = tsc.mipmap_filter == TextureMipmapFilter::None ? 0.0f : tsc.MinLod(),
             .maxLod = tsc.mipmap_filter == TextureMipmapFilter::None ? 0.25f : tsc.MaxLod(),
-            .borderColor =
-                arbitrary_borders ? VK_BORDER_COLOR_FLOAT_CUSTOM_EXT : ConvertBorderColor(color),
+            .borderColor = should_use_custom_border ? VK_BORDER_COLOR_FLOAT_CUSTOM_EXT
+                                                    : ConvertBorderColor(color),
             .unnormalizedCoordinates = VK_FALSE,
         });
     };
@@ -2089,11 +2451,621 @@ void Framebuffer::CreateFramebuffer(TextureCacheRuntime& runtime,
     });
 }
 
+// DDS file format structures for BCn texture export
+namespace {
+
+// GOB (Group of Bytes) constants from Tegra X1 TRM
+constexpr u32 GOB_SIZE_X_SHIFT = 6u;                                // 64 bytes
+//constexpr u32 GOB_SIZE_Y_SHIFT = 3u;                                // 8 rows
+//constexpr u32 GOB_SIZE_SHIFT = GOB_SIZE_X_SHIFT + GOB_SIZE_Y_SHIFT; // 9 => 512 bytes per GOB
+
+/**
+ * Deswizzle a single mip level of BCn texture using yuzu's official implementation
+ *
+ * For BCn textures, we treat each 4x4 compressed block as a single "pixel"
+ * with bytes_per_pixel = bytes_per_block (8 for BC1/BC4, 16 for others)
+ */
+BufferImageCopy DeswizzleBCnMipLevel(std::span<u8> output, std::span<const u8> input,
+                                     const VideoCommon::SwizzleParameters& swizzle,
+                                     u32 mip_width, u32 mip_height, u32 num_layers,
+                                     u32 bytes_per_block) {
+    constexpr u32 TILE_WIDTH = 4;
+    constexpr u32 TILE_HEIGHT = 4;
+
+    // Validate bytes_per_block
+    if (bytes_per_block == 0 || (bytes_per_block & (bytes_per_block - 1)) != 0) {
+        LOG_ERROR(Render_Vulkan, "DeswizzleBCn: Invalid bytes_per_block={}", bytes_per_block);
+        return BufferImageCopy{};
+    }
+
+    // Calculate mip level dimensions in blocks
+    const u32 mip_width_in_blocks = Common::DivCeil(mip_width, TILE_WIDTH);
+    const u32 mip_height_in_blocks = Common::DivCeil(mip_height, TILE_HEIGHT);
+
+    // Validate dimensions
+    if (mip_width == 0 || mip_height == 0) {
+        LOG_ERROR(Render_Vulkan, "DeswizzleBCn: Invalid dimensions {}x{}", mip_width, mip_height);
+        return BufferImageCopy{};
+    }
+
+    // block.height and block.depth are log2 values
+    const u32 block_height_log2 = swizzle.block.height;
+    const u32 block_depth_log2 = swizzle.block.depth;
+
+    // Validate block_depth for 2D textures
+    if (block_depth_log2 != 0) {
+        LOG_WARNING(Render_Vulkan,
+                    "DeswizzleBCn: Unexpected block_depth_log2={} for 2D texture, expected 0",
+                    block_depth_log2);
+    }
+
+    // Calculate output size
+    const u32 blocks_per_layer = mip_width_in_blocks * mip_height_in_blocks;
+    const u32 bytes_per_layer = blocks_per_layer * bytes_per_block;
+
+    LOG_INFO(Render_Vulkan,
+             "DeswizzleBCn: {}x{} pixels ({}x{} blocks), {} layers, "
+             "bytes_per_block={}, block_height_log2={}, block_depth_log2={}",
+             mip_width, mip_height, mip_width_in_blocks, mip_height_in_blocks, num_layers,
+             bytes_per_block, block_height_log2, block_depth_log2);
+
+    // Use yuzu's UnswizzleTexture
+    // For BCn: treat blocks as "pixels", so width/height are in blocks, not pixels
+    Tegra::Texture::UnswizzleTexture(
+        output,                  // output buffer
+        input,                   // input buffer (swizzled)
+        bytes_per_block,         // bytes per "pixel" (actually bytes per block)
+        mip_width_in_blocks,     // width in "pixels" (actually blocks)
+        mip_height_in_blocks,    // height in "pixels" (actually blocks)
+        num_layers,              // depth (number of layers)
+        block_height_log2,       // block_height (log2)
+        block_depth_log2,        // block_depth (log2)
+        GOB_SIZE_X_SHIFT         // stride_alignment
+    );
+
+    // Return BufferImageCopy info
+    return BufferImageCopy{
+        .buffer_offset = 0,
+        .buffer_size = static_cast<size_t>(bytes_per_layer) * num_layers,
+        .buffer_row_length = Common::AlignUp(mip_width, TILE_WIDTH),
+        .buffer_image_height = Common::AlignUp(mip_height, TILE_HEIGHT),
+        .image_subresource =
+            {
+                .base_level = 0,
+                .base_layer = 0,
+                .num_layers = static_cast<s32>(num_layers),
+            },
+        .image_offset = {0, 0, 0},
+        .image_extent = {mip_width, mip_height, 1},
+    };
+}
+
+/**
+ * Deswizzle all mip levels of BCn texture
+ * Each mip level uses its own swizzle parameters
+ * BCn formats only support 2D textures and 2D texture arrays
+ *
+ * @param output Output buffer for all mip levels
+ * @param input Input buffer with block-linear swizzled data
+ * @param swizzles Array of swizzle parameters, one per mip level
+ * @param base_width Base mip level width in pixels
+ * @param base_height Base mip level height in pixels
+ * @param num_layers Number of array layers (1 for non-array textures)
+ * @param bytes_per_block Bytes per compressed block (8 for BC1/BC4, 16 for others)
+ * @return Vector of BufferImageCopy structures for each mip level
+ */
+boost::container::small_vector<BufferImageCopy, 16> DeswizzleBCnTexture(
+    std::span<u8> output, std::span<const u8> input,
+    std::span<const VideoCommon::SwizzleParameters> swizzles, u32 base_width, u32 base_height,
+    u32 num_layers, u32 bytes_per_block) {
+    // Validate parameters
+    if (swizzles.empty()) {
+        LOG_ERROR(Render_Vulkan, "DeswizzleBCn: swizzles is empty");
+        return {};
+    }
+    if (base_width == 0 || base_height == 0 || num_layers == 0) {
+        LOG_ERROR(Render_Vulkan, "DeswizzleBCn: Invalid parameters {}x{}, {} layers", base_width,
+                  base_height, num_layers);
+        return {};
+    }
+
+    const u32 num_levels = static_cast<u32>(swizzles.size());
+    boost::container::small_vector<BufferImageCopy, 16> copies(num_levels);
+
+    size_t output_offset = 0;
+
+    // Process each mip level with its own swizzle parameters
+    for (u32 level = 0; level < num_levels; ++level) {
+        // Calculate mip level dimensions
+        const u32 mip_width = std::max(1u, base_width >> level);
+        const u32 mip_height = std::max(1u, base_height >> level);
+
+        // Verify swizzle level matches
+        if (swizzles[level].level != static_cast<s32>(level)) {
+            LOG_WARNING(Render_Vulkan,
+                        "DeswizzleBCn: Swizzle level mismatch at index {}: "
+                        "expected level={}, got level={}",
+                        level, level, swizzles[level].level);
+        }
+
+        // Get output span for this mip level
+        auto mip_output = output.subspan(output_offset);
+
+        // Validate buffer offset before creating subspan
+        if (swizzles[level].buffer_offset >= input.size()) {
+            LOG_ERROR(Render_Vulkan,
+                      "DeswizzleBCn: Invalid buffer_offset={:#x} for level {}, input size={:#x}",
+                      swizzles[level].buffer_offset, level, input.size());
+            return {};
+        }
+
+        // Get input span starting at this mip level's offset
+        auto mip_input = input.subspan(swizzles[level].buffer_offset);
+
+        // Deswizzle this mip level using yuzu's implementation
+        copies[level] = DeswizzleBCnMipLevel(mip_output, mip_input, swizzles[level], mip_width,
+                                             mip_height, num_layers, bytes_per_block);
+
+        // Validate deswizzle result
+        if (copies[level].buffer_size == 0) {
+            LOG_ERROR(Render_Vulkan, "DeswizzleBCn: Failed to deswizzle level {}", level);
+            return {};
+        }
+
+        // Update buffer offset and level info
+        copies[level].buffer_offset = output_offset;
+        copies[level].image_subresource.base_level = level;
+
+        // Move to next mip level in output buffer
+        output_offset += copies[level].buffer_size;
+    }
+
+    return copies;
+}
+
+} // namespace
+
+void DbgScpExportBCnTexture(Image& image, const StagingBufferRef& map,
+                            std::span<const VideoCommon::SwizzleParameters> swizzles,
+                            const char* tag, Scheduler& scheduler,
+                            MemoryAllocator& memory_allocator) {
+    bool needExport = false;
+    auto&& imgInfo = image.info;
+    DBGSCP_HOOK_VOID("DbgScpExportBCnTexture", needExport, image, map, swizzles, imgInfo);
+    if (!needExport) {
+        return;
+    }
+
+    if (swizzles.empty()) {
+        LOG_ERROR(Render_Vulkan, "DbgScpExportBCnTexture: swizzles is empty");
+        return;
+    }
+
+    const u32 width = image.info.size.width;
+    const u32 height = image.info.size.height;
+    const u32 num_layers = image.info.resources.layers;
+    const u32 num_levels = static_cast<u32>(swizzles.size());
+
+    // BCn textures should always be 2D
+    if (image.info.size.depth != 1) {
+        LOG_WARNING(Render_Vulkan, "DbgScpExportBCnTexture: BCn format with depth={}, expected 1",
+                    image.info.size.depth);
+    }
+
+    // Get DDS format information
+    DDSWriter::DDSFormatInfo formatInfo = DDSWriter::GetDDSFormatInfo(image.info.format);
+    const u32 bytes_per_block = formatInfo.bytesPerBlock;
+
+    // Log swizzle parameters for debugging
+    LOG_INFO(Render_Vulkan, "Deswizzling BCn texture: {}x{}, {} layers, {} mip levels, format={}",
+             width, height, num_layers, num_levels, static_cast<u32>(image.info.format));
+
+    for (u32 level = 0; level < std::min(num_levels, 5u); ++level) {
+        const auto& swizzle = swizzles[level];
+        const u32 mip_width = std::max(1u, width >> level);
+        const u32 mip_height = std::max(1u, height >> level);
+
+        LOG_INFO(Render_Vulkan, "  Mip {}: {}x{}, offset={:#x}, block={}x{}x{}, num_tiles={}x{}x{}",
+                 level, mip_width, mip_height, swizzle.buffer_offset, swizzle.block.width,
+                 swizzle.block.height, swizzle.block.depth, swizzle.num_tiles.width,
+                 swizzle.num_tiles.height, swizzle.num_tiles.depth);
+    }
+    if (num_levels > 5) {
+        LOG_INFO(Render_Vulkan, "  ... and {} more mip levels", num_levels - 5);
+    }
+
+    // Calculate total output size for all mip levels
+    size_t total_output_size = 0;
+    for (u32 level = 0; level < num_levels; ++level) {
+        const u32 mip_width = std::max(1u, width >> level);
+        const u32 mip_height = std::max(1u, height >> level);
+        const u32 mip_width_in_blocks = Common::DivCeil(mip_width, 4u);
+        const u32 mip_height_in_blocks = Common::DivCeil(mip_height, 4u);
+
+        total_output_size += static_cast<size_t>(mip_width_in_blocks) * mip_height_in_blocks *
+                             bytes_per_block * num_layers;
+    }
+
+    LOG_INFO(Render_Vulkan, "Total output size: {} bytes ({} KB)", total_output_size,
+             total_output_size / 1024);
+
+    // Allocate output buffer
+    std::vector<u8> linear_data(total_output_size);
+
+    // Get input data
+    const u8* compressed_data = reinterpret_cast<const u8*>(map.mapped_span.data());
+    const size_t source_buffer_size = map.mapped_span.size();
+
+    LOG_INFO(Render_Vulkan, "Input buffer size: {} bytes ({} KB)", source_buffer_size,
+             source_buffer_size / 1024);
+
+    // Deswizzle all mip levels
+    auto copies =
+        DeswizzleBCnTexture(linear_data, std::span<const u8>(compressed_data, source_buffer_size),
+                            swizzles, width, height, num_layers, bytes_per_block);
+
+    // Validate deswizzle result
+    if (copies.empty()) {
+        LOG_ERROR(Render_Vulkan, "DeswizzleBCnTexture failed");
+        return;
+    }
+
+    // Create dump directory
+    const auto dump_dir = Common::FS::GetYuzuPath(Common::FS::YuzuPath::DumpDir);
+    const auto base_dir = dump_dir / "textures";
+    if (!Common::FS::CreateDir(dump_dir) || !Common::FS::CreateDir(base_dir)) {
+        LOG_ERROR(Render_Vulkan, "Failed to create texture dump directories");
+        return;
+    }
+
+    // Generate filename
+    const auto timestamp = std::chrono::system_clock::now().time_since_epoch().count();
+    std::string filename =
+        fmt::format("{}_{}x{}_L{}_M{}_fmt{}_{:016X}.dds", tag, width, height, num_layers,
+                    num_levels, static_cast<u32>(image.info.format), timestamp);
+
+    DDSWriter::WriteDDSLinearData(
+        (base_dir / filename).string(), linear_data.data(), linear_data.size(), width, height,
+        static_cast<u32>(copies[0].buffer_size / num_layers), num_layers, num_levels, formatInfo);
+
+    LOG_INFO(Render_Vulkan,
+             "Exported BCn texture: {} ({} bytes, {}x{} pixels, {} layers, {} mip levels)",
+             filename, linear_data.size(), width, height, num_layers, num_levels);
+
+    // Add this flag at the top of your function or as a parameter
+    constexpr bool SAVE_AS_DDS_WITH_MIPMAPS = false; // Set to true when you need mipmaps
+
+    if (SAVE_AS_DDS_WITH_MIPMAPS) {
+        // Save as DDS with all mipmaps and layers
+        std::string savefilename =
+            fmt::format("{}_{}x{}_L{}_M{}_fmt{}_{:016X}_decoded.dds", tag, width, height,
+                        num_layers, num_levels, static_cast<u32>(image.info.format), timestamp);
+
+        // Collect all mipmap data (organized as: Mip0-Layer0, Mip0-Layer1, ..., Mip1-Layer0, Mip1-Layer1, ...)
+        std::vector<DDSWriter::MipmapData> mipmaps;
+        std::vector<std::vector<u8>> mipmap_buffers; // Keep buffers alive
+
+        // BC6H decoded textures are in RGBA16F format (8 bytes per pixel), others are RGBA8 (4 bytes per pixel)
+        const bool is_bc6h = (image.info.format == VideoCore::Surface::PixelFormat::BC6H_UFLOAT ||
+                               image.info.format == VideoCore::Surface::PixelFormat::BC6H_SFLOAT);
+        const u32 bytes_per_pixel = is_bc6h ? 8 : 4;
+
+        // Iterate through all layers and mip levels
+        // DDS format requires: Layer0[Mip0, Mip1, ...], Layer1[Mip0, Mip1, ...], ...
+        for (u32 layer = 0; layer < num_layers; ++layer) {
+            for (u32 mip_level = 0; mip_level < num_levels; ++mip_level) {
+                const u32 mip_width = std::max(1u, width >> mip_level);
+                const u32 mip_height = std::max(1u, height >> mip_level);
+                // Create readback buffer for this mip level and layer
+                const size_t rgba_size = mip_width * mip_height * bytes_per_pixel;
+                const VkBufferCreateInfo buffer_ci = {
+                    .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                    .pNext = nullptr,
+                    .flags = 0,
+                    .size = rgba_size,
+                    .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                    .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+                    .queueFamilyIndexCount = 0,
+                    .pQueueFamilyIndices = nullptr,
+                };
+                auto readback_buffer = memory_allocator.CreateBuffer(buffer_ci, MemoryUsage::Download);
+
+                // Copy decoded image data from GPU to readback buffer
+                scheduler.RequestOutsideRenderPassOperationContext();
+                scheduler.Record([&image, &readback_buffer, mip_width, mip_height,
+                                  mip_level, layer](vk::CommandBuffer cmdbuf) {
+                    // Transition image to TRANSFER_SRC_OPTIMAL
+                    const VkImageMemoryBarrier read_barrier{
+                        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                        .pNext = nullptr,
+                        .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
+                        .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+                        .oldLayout = VK_IMAGE_LAYOUT_GENERAL,
+                        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                        .image = image.Handle(),
+                        .subresourceRange =
+                            {
+                                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                .baseMipLevel = mip_level,
+                                .levelCount = 1,
+                                .baseArrayLayer = layer,
+                                .layerCount = 1,
+                            },
+                    };
+                    cmdbuf.PipelineBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                                           VK_PIPELINE_STAGE_TRANSFER_BIT, 0, read_barrier);
+
+                    // Copy image to buffer
+                    const VkBufferImageCopy copy{
+                        .bufferOffset = 0,
+                        .bufferRowLength = 0,
+                        .bufferImageHeight = 0,
+                        .imageSubresource =
+                            {
+                                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                .mipLevel = mip_level,
+                                .baseArrayLayer = layer,
+                                .layerCount = 1,
+                            },
+                        .imageOffset = {0, 0, 0},
+                        .imageExtent = {mip_width, mip_height, 1},
+                    };
+                    cmdbuf.CopyImageToBuffer(image.Handle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                             *readback_buffer, copy);
+
+                    // Transition image back to GENERAL
+                    const VkImageMemoryBarrier restore_barrier{
+                        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                        .pNext = nullptr,
+                        .srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+                        .dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+                        .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                        .newLayout = VK_IMAGE_LAYOUT_GENERAL,
+                        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                        .image = image.Handle(),
+                        .subresourceRange =
+                            {
+                                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                .baseMipLevel = mip_level,
+                                .levelCount = 1,
+                                .baseArrayLayer = layer,
+                                .layerCount = 1,
+                            },
+                    };
+                    cmdbuf.PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                           VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, restore_barrier);
+                });
+                scheduler.Finish();
+
+                // Copy data to persistent buffer
+                const u8* rgba_data = reinterpret_cast<const u8*>(readback_buffer.Mapped().data());
+                std::vector<u8> mip_buffer(rgba_data, rgba_data + rgba_size);
+
+                DDSWriter::MipmapData mip;
+                mip.width = mip_width;
+                mip.height = mip_height;
+                mip.data = mip_buffer.data();
+                mip.size = rgba_size;
+
+                mipmap_buffers.push_back(std::move(mip_buffer));
+                mipmaps.push_back(mip);
+            }
+        }
+
+        // Update pointers after all buffers are created
+        for (size_t i = 0; i < mipmaps.size(); ++i) {
+            mipmaps[i].data = mipmap_buffers[i].data();
+        }
+
+        // Write DDS file
+        const std::string full_path = (base_dir / savefilename).string();
+
+        // BC6H decoded textures are in RGBA16F format, others are RGBA8
+        const bool use_rgba16f = (image.info.format == VideoCore::Surface::PixelFormat::BC6H_UFLOAT ||
+                                   image.info.format == VideoCore::Surface::PixelFormat::BC6H_SFLOAT);
+
+        if (!DDSWriter::WriteDDS(full_path, mipmaps, true, use_rgba16f, num_layers)) {
+            LOG_ERROR(Render_Vulkan, "Failed to write DDS file: {}", savefilename);
+            return;
+        }
+
+        LOG_INFO(Render_Vulkan,
+                 "Exported decoded BCn texture to DDS: {} ({} mip levels, {} layers, {}x{} base resolution, format={})",
+                 savefilename, num_levels, num_layers, width, height, use_rgba16f ? "RGBA16F" : "RGBA8");
+
+    } else {
+        // Generate filename with timestamp
+        std::string savefilename =
+            fmt::format("{}_{}x{}_L{}_M{}_fmt{}_{:016X}_decoded.png", tag, width, height,
+                        num_layers, num_levels, static_cast<u32>(image.info.format), timestamp);
+
+        // BC6H decoded textures are in RGBA16F format (8 bytes per pixel), others are RGBA8 (4 bytes per pixel)
+        const bool is_bc6h = (image.info.format == VideoCore::Surface::PixelFormat::BC6H_UFLOAT ||
+                               image.info.format == VideoCore::Surface::PixelFormat::BC6H_SFLOAT);
+        const u32 bytes_per_pixel = is_bc6h ? 8 : 4;
+
+        // Create readback buffer to download decoded data from GPU
+        const size_t rgba_size = width * height * bytes_per_pixel;
+        const VkBufferCreateInfo buffer_ci = {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0,
+            .size = rgba_size,
+            .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            .queueFamilyIndexCount = 0,
+            .pQueueFamilyIndices = nullptr,
+        };
+        auto readback_buffer = memory_allocator.CreateBuffer(buffer_ci, MemoryUsage::Download);
+
+        // Copy decoded image data from GPU to readback buffer
+        scheduler.RequestOutsideRenderPassOperationContext();
+        scheduler.Record([&image, &readback_buffer, width, height](vk::CommandBuffer cmdbuf) {
+            // Transition image to TRANSFER_SRC_OPTIMAL
+            const VkImageMemoryBarrier read_barrier{
+                .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                .pNext = nullptr,
+                .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
+                .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+                .oldLayout = VK_IMAGE_LAYOUT_GENERAL,
+                .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = image.Handle(),
+                .subresourceRange =
+                    {
+                        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                        .baseMipLevel = 0,
+                        .levelCount = 1,
+                        .baseArrayLayer = 0,
+                        .layerCount = 1,
+                    },
+            };
+            cmdbuf.PipelineBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                                   VK_PIPELINE_STAGE_TRANSFER_BIT, 0, read_barrier);
+
+            // Copy image to buffer
+            const VkBufferImageCopy copy{
+                .bufferOffset = 0,
+                .bufferRowLength = 0,
+                .bufferImageHeight = 0,
+                .imageSubresource =
+                    {
+                        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                        .mipLevel = 0,
+                        .baseArrayLayer = 0,
+                        .layerCount = 1,
+                    },
+                .imageOffset = {0, 0, 0},
+                .imageExtent = {width, height, 1},
+            };
+            cmdbuf.CopyImageToBuffer(image.Handle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                     *readback_buffer, copy);
+
+            // Transition image back to GENERAL
+            const VkImageMemoryBarrier restore_barrier{
+                .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                .pNext = nullptr,
+                .srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+                .dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+                .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                .newLayout = VK_IMAGE_LAYOUT_GENERAL,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = image.Handle(),
+                .subresourceRange =
+                    {
+                        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                        .baseMipLevel = 0,
+                        .levelCount = 1,
+                        .baseArrayLayer = 0,
+                        .layerCount = 1,
+                    },
+            };
+            cmdbuf.PipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                   VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, restore_barrier);
+        });
+        scheduler.Finish();
+
+        // Map readback buffer and read data
+        const u8* rgba_data = reinterpret_cast<const u8*>(readback_buffer.Mapped().data());
+
+        // For BC6H (RGBA16F), we need to convert to RGBA8 for PNG
+        std::vector<u8> rgba8_data;
+        const u8* png_data = rgba_data;
+
+        if (is_bc6h) {
+            // Convert RGBA16F to RGBA8
+            rgba8_data.resize(width * height * 4);
+            const u16* rgba16f = reinterpret_cast<const u16*>(rgba_data);
+
+            for (size_t i = 0; i < width * height * 4; ++i) {
+                // Convert half-float to float, then to 8-bit
+                // Simple conversion: clamp to [0, 1] and scale to [0, 255]
+                const u16 half = rgba16f[i];
+
+                // Extract sign, exponent, mantissa from half-float (IEEE 754 binary16)
+                const u32 sign = (half >> 15) & 0x1;
+                const u32 exponent = (half >> 10) & 0x1F;
+                const u32 mantissa = half & 0x3FF;
+
+                float value = 0.0f;
+
+                if (exponent == 0) {
+                    // Subnormal or zero
+                    if (mantissa == 0) {
+                        value = sign ? -0.0f : 0.0f;
+                    } else {
+                        // Subnormal: value = (-1)^sign * 2^-14 * (mantissa / 1024)
+                        value = (sign ? -1.0f : 1.0f) * std::ldexp(static_cast<float>(mantissa) / 1024.0f, -14);
+                    }
+                } else if (exponent == 31) {
+                    // Infinity or NaN
+                    value = (mantissa == 0) ? (sign ? -INFINITY : INFINITY) : NAN;
+                } else {
+                    // Normal: value = (-1)^sign * 2^(exponent-15) * (1 + mantissa/1024)
+                    value = (sign ? -1.0f : 1.0f) * std::ldexp(1.0f + static_cast<float>(mantissa) / 1024.0f, static_cast<int>(exponent) - 15);
+                }
+
+                // Clamp to [0, 1] and convert to 8-bit
+                // For HDR content, we apply a simple tone mapping
+                if (std::isnan(value) || std::isinf(value)) {
+                    rgba8_data[i] = 255; // Clamp invalid values to white
+                } else {
+                    // Simple Reinhard tone mapping for HDR: x / (1 + x)
+                    value = std::max(0.0f, value); // Remove negative values
+                    value = value / (1.0f + value); // Tone map
+                    rgba8_data[i] = static_cast<u8>(std::clamp(value * 255.0f, 0.0f, 255.0f));
+                }
+            }
+
+            png_data = rgba8_data.data();
+        }
+
+        // Write PNG file using stb_image_write
+        const std::string full_path = (base_dir / savefilename).string();
+        const int stride_in_bytes = width * 4; // RGBA8
+
+        if (!stbi_write_png(full_path.c_str(), width, height, 4, png_data, stride_in_bytes)) {
+            LOG_ERROR(Render_Vulkan, "Failed to write PNG file: {}", savefilename);
+            return;
+        }
+
+        LOG_INFO(
+            Render_Vulkan,
+            "Exported decoded BCn texture to PNG: {} ({} bytes, {}x{} pixels, {} layers, {} mip "
+            "levels, format={})",
+            savefilename, linear_data.size(), width, height, num_layers, num_levels,
+            is_bc6h ? "RGBA16F->RGBA8" : "RGBA8");
+    }
+}
+
 void TextureCacheRuntime::AccelerateImageUpload(
-    Image& image, const StagingBufferRef& map,
+    Image & image, const StagingBufferRef& map,
     std::span<const VideoCommon::SwizzleParameters> swizzles) {
-    if (IsPixelFormatASTC(image.info.format)) {
-        return astc_decoder_pass->Assemble(image, map, swizzles);
+        if (IsPixelFormatASTC(image.info.format)) {
+            return astc_decoder_pass->Assemble(image, map, swizzles);
+        }
+    if (IsPixelFormatBCn(image.info.format) && bcn_decoder_pass) {
+        // Use specialized decoder for BC6H
+        if ((image.info.format == PixelFormat::BC6H_UFLOAT ||
+             image.info.format == PixelFormat::BC6H_SFLOAT) &&
+            bc6h_decoder_pass) {
+            return bc6h_decoder_pass->Decode(image, map, swizzles);
+        }
+
+        // Use specialized decoder for BC7
+        if ((image.info.format == PixelFormat::BC7_UNORM ||
+             image.info.format == PixelFormat::BC7_SRGB) &&
+            bc7_decoder_pass) {
+            return bc7_decoder_pass->Decode(image, map, swizzles);
+        }
+
+        // Fall back to unified BCn decoder
+        return bcn_decoder_pass->Decode(image, map, swizzles);
     }
     ASSERT(false);
 }

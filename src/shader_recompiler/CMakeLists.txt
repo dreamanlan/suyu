@@ -220,6 +220,7 @@ add_library(shader_recompiler STATIC
     ir_opt/constant_propagation_pass.cpp
     ir_opt/dead_code_elimination_pass.cpp
     ir_opt/dual_vertex_pass.cpp
+    ir_opt/geometry_to_compute_pass.cpp
     ir_opt/global_memory_to_storage_buffer_pass.cpp
     ir_opt/identity_removal_pass.cpp
     ir_opt/layer_pass.cpp
@@ -233,10 +234,13 @@ add_library(shader_recompiler STATIC
     ir_opt/texture_pass.cpp
     ir_opt/vendor_workaround_pass.cpp
     ir_opt/verification_pass.cpp
+    ir_opt/vertex_to_compute_pass.cpp
+    ir_opt/vertex_passthrough_for_compute.cpp
     object_pool.h
     precompiled_headers.h
     profile.h
     program_header.h
+    vtg_as_compute.h
     runtime_info.h
     shader_info.h
     varying_state.h

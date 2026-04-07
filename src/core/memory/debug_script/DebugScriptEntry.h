@@ -11,7 +11,7 @@
 #endif
 extern void LoadDbgScp(const core::string& log_path, const core::string& load_path);
 
-#elif (defined(UE_BUILD_DEBUG) || defined(UE_BUILD_DEVELOPMENT) || defined(UE_BUILD_TEST) || defined(UE_BUILD_SHIPPING)) && defined(UE_SERVER) && !UE_SERVER
+#elif defined(UE_BUILD_DEBUG) || defined(UE_BUILD_DEVELOPMENT) || defined(UE_BUILD_TEST) || defined(UE_BUILD_SHIPPING)
 
 #include "CoreMinimal.h"
 #ifndef DBGSCP_ON_UNREAL

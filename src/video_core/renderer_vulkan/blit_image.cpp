@@ -67,6 +67,7 @@ inline constexpr DescriptorBankInfo TEXTURE_DESCRIPTOR_BANK_INFO{
     .textures = num_textures,
     .images = 0,
     .score = 2,
+    .force_combined = true,
 };
 constexpr VkDescriptorSetLayoutCreateInfo TWO_TEXTURES_DESCRIPTOR_SET_LAYOUT_CREATE_INFO{
     .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -95,7 +96,11 @@ constexpr VkPipelineInputAssemblyStateCreateInfo PIPELINE_INPUT_ASSEMBLY_STATE_C
     .pNext = nullptr,
     .flags = 0,
     .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+#if __APPLE__
+    .primitiveRestartEnable = VK_TRUE,
+#else
     .primitiveRestartEnable = VK_FALSE,
+#endif
 };
 constexpr VkPipelineViewportStateCreateInfo PIPELINE_VIEWPORT_STATE_CREATE_INFO{
     .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
@@ -440,7 +445,26 @@ BlitImageHelper::BlitImageHelper(const Device& device_, Scheduler& scheduler_,
       convert_d24s8_to_abgr8_frag(BuildShader(device, CONVERT_D24S8_TO_ABGR8_FRAG_SPV)),
       convert_s8d24_to_abgr8_frag(BuildShader(device, CONVERT_S8D24_TO_ABGR8_FRAG_SPV)),
       linear_sampler(device.GetLogical().CreateSampler(SAMPLER_CREATE_INFO<VK_FILTER_LINEAR>)),
-      nearest_sampler(device.GetLogical().CreateSampler(SAMPLER_CREATE_INFO<VK_FILTER_NEAREST>)) {}
+      nearest_sampler(device.GetLogical().CreateSampler(SAMPLER_CREATE_INFO<VK_FILTER_NEAREST>)) {
+    if (device.HasDebuggingToolAttached()) {
+        one_texture_pipeline_layout.SetObjectNameEXT("Blit OneTexture PipelineLayout");
+        two_textures_pipeline_layout.SetObjectNameEXT("Blit TwoTextures PipelineLayout");
+        clear_color_pipeline_layout.SetObjectNameEXT("Blit ClearColor PipelineLayout");
+        full_screen_vert.SetObjectNameEXT("Blit FullScreenTriangle Vert");
+        blit_color_to_color_frag.SetObjectNameEXT("Blit ColorToColor Frag");
+        blit_depth_stencil_frag.SetObjectNameEXT("Blit DepthStencil Frag");
+        clear_color_vert.SetObjectNameEXT("Blit ClearColor Vert");
+        clear_color_frag.SetObjectNameEXT("Blit ClearColor Frag");
+        clear_stencil_frag.SetObjectNameEXT("Blit ClearStencil Frag");
+        convert_depth_to_float_frag.SetObjectNameEXT("Blit DepthToFloat Frag");
+        convert_float_to_depth_frag.SetObjectNameEXT("Blit FloatToDepth Frag");
+        convert_abgr8_to_d24s8_frag.SetObjectNameEXT("Blit ABGR8ToD24S8 Frag");
+        convert_abgr8_to_d32f_frag.SetObjectNameEXT("Blit ABGR8ToD32F Frag");
+        convert_d32f_to_abgr8_frag.SetObjectNameEXT("Blit D32FToABGR8 Frag");
+        convert_d24s8_to_abgr8_frag.SetObjectNameEXT("Blit D24S8ToABGR8 Frag");
+        convert_s8d24_to_abgr8_frag.SetObjectNameEXT("Blit S8D24ToABGR8 Frag");
+    }
+}
 
 BlitImageHelper::~BlitImageHelper() = default;
 

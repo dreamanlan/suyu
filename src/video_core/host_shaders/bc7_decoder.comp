@@ -1,0 +1,581 @@
+#version 460 core
+
+// Removed 64-bit integer usage to improve spirv-cross / MoltenVK compatibility.
+// #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) readonly restrict buffer InputBuffer {
+    uint input_data[];
+};
+
+layout(binding = 1, rgba8) uniform writeonly image2DArray dest_image;
+
+layout(push_constant) uniform PushConstants {
+    uint num_blocks_x;
+    uint num_blocks_y;
+
+    // Bytes between array layers. For block-linear sources this must match the swizzle params.
+    uint layer_stride; // bytes
+
+    // Block-linear (GOB) swizzle parameters.
+    uint block_size;
+    uint x_shift;
+    uint block_height;
+    uint block_height_mask;
+
+    uint input_size_bytes;       // readable input size from the bound buffer region
+};
+
+uvec4 LoadBlock128(uint byte_address) {
+    uint w = byte_address >> 2;
+    return uvec4(input_data[w + 0], input_data[w + 1], input_data[w + 2], input_data[w + 3]);
+}
+
+// -------------------- Block-linear address calculation --------------------
+
+const uint GOB_SIZE_X_SHIFT = 6;
+const uint GOB_SIZE_Y_SHIFT = 3;
+const uint GOB_SIZE_SHIFT   = GOB_SIZE_X_SHIFT + GOB_SIZE_Y_SHIFT;
+
+// BC7 block is 16 bytes.
+const uint BYTES_PER_BLOCK_LOG2 = 4;
+const uint SWIZZLE_X_BITS = 0x12Fu;
+const uint SWIZZLE_Y_BITS = 0x0D0u;
+
+uint pdep32(uint value, uint mask) {
+    uint result = 0u;
+    uint src_bit_index = 0u;
+    for (uint dst_bit = 0u; dst_bit < 32u; ++dst_bit) {
+        uint dst_mask = 1u << dst_bit;
+        if ((mask & dst_mask) != 0u) {
+            uint src_mask = 1u << src_bit_index;
+            if ((value & src_mask) != 0u) {
+                result |= dst_mask;
+            }
+            src_bit_index++;
+        }
+    }
+    return result;
+}
+
+uint SwizzleOffset(uvec2 pos_bytes_xy) {
+    uint x_bytes = pos_bytes_xy.x;
+    uint y_rows = pos_bytes_xy.y;
+    uint swizzled_x = pdep32(x_bytes, SWIZZLE_X_BITS);
+    uint swizzled_y = pdep32(y_rows, SWIZZLE_Y_BITS);
+    return swizzled_x | swizzled_y;
+}
+
+uint ComputeBlockByteAddress(uvec3 block_id) {
+    uvec3 pos = block_id;
+    pos.x <<= BYTES_PER_BLOCK_LOG2;
+
+    const uint swizzle = SwizzleOffset(pos.xy);
+    const uint block_y = pos.y >> GOB_SIZE_Y_SHIFT;
+
+    uint offset = 0u;
+    offset += pos.z * layer_stride;
+    offset += (block_y >> block_height) * block_size;
+    offset += (block_y & block_height_mask) << GOB_SIZE_SHIFT;
+    offset += (pos.x >> GOB_SIZE_X_SHIFT) << x_shift;
+    offset += swizzle;
+    return offset;
+}
+
+// ------------ tables: paste from CPU ------------
+// (kept exactly as provided by user)
+const uint MaxPartitions = 64u;
+const uint MaxSubsets = 3u;
+
+const uint PartitionTable2[64][16] = {
+    {0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1},
+    {0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1},
+    {0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1},
+    {0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1},
+    {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1},
+    {0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1},
+    {0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1},
+    {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1},
+    {0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+    {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1},
+    {0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+    {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
+    {0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
+    {0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1},
+    {0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0},
+    {0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0},
+    {0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0},
+    {0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1},
+    {0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0},
+    {0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0},
+    {0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0},
+    {0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0},
+    {0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0},
+    {0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0},
+    {0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0},
+    {0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0},
+    {0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1},
+    {0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1},
+    {0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0},
+    {0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0},
+    {0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0},
+    {0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0},
+    {0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1},
+    {0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1},
+    {0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0},
+    {0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0},
+    {0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0},
+    {0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0},
+    {0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0},
+    {0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1},
+    {0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1},
+    {0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0},
+    {0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    {0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0},
+    {0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0},
+    {0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1},
+    {0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1},
+    {0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0},
+    {0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0},
+    {0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1},
+    {0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1},
+    {0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1},
+    {0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1},
+    {0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1},
+    {0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0},
+    {0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0},
+    {0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1},
+};
+
+const uint PartitionTable3[64][16] = {
+    {0, 0, 1, 1, 0, 0, 1, 1, 0, 2, 2, 1, 2, 2, 2, 2},
+    {0, 0, 0, 1, 0, 0, 1, 1, 2, 2, 1, 1, 2, 2, 2, 1},
+    {0, 0, 0, 0, 2, 0, 0, 1, 2, 2, 1, 1, 2, 2, 1, 1},
+    {0, 2, 2, 2, 0, 0, 2, 2, 0, 0, 1, 1, 0, 1, 1, 1},
+    {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 1, 1, 2, 2},
+    {0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 2, 2, 0, 0, 2, 2},
+    {0, 0, 2, 2, 0, 0, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1},
+    {0, 0, 1, 1, 0, 0, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1},
+    {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2},
+    {0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2},
+    {0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2},
+    {0, 0, 1, 2, 0, 0, 1, 2, 0, 0, 1, 2, 0, 0, 1, 2},
+    {0, 1, 1, 2, 0, 1, 1, 2, 0, 1, 1, 2, 0, 1, 1, 2},
+    {0, 1, 2, 2, 0, 1, 2, 2, 0, 1, 2, 2, 0, 1, 2, 2},
+    {0, 0, 1, 1, 0, 1, 1, 2, 1, 1, 2, 2, 1, 2, 2, 2},
+    {0, 0, 1, 1, 2, 0, 0, 1, 2, 2, 0, 0, 2, 2, 2, 0},
+    {0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 2, 1, 1, 2, 2},
+    {0, 1, 1, 1, 0, 0, 1, 1, 2, 0, 0, 1, 2, 2, 0, 0},
+    {0, 0, 0, 0, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2},
+    {0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 1, 1, 1, 1},
+    {0, 1, 1, 1, 0, 1, 1, 1, 0, 2, 2, 2, 0, 2, 2, 2},
+    {0, 0, 0, 1, 0, 0, 0, 1, 2, 2, 2, 1, 2, 2, 2, 1},
+    {0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 2, 2, 0, 1, 2, 2},
+    {0, 0, 0, 0, 1, 1, 0, 0, 2, 2, 1, 0, 2, 2, 1, 0},
+    {0, 1, 2, 2, 0, 1, 2, 2, 0, 0, 1, 1, 0, 0, 0, 0},
+    {0, 0, 1, 2, 0, 0, 1, 2, 1, 1, 2, 2, 2, 2, 2, 2},
+    {0, 1, 1, 0, 1, 2, 2, 1, 1, 2, 2, 1, 0, 1, 1, 0},
+    {0, 0, 0, 0, 0, 1, 1, 0, 1, 2, 2, 1, 1, 2, 2, 1},
+    {0, 0, 2, 2, 1, 1, 0, 2, 1, 1, 0, 2, 0, 0, 2, 2},
+    {0, 1, 1, 0, 0, 1, 1, 0, 2, 0, 0, 2, 2, 2, 2, 2},
+    {0, 0, 1, 1, 0, 1, 2, 2, 0, 1, 2, 2, 0, 0, 1, 1},
+    {0, 0, 0, 0, 2, 0, 0, 0, 2, 2, 1, 1, 2, 2, 2, 1},
+    {0, 0, 0, 0, 0, 0, 0, 2, 1, 1, 2, 2, 1, 2, 2, 2},
+    {0, 2, 2, 2, 0, 0, 2, 2, 0, 0, 1, 2, 0, 0, 1, 1},
+    {0, 0, 1, 1, 0, 0, 1, 2, 0, 0, 2, 2, 0, 2, 2, 2},
+    {0, 1, 2, 0, 0, 1, 2, 0, 0, 1, 2, 0, 0, 1, 2, 0},
+    {0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 0, 0, 0, 0},
+    {0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0},
+    {0, 1, 2, 0, 2, 0, 1, 2, 1, 2, 0, 1, 0, 1, 2, 0},
+    {0, 0, 1, 1, 2, 2, 0, 0, 1, 1, 2, 2, 0, 0, 1, 1},
+    {0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 0, 0, 0, 0, 1, 1},
+    {0, 1, 0, 1, 0, 1, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2},
+    {0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 2, 1, 2, 1, 2, 1},
+    {0, 0, 2, 2, 1, 1, 2, 2, 0, 0, 2, 2, 1, 1, 2, 2},
+    {0, 0, 2, 2, 0, 0, 1, 1, 0, 0, 2, 2, 0, 0, 1, 1},
+    {0, 2, 2, 0, 1, 2, 2, 1, 0, 2, 2, 0, 1, 2, 2, 1},
+    {0, 1, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 0, 1, 0, 1},
+    {0, 0, 0, 0, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1},
+    {0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 2, 2, 2, 2},
+    {0, 2, 2, 2, 0, 1, 1, 1, 0, 2, 2, 2, 0, 1, 1, 1},
+    {0, 0, 0, 2, 1, 1, 1, 2, 0, 0, 0, 2, 1, 1, 1, 2},
+    {0, 0, 0, 0, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2},
+    {0, 2, 2, 2, 0, 1, 1, 1, 0, 1, 1, 1, 0, 2, 2, 2},
+    {0, 0, 0, 2, 1, 1, 1, 2, 1, 1, 1, 2, 0, 0, 0, 2},
+    {0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 2, 2, 2, 2},
+    {0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 1, 2, 2, 1, 1, 2},
+    {0, 1, 1, 0, 0, 1, 1, 0, 2, 2, 2, 2, 2, 2, 2, 2},
+    {0, 0, 2, 2, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 2, 2},
+    {0, 0, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 0, 0, 2, 2},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 1, 2},
+    {0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 1},
+    {0, 2, 2, 2, 1, 2, 2, 2, 0, 2, 2, 2, 1, 2, 2, 2},
+    {0, 1, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
+    {0, 1, 1, 1, 2, 0, 1, 1, 2, 2, 0, 1, 2, 2, 2, 0},
+};
+
+const uint AnchorTable2[64] = {
+    0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf,
+    0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf,
+    0xf, 0x2, 0x8, 0x2, 0x2, 0x8, 0x8, 0xf,
+    0x2, 0x8, 0x2, 0x2, 0x8, 0x8, 0x2, 0x2,
+    0xf, 0xf, 0x6, 0x8, 0x2, 0x8, 0xf, 0xf,
+    0x2, 0x8, 0x2, 0x2, 0x2, 0xf, 0xf, 0x6,
+    0x6, 0x2, 0x6, 0x8, 0xf, 0xf, 0x2, 0x2,
+    0xf, 0xf, 0xf, 0xf, 0xf, 0x2, 0x2, 0xf,
+};
+
+const uint AnchorTable3a[64] = {
+    0x3, 0x3, 0xf, 0xf, 0x8, 0x3, 0xf, 0xf,
+    0x8, 0x8, 0x6, 0x6, 0x6, 0x5, 0x3, 0x3,
+    0x3, 0x3, 0x8, 0xf, 0x3, 0x3, 0x6, 0xa,
+    0x5, 0x8, 0x8, 0x6, 0x8, 0x5, 0xf, 0xf,
+    0x8, 0xf, 0x3, 0x5, 0x6, 0xa, 0x8, 0xf,
+    0xf, 0x3, 0xf, 0x5, 0xf, 0xf, 0xf, 0xf,
+    0x3, 0xf, 0x5, 0x5, 0x5, 0x8, 0x5, 0xa,
+    0x5, 0xa, 0x8, 0xd, 0xf, 0xc, 0x3, 0x3,
+};
+
+const uint AnchorTable3b[64] = {
+    0xf, 0x8, 0x8, 0x3, 0xf, 0xf, 0x3, 0x8,
+    0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0x8,
+    0xf, 0x8, 0xf, 0x3, 0xf, 0x8, 0xf, 0x8,
+    0x3, 0xf, 0x6, 0xa, 0xf, 0xf, 0xa, 0x8,
+    0xf, 0x3, 0xf, 0xa, 0xa, 0x8, 0x9, 0xa,
+    0x6, 0xf, 0x8, 0xf, 0x3, 0x6, 0x6, 0x8,
+    0xf, 0x3, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf,
+    0xf, 0xf, 0xf, 0xf, 0x3, 0xf, 0xf, 0x8,
+};
+
+// ------------ BC7 core (ported from CPU) ------------
+
+struct Bitfield { int offset; int count; };
+
+Bitfield Then(Bitfield bf, int bits) { return Bitfield(bf.offset + bf.count, bits); }
+
+struct Mode {
+    int IDX; int NS; int PB; int RB; int ISB; int CB; int AB; int EPB; int SPB; int IB; int IBC; int IB2;
+};
+
+const Mode Modes[9] = Mode[9](
+    Mode(0x0,0x3,0x4,0x0,0x0,0x4,0x0,0x1,0x0,0x3,0x2d,0x0),
+    Mode(0x1,0x2,0x6,0x0,0x0,0x6,0x0,0x0,0x1,0x3,0x2e,0x0),
+    Mode(0x2,0x3,0x6,0x0,0x0,0x5,0x0,0x0,0x0,0x2,0x1d,0x0),
+    Mode(0x3,0x2,0x6,0x0,0x0,0x7,0x0,0x1,0x0,0x2,0x1e,0x0),
+    Mode(0x4,0x1,0x0,0x2,0x1,0x5,0x6,0x0,0x0,0x2,0x1f,0x3),
+    Mode(0x5,0x1,0x0,0x2,0x0,0x7,0x8,0x0,0x0,0x2,0x1f,0x2),
+    Mode(0x6,0x1,0x0,0x0,0x0,0x7,0x7,0x1,0x0,0x4,0x3f,0x0),
+    Mode(0x7,0x2,0x6,0x0,0x0,0x5,0x5,0x1,0x0,0x2,0x1e,0x0),
+    Mode(-1,0,0,0,0,0,0,0,0,0,0,0)
+);
+
+int NumColors(Mode m) { return m.NS * 2; }
+
+Bitfield BF_Partition(Mode m) { return Bitfield(m.IDX + 1, m.PB); }
+Bitfield BF_Rotation(Mode m) { return Then(BF_Partition(m), m.RB); }
+Bitfield BF_IndexSelection(Mode m) { return Then(BF_Rotation(m), m.ISB); }
+
+Bitfield BF_Red(Mode m, int idx) { return Then(Then(BF_IndexSelection(m), m.CB * idx), m.CB); }
+Bitfield BF_Green(Mode m, int idx) { return Then(Then(BF_Red(m, NumColors(m)-1), m.CB * idx), m.CB); }
+Bitfield BF_Blue(Mode m, int idx) { return Then(Then(BF_Green(m, NumColors(m)-1), m.CB * idx), m.CB); }
+Bitfield BF_Alpha(Mode m, int idx) { return Then(Then(BF_Blue(m, NumColors(m)-1), m.AB * idx), m.AB); }
+Bitfield BF_EndpointPBit(Mode m, int idx) { return Then(Then(BF_Alpha(m, NumColors(m)-1), m.EPB * idx), m.EPB); }
+Bitfield BF_SharedPBit0(Mode m) { return Then(BF_EndpointPBit(m, NumColors(m)-1), m.SPB); }
+Bitfield BF_SharedPBit1(Mode m) { return Then(BF_SharedPBit0(m), m.SPB); }
+
+Bitfield BF_PrimaryIndex(Mode m, int offset, int count) { return Then(Then(BF_SharedPBit1(m), offset), count); }
+Bitfield BF_SecondaryIndex(Mode m, int offset, int count) { return Then(Then(BF_SharedPBit1(m), m.IBC + offset), count); }
+
+struct IndexInfo { uint value; int numBits; };
+
+// --- New: 128-bit access helpers based on uvec4 words (little-endian: words.x = least significant 32b) ---
+// Get up to 32 bits starting at bit offset 'offset' from the 128-bit vector.
+uint GetBits128(uvec4 words, Bitfield bf) {
+    int offs = bf.offset;
+    int cnt = bf.count;
+    if (cnt <= 0) return 0u;
+    // Clamp cnt to 32 to keep return type uint and avoid 64-bit math.
+    // BC7 usage uses small counts; this is safe for intended tables.
+    if (cnt > 32) cnt = 32;
+
+    uint uoffs = uint(offs);
+    uint ucnt = uint(cnt);
+    uint wordIdx = uoffs >> 5; // /32
+    uint bit = uoffs & 31u;
+
+    // read low part
+    uint low = 0u;
+    // safe indexing: if wordIdx within 0..3 use words[wordIdx], else 0
+    if (wordIdx == 0u) low = words.x;
+    else if (wordIdx == 1u) low = words.y;
+    else if (wordIdx == 2u) low = words.z;
+    else if (wordIdx == 3u) low = words.w;
+    else low = 0u;
+
+    // if the requested bits fit within this 32-bit word
+    if (bit + ucnt <= 32u) {
+        uint res = (low >> bit) & ((ucnt == 32u) ? 0xFFFFFFFFu : ((1u << ucnt) - 1u));
+        return res;
+    }
+
+    // need bits from next word as well
+    uint next = 0u;
+    if (wordIdx + 1u == 0u) next = words.x;
+    else if (wordIdx + 1u == 1u) next = words.y;
+    else if (wordIdx + 1u == 2u) next = words.z;
+    else if (wordIdx + 1u == 3u) next = words.w;
+    else next = 0u;
+
+    uint part1 = (low >> bit);
+    uint part2 = (next & ((1u << (bit + ucnt - 32u)) - 1u)) << (32u - bit);
+    uint res = part1 | part2;
+    res &= ((ucnt == 32u) ? 0xFFFFFFFFu : ((1u << ucnt) - 1u));
+    return res;
+}
+
+// Get bits at arbitrary offset (used by colorIndex/alphaIndex with dynamic offsets).
+uint GetBitsAtOffset(uvec4 words, int offset, int count) {
+    Bitfield bf = Bitfield(offset, count);
+    return GetBits128(words, bf);
+}
+
+// GetMode equivalent using words.x (low 32 bits) and words.y (next 32) to inspect low 8 bits as original code.
+Mode GetModeFromWords(uvec4 words) {
+    // original tested low64 mask bits; here low 8 bits are in words.x low bits.
+    uint low0 = words.x;
+    if ((low0 & 0x01u) != 0u) return Modes[0];
+    if ((low0 & 0x02u) != 0u) return Modes[1];
+    if ((low0 & 0x04u) != 0u) return Modes[2];
+    if ((low0 & 0x08u) != 0u) return Modes[3];
+    if ((low0 & 0x10u) != 0u) return Modes[4];
+    if ((low0 & 0x20u) != 0u) return Modes[5];
+    if ((low0 & 0x40u) != 0u) return Modes[6];
+    if ((low0 & 0x80u) != 0u) return Modes[7];
+    return Modes[8];
+}
+
+uint bc7_interp_u8(uint e0, uint e1, IndexInfo idx) {
+    // Weights match the CPU implementation.
+    const uint w2[4]  = uint[4](0,21,43,64);
+    const uint w3[8]  = uint[8](0,9,18,27,37,46,55,64);
+    const uint w4[16] = uint[16](0,4,9,13,17,21,26,30,34,38,43,47,51,55,60,64);
+    uint w = (idx.numBits == 2) ? w2[idx.value] : (idx.numBits == 3 ? w3[idx.value] : w4[idx.value]);
+    return (((64u - w) * e0 + w * e1 + 32u) >> 6);
+}
+
+int subsetIndex(Mode m, uint partitionIdx, int texelIndex) {
+    if (m.NS == 2) return int(PartitionTable2[partitionIdx][texelIndex]);
+    if (m.NS == 3) return int(PartitionTable3[partitionIdx][texelIndex]);
+    return 0;
+}
+
+int anchorIndex(Mode m, uint partitionIdx, int subsetIdx) {
+    if (subsetIdx == 0) return 0;
+    if (subsetIdx == 1) return (m.NS == 2) ? int(AnchorTable2[partitionIdx]) : int(AnchorTable3a[partitionIdx]);
+    return int(AnchorTable3b[partitionIdx]);
+}
+
+// colorIndex/alphaIndex rewritten to use GetBitsAtOffset on uvec4 words and update bitOffset.
+IndexInfo colorIndex(Mode m, bool isAnchor, inout int bitOffset, uvec4 words) {
+    uint idxSel = uint(GetBits128(words, BF_IndexSelection(m)));
+    bool secondary = (idxSel == 1u);
+    int numBits = secondary ? m.IB2 : m.IB;
+    int numReadBits = numBits - (isAnchor ? 1 : 0);
+    uint v;
+    if (secondary) {
+        v = uint(GetBitsAtOffset(words, BF_SecondaryIndex(m, bitOffset, numReadBits).offset, numReadBits));
+    } else {
+        v = uint(GetBitsAtOffset(words, BF_PrimaryIndex(m, bitOffset, numReadBits).offset, numReadBits));
+    }
+    bitOffset += numReadBits;
+    IndexInfo ii; ii.value = v; ii.numBits = numBits;
+    return ii;
+}
+
+IndexInfo alphaIndex(Mode m, bool isAnchor, inout int bitOffset, uvec4 words) {
+    uint idxSel = uint(GetBits128(words, BF_IndexSelection(m)));
+    bool secondary = (m.IB2 != 0) && (idxSel == 0u);
+    int numBits = secondary ? m.IB2 : m.IB;
+    int numReadBits = numBits - (isAnchor ? 1 : 0);
+    uint v;
+    if (secondary) {
+        v = uint(GetBitsAtOffset(words, BF_SecondaryIndex(m, bitOffset, numReadBits).offset, numReadBits));
+    } else {
+        v = uint(GetBitsAtOffset(words, BF_PrimaryIndex(m, bitOffset, numReadBits).offset, numReadBits));
+    }
+    bitOffset += numReadBits;
+    IndexInfo ii; ii.value = v; ii.numBits = numBits;
+    return ii;
+}
+
+void main() {
+    uint bx = gl_GlobalInvocationID.x;
+    uint by = gl_GlobalInvocationID.y;
+    uint layer = gl_GlobalInvocationID.z;
+
+    if (bx >= num_blocks_x || by >= num_blocks_y) {
+        return;
+    }
+
+    // Fetch block using block-linear addressing (GOB swizzle).
+    uint byte_address = ComputeBlockByteAddress(uvec3(bx, by, layer));
+
+    // ---------------------------------------------------------
+    // Bounds check
+    // ---------------------------------------------------------
+    // BC7 blocks are 16 bytes. Check if reading this block would exceed the buffer size.
+    if (byte_address + 16u > input_size_bytes) {
+        if (gl_LocalInvocationIndex == 0u) {
+            ivec3 img_size = imageSize(dest_image);
+            ivec2 base_px = ivec2(int(bx * 4u), int(by * 4u));
+            int layer_i = int(layer);
+            for (uint y = 0u; y < 4u; y++) {
+                for (uint x = 0u; x < 4u; x++) {
+                    ivec3 p = ivec3(base_px + ivec2(int(x), int(y)), layer_i);
+                    if (p.x < img_size.x && p.y < img_size.y && p.z < img_size.z) {
+                        imageStore(dest_image, p, vec4(0.0, 0.0, 0.0, 0.0));
+                    }
+                }
+            }
+        }
+        return;
+    }
+    // ---------------------------------------------------------
+
+    uvec4 w = LoadBlock128(byte_address);
+
+    // Words: little-endian 32-bit words of the 128-bit block
+    uvec4 words = w; // words.x = least significant 32 bits
+
+    Mode m = GetModeFromWords(words);
+
+    ivec3 img_size = imageSize(dest_image);
+    ivec2 base_px = ivec2(int(bx * 4u), int(by * 4u));
+    int layer_i = int(layer);
+
+    if (m.IDX < 0) {
+        for (uint y = 0u; y < 4u; y++) {
+            for (uint x = 0u; x < 4u; x++) {
+                ivec3 p = ivec3(base_px + ivec2(int(x), int(y)), layer_i);
+                if (p.x < img_size.x && p.y < img_size.y && p.z < img_size.z) {
+                    imageStore(dest_image, p, vec4(0.0, 0.0, 0.0, 0.0));
+                }
+            }
+        }
+        return;
+    }
+
+    // Endpoints (expanded to 8-bit later).
+    uvec4 subset0_e0 = uvec4(0), subset0_e1 = uvec4(0);
+    uvec4 subset1_e0 = uvec4(0), subset1_e1 = uvec4(0);
+    uvec4 subset2_e0 = uvec4(0), subset2_e1 = uvec4(0);
+
+    // Read raw endpoint bits using GetBits128
+    for (int i = 0; i < m.NS; i++) {
+        uint r0 = uint(GetBits128(words, BF_Red(m, i * 2 + 0)));
+        uint g0 = uint(GetBits128(words, BF_Green(m, i * 2 + 0)));
+        uint b0 = uint(GetBits128(words, BF_Blue(m, i * 2 + 0)));
+        uint a0 = (m.AB > 0) ? uint(GetBits128(words, BF_Alpha(m, i * 2 + 0))) : 255u;
+
+        uint r1 = uint(GetBits128(words, BF_Red(m, i * 2 + 1)));
+        uint g1 = uint(GetBits128(words, BF_Green(m, i * 2 + 1)));
+        uint b1 = uint(GetBits128(words, BF_Blue(m, i * 2 + 1)));
+        uint a1 = (m.AB > 0) ? uint(GetBits128(words, BF_Alpha(m, i * 2 + 1))) : 255u;
+
+        if (i == 0) { subset0_e0 = uvec4(r0, g0, b0, a0); subset0_e1 = uvec4(r1, g1, b1, a1); }
+        if (i == 1) { subset1_e0 = uvec4(r0, g0, b0, a0); subset1_e1 = uvec4(r1, g1, b1, a1); }
+        if (i == 2) { subset2_e0 = uvec4(r0, g0, b0, a0); subset2_e1 = uvec4(r1, g1, b1, a1); }
+    }
+
+    // P-bits.
+    if (m.SPB > 0) {
+        uint p0 = uint(GetBits128(words, BF_SharedPBit0(m)));
+        uint p1 = uint(GetBits128(words, BF_SharedPBit1(m)));
+        subset0_e0.xyz = (subset0_e0.xyz << 1) | uvec3(p0);
+        subset0_e1.xyz = (subset0_e1.xyz << 1) | uvec3(p0);
+        subset1_e0.xyz = (subset1_e0.xyz << 1) | uvec3(p1);
+        subset1_e1.xyz = (subset1_e1.xyz << 1) | uvec3(p1);
+    }
+    if (m.EPB > 0) {
+        for (int i = 0; i < m.NS; i++) {
+            uint p0 = uint(GetBits128(words, BF_EndpointPBit(m, i * 2 + 0)));
+            uint p1 = uint(GetBits128(words, BF_EndpointPBit(m, i * 2 + 1)));
+            if (i == 0) {
+                subset0_e0.xyz = (subset0_e0.xyz << 1) | uvec3(p0);
+                subset0_e1.xyz = (subset0_e1.xyz << 1) | uvec3(p1);
+                if (m.AB > 0) { subset0_e0.w = (subset0_e0.w << 1) | p0; subset0_e1.w = (subset0_e1.w << 1) | p1; }
+            }
+            if (i == 1) {
+                subset1_e0.xyz = (subset1_e0.xyz << 1) | uvec3(p0);
+                subset1_e1.xyz = (subset1_e1.xyz << 1) | uvec3(p1);
+                if (m.AB > 0) { subset1_e0.w = (subset1_e0.w << 1) | p0; subset1_e1.w = (subset1_e1.w << 1) | p1; }
+            }
+            if (i == 2) {
+                subset2_e0.xyz = (subset2_e0.xyz << 1) | uvec3(p0);
+                subset2_e1.xyz = (subset2_e1.xyz << 1) | uvec3(p1);
+                if (m.AB > 0) { subset2_e0.w = (subset2_e0.w << 1) | p0; subset2_e1.w = (subset2_e1.w << 1) | p1; }
+            }
+        }
+    }
+
+    int colorBits = m.CB + m.SPB + m.EPB;
+    int alphaBits = m.AB + m.SPB + m.EPB;
+
+    // Expand to 8-bit UNORM (shift + replicate).
+    #define EXPAND_RGB(E) \
+        E.xyz = E.xyz << uint(8 - colorBits); \
+        E.xyz = E.xyz | (E.xyz >> uint(colorBits));
+    #define EXPAND_A(E) \
+        if (m.AB > 0) { E.w = (E.w << uint(8 - alphaBits)); E.w = E.w | (E.w >> uint(alphaBits)); } else { E.w = 255u; }
+
+    EXPAND_RGB(subset0_e0); EXPAND_RGB(subset0_e1); EXPAND_A(subset0_e0); EXPAND_A(subset0_e1);
+    if (m.NS > 1) { EXPAND_RGB(subset1_e0); EXPAND_RGB(subset1_e1); EXPAND_A(subset1_e0); EXPAND_A(subset1_e1); }
+    if (m.NS > 2) { EXPAND_RGB(subset2_e0); EXPAND_RGB(subset2_e1); EXPAND_A(subset2_e0); EXPAND_A(subset2_e1); }
+
+    int colorOff = 0;
+    int alphaOff = 0;
+    uint partitionIdx = (m.PB > 0) ? uint(GetBits128(words, BF_Partition(m))) : 0u;
+
+    for (int y = 0; y < 4; y++) {
+        for (int x = 0; x < 4; x++) {
+            ivec3 p = ivec3(base_px + ivec2(x, y), layer_i);
+            if (p.x >= img_size.x || p.y >= img_size.y || p.z >= img_size.z) {
+                continue;
+            }
+
+            int texel = y * 4 + x;
+            int sIdx = subsetIndex(m, partitionIdx, texel);
+            int aIdx = anchorIndex(m, partitionIdx, sIdx);
+            bool isA = (aIdx == texel);
+
+            IndexInfo cI = colorIndex(m, isA, colorOff, words);
+            IndexInfo aI = alphaIndex(m, isA, alphaOff, words);
+
+            uvec4 e0 = (sIdx == 0) ? subset0_e0 : (sIdx == 1 ? subset1_e0 : subset2_e0);
+            uvec4 e1 = (sIdx == 0) ? subset0_e1 : (sIdx == 1 ? subset1_e1 : subset2_e1);
+
+            // CPU note: flip r/b for storage BGR -> output RGB.
+            uint outR = bc7_interp_u8(e0.z, e1.z, cI);
+            uint outG = bc7_interp_u8(e0.y, e1.y, cI);
+            uint outB = bc7_interp_u8(e0.x, e1.x, cI);
+            uint outA = bc7_interp_u8(e0.w, e1.w, aI);
+
+            uint rot = (m.RB > 0) ? uint(GetBits128(words, BF_Rotation(m))) : 0u;
+            if (rot == 1u) { uint t = outA; outA = outB; outB = t; }
+            if (rot == 2u) { uint t = outA; outA = outG; outG = t; }
+            if (rot == 3u) { uint t = outA; outA = outR; outR = t; }
+
+            // flip r/b again for output
+            vec4 outColor = vec4(float(outB), float(outG), float(outR), float(outA)) / 255.0;
+            imageStore(dest_image, p, outColor);
+        }
+    }
+}

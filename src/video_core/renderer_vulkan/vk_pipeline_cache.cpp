@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright 2019 yuzu Emulator Project
+// SPDX-FileCopyrightText: Copyright 2019 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include <algorithm>
@@ -19,7 +19,9 @@
 #include "shader_recompiler/environment.h"
 #include "shader_recompiler/frontend/maxwell/control_flow.h"
 #include "shader_recompiler/frontend/maxwell/translate_program.h"
+#include "shader_recompiler/ir_opt/passes.h"
 #include "shader_recompiler/program_header.h"
+#include "shader_recompiler/runtime_info.h"
 #include "video_core/engines/kepler_compute.h"
 #include "video_core/engines/maxwell_3d.h"
 #include "video_core/memory_manager.h"
@@ -38,6 +40,12 @@
 #include "video_core/shader_notify.h"
 #include "video_core/vulkan_common/vulkan_device.h"
 #include "video_core/vulkan_common/vulkan_wrapper.h"
+#include "core/memory/debug_script/DbgScpHook.h"
+
+void dbgscpHookEmitSpirv(u64 pipeline_hash, u64 shader_hash, Shader::Stage stage)
+{
+    DBGSCP_HOOK_VOID("dbgscpHookEmitSpirv", pipeline_hash, shader_hash, stage);
+}
 
 namespace Vulkan {
 MICROPROFILE_DECLARE(Vulkan_PipelineCache);
@@ -349,6 +357,7 @@ PipelineCache::PipelineCache(Tegra::MaxwellDeviceMemoryManager& device_memory_,
         .support_int64_atomics = device.IsExtShaderAtomicInt64Supported(),
         .support_derivative_control = true,
         .support_geometry_shader_passthrough = device.IsNvGeometryShaderPassthroughSupported(),
+        .support_geometry_shader = device.IsGeometryShaderSupported(),
         .support_native_ndc = device.IsExtDepthClipControlSupported(),
         .support_scaled_attributes = !device.MustEmulateScaledFormats(),
         .support_multi_viewport = device.SupportsMultiViewport(),
@@ -389,6 +398,7 @@ PipelineCache::PipelineCache(Tegra::MaxwellDeviceMemoryManager& device_memory_,
         .support_snorm_render_buffer = true,
         .support_viewport_index_layer = device.IsExtShaderViewportIndexLayerSupported(),
         .min_ssbo_alignment = static_cast<u32>(device.GetStorageBufferAlignment()),
+        .support_geometry_shader = device.IsGeometryShaderSupported(),
         .support_geometry_shader_passthrough = device.IsNvGeometryShaderPassthroughSupported(),
         .support_conditional_barrier = device.SupportsConditionalBarriers(),
     };
@@ -673,11 +683,20 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
 
     // Layer passthrough generation for devices without VK_EXT_shader_viewport_index_layer
     Shader::IR::Program* layer_source_program{};
+    const bool gs_supported = device.IsGeometryShaderSupported();
 
     for (size_t index = 0; index < Maxwell::MaxShaderProgram; ++index) {
         const bool is_emulated_stage = layer_source_program != nullptr &&
                                        index == static_cast<u32>(Maxwell::ShaderType::Geometry);
         if (key.unique_hashes[index] == 0 && is_emulated_stage) {
+            // Skip synthesizing layer emulation GS when device has no GS support.
+            // In that case, layer output should be handled by VS via
+            // VK_EXT_shader_viewport_index_layer.
+            if (!gs_supported) {
+                LOG_WARNING(Render_Vulkan,
+                    "Skipping layer emulation GS synthesis (no HW GS support)");
+                continue;
+            }
             auto topology = MaxwellToOutputTopology(key.state.topology);
             programs[index] = GenerateGeometryPassthrough(pools.inst, pools.block, host_info,
                                                           *layer_source_program, topology);
@@ -766,22 +785,29 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
 
         const auto runtime_info{MakeRuntimeInfo(programs, key, program, previous_stage)};
         ConvertLegacyToGeneric(program, runtime_info);
+        dbgscpHookEmitSpirv(hash, key.unique_hashes[index], Shader::StageFromIndex(stage_index));
         std::vector<u32> code{EmitSPIRV(profile, runtime_info, program, binding)};
         device.SaveShader(code);
         VideoCommon::DumpSpirvShader(hash, key.unique_hashes[index], Shader::StageFromIndex(stage_index), code);
-#ifdef __APPLE__
-        // Currently, Apple's Metal does not support geometry shader.
-        // [See MoltenVK]: The current plan for geometry shaders is to use Apple's new Shader Converter tech.
-        // As for more info, we've got this identified in the MoltenVK roadmap.
-        if (index == static_cast<u32>(Maxwell::ShaderType::Geometry)) {
-            printf("Skip geometry shader, pipeline:%llx vs:%llx gs:%llx fs:%llx\n",
-                   static_cast<u64>(hash),
-                   key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1],
-                   key.unique_hashes[static_cast<int>(Shader::Stage::Geometry) + 1],
-                   key.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1]);
+        // Skip geometry shader on devices without hardware GS support (e.g. MoltenVK).
+        // For passthrough GS, this is safe because VS already handles all outputs.
+        // For non-passthrough GS, this is a degraded fallback (Phase 3-4 will add
+        // compute shader emulation).
+        if (!gs_supported && index == static_cast<u32>(Maxwell::ShaderType::Geometry)) {
+            const bool is_passthrough = program.is_geometry_passthrough;
+            LOG_WARNING(Render_Vulkan,
+                "Skipping {} geometry shader (no HW GS support), "
+                "pipeline:{:016x} vs:{:016x} gs:{:016x} fs:{:016x}",
+                is_passthrough ? "passthrough" : "non-passthrough",
+                static_cast<u64>(hash),
+                key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1],
+                key.unique_hashes[static_cast<int>(Shader::Stage::Geometry) + 1],
+                key.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1]);
+            // Clear infos for this stage so GraphicsPipeline won't create
+            // descriptors for a non-existent shader module.
+            infos[stage_index] = nullptr;
             continue;
         }
-#endif
         auto&& it = replace_shaders.find(key.unique_hashes[index]);
         if (it != replace_shaders.end()) {
             auto&& it2 = it->second.find(Shader::StageFromIndex(stage_index));
@@ -790,7 +816,7 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
             }
         }
         modules[stage_index] = BuildShader(device, code);
-        if (device.HasDebuggingToolAttached()) {
+        {
             const std::string name{fmt::format("Shader {:016x}", key.unique_hashes[index])};
             modules[stage_index].SetObjectNameEXT(name.c_str());
         }
@@ -852,6 +878,330 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline() {
         SerializePipeline(key, env_ptrs, pipeline_cache_filename, CACHE_VERSION);
     });
     return pipeline;
+}
+
+VtgPipelineSet* PipelineCache::GetVtgPipelineSet(const GraphicsPipelineCacheKey& key) {
+    // Check if already cached.
+    const auto it = vtg_compute_cache.find(key);
+    if (it != vtg_compute_cache.end()) {
+        return it->second.get();
+    }
+
+    // Only create VTG pipeline set for pipelines with non-passthrough GS
+    // on devices without HW GS support.
+    if (device.IsGeometryShaderSupported()) {
+        return nullptr;
+    }
+
+    const u32 gs_index = static_cast<u32>(Maxwell::ShaderType::Geometry);
+    if (key.unique_hashes[gs_index] == 0) {
+        return nullptr;
+    }
+
+    // Re-translate VS and GS programs for VTG-as-Compute transformation.
+    GraphicsEnvironments environments;
+    GetGraphicsEnvironments(environments, key.unique_hashes);
+
+    ShaderPools pools;
+    std::array<Shader::IR::Program, Maxwell::MaxShaderProgram> programs;
+
+    size_t env_index = 0;
+    for (size_t index = 0; index < Maxwell::MaxShaderProgram; ++index) {
+        if (key.unique_hashes[index] == 0) {
+            continue;
+        }
+        Shader::Environment& env{*environments.Span()[env_index]};
+        ++env_index;
+
+        const u32 cfg_offset{static_cast<u32>(env.StartAddress() + sizeof(Shader::ProgramHeader))};
+        Shader::Maxwell::Flow::CFG cfg(env, pools.flow_block, cfg_offset, index == 0);
+        programs[index] = Shader::Maxwell::TranslateProgram(pools.inst, pools.block, env, cfg, host_info);
+    }
+
+    // Check if GS is passthrough - if so, no VTG compute needed.
+    auto& gs_program = programs[gs_index];
+    if (gs_program.is_geometry_passthrough) {
+        vtg_compute_cache.emplace(key, nullptr);
+        return nullptr;
+    }
+
+    LOG_INFO(Render_Vulkan,
+        "Creating VTG-as-Compute pipeline set for pipeline:{:016x} vs:{:016x} gs:{:016x}",
+        static_cast<u64>(key.Hash()),
+        key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1],
+        key.unique_hashes[static_cast<int>(Shader::Stage::Geometry) + 1]);
+
+    auto vtg_set = std::make_unique<VtgPipelineSet>();
+    vtg_set->has_geometry_shader = true;
+    vtg_set->gs_max_output_vertices = gs_program.output_vertices;
+    vtg_set->gs_threads_per_prim = std::max(gs_program.invocations, 1u);
+
+    // Determine GS output topology vertices from the GS program header.
+    switch (gs_program.output_topology) {
+    case Shader::OutputTopology::PointList:
+        vtg_set->gs_output_topology_vertices = 1;
+        break;
+    case Shader::OutputTopology::LineStrip:
+        vtg_set->gs_output_topology_vertices = 2;
+        break;
+    default: // TriangleStrip
+        vtg_set->gs_output_topology_vertices = 3;
+        break;
+    }
+
+    // Determine GS input vertices from the topology.
+    Shader::InputTopology input_topo = Shader::InputTopology::Triangles;
+    switch (key.state.topology) {
+    case Maxwell::PrimitiveTopology::Points:
+        input_topo = Shader::InputTopology::Points;
+        break;
+    case Maxwell::PrimitiveTopology::Lines:
+    case Maxwell::PrimitiveTopology::LineLoop:
+    case Maxwell::PrimitiveTopology::LineStrip:
+        input_topo = Shader::InputTopology::Lines;
+        break;
+    case Maxwell::PrimitiveTopology::LinesAdjacency:
+    case Maxwell::PrimitiveTopology::LineStripAdjacency:
+        input_topo = Shader::InputTopology::LinesAdjacency;
+        break;
+    case Maxwell::PrimitiveTopology::TrianglesAdjacency:
+    case Maxwell::PrimitiveTopology::TriangleStripAdjacency:
+        input_topo = Shader::InputTopology::TrianglesAdjacency;
+        break;
+    default:
+        input_topo = Shader::InputTopology::Triangles;
+        break;
+    }
+    const u32 gs_input_vertices = Shader::InputTopologyVertices::vertices(input_topo);
+
+    // Build IO offset maps from VS output state.
+    const u32 vs_index = static_cast<u32>(Maxwell::ShaderType::VertexB);
+    auto& vs_program = programs[vs_index];
+
+    // Convert legacy attributes to generic before building IO offset maps.
+    // Without this, legacy attributes (e.g. ColorFrontDiffuse) would be missing
+    // from the IO maps, causing GS output data loss and FS varying mismatch.
+    {
+        const Shader::IR::Program* prev = nullptr;
+        const auto vs_runtime = MakeRuntimeInfo(programs, key, vs_program, prev);
+        Shader::Maxwell::ConvertLegacyToGeneric(vs_program, vs_runtime);
+        prev = &vs_program;
+        const auto gs_runtime = MakeRuntimeInfo(programs, key, gs_program, prev);
+        Shader::Maxwell::ConvertLegacyToGeneric(gs_program, gs_runtime);
+    }
+
+    Shader::VtgAsCompute::IoOffsetMap vs_output_map;
+    const u32 vs_output_size = Shader::VtgAsCompute::BuildIoOffsetMap(
+        vs_program.info.stores, vs_program.info.used_clip_distances,
+        vs_program.info.stores[Shader::IR::Attribute::Layer], vs_output_map);
+
+    // Build GS output map.
+    Shader::VtgAsCompute::IoOffsetMap gs_output_map;
+    const u32 gs_output_size = Shader::VtgAsCompute::BuildIoOffsetMap(
+        gs_program.info.stores, gs_program.info.used_clip_distances,
+        gs_program.info.stores[Shader::IR::Attribute::Layer], gs_output_map);
+
+    // Build resource reservations with proper sizes.
+    // VS reservations use vs_output_size for output stride.
+    auto res = Shader::VtgAsCompute::MakeResourceReservations(
+        vs_output_size, vs_output_size, gs_input_vertices);
+    res.gs_max_output_vertices = gs_program.output_vertices;
+    res.gs_threads_per_prim = vtg_set->gs_threads_per_prim;
+    res.gs_output_topology_vertices = vtg_set->gs_output_topology_vertices;
+
+    // GS reservations use gs_output_size for output stride.
+    // GS writes to its own vertex output SSBO with a different stride than VS.
+    auto gs_res = Shader::VtgAsCompute::MakeResourceReservations(
+        gs_output_size, vs_output_size, gs_input_vertices);
+    gs_res.gs_max_output_vertices = gs_program.output_vertices;
+    gs_res.gs_threads_per_prim = vtg_set->gs_threads_per_prim;
+    gs_res.gs_output_topology_vertices = vtg_set->gs_output_topology_vertices;
+
+    vtg_set->reservations = res;
+    vtg_set->gs_reservations = gs_res;
+    vtg_set->vs_output_map = vs_output_map;
+    vtg_set->gs_output_map = gs_output_map;
+
+    // Transform VS to compute.
+    Shader::Optimization::VertexToComputePass(vs_program, res, vs_output_map);
+
+    // Compile VS compute shader.
+    std::vector<u32> vs_code{Shader::Backend::SPIRV::EmitSPIRV(profile, vs_program)};
+    device.SaveShader(vs_code);
+    VideoCommon::DumpSpirvShader(key.Hash(),
+        key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1],
+        Shader::Stage::Compute, vs_code);
+    vk::ShaderModule vs_spv = BuildShader(device, vs_code);
+    {
+        const auto name{fmt::format("VTG-VS-Compute {:016x}",
+            key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1])};
+        vs_spv.SetObjectNameEXT(name.c_str());
+    }
+
+    try {
+        const auto vs_pipeline_name{fmt::format("VTG-VS-Compute {:016x}",
+            key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1])};
+        vtg_set->vs_compute = std::make_unique<VtgComputePipeline>(
+            device, descriptor_pool, vs_program.info, std::move(vs_spv), vulkan_pipeline_cache,
+            vs_pipeline_name);
+    } catch (const std::exception& e) {
+        LOG_ERROR(Render_Vulkan, "Failed to create VS compute pipeline: {}", e.what());
+        vtg_compute_cache.emplace(key, nullptr);
+        return nullptr;
+    }
+
+    // Transform GS to compute.
+    auto gs_program_copy = programs[gs_index]; // Work on a copy
+    Shader::Optimization::GeometryToComputePass(gs_program_copy, gs_res, vs_output_map, gs_output_map);
+
+    // Compile GS compute shader.
+    std::vector<u32> gs_code{Shader::Backend::SPIRV::EmitSPIRV(profile, gs_program_copy)};
+    device.SaveShader(gs_code);
+    VideoCommon::DumpSpirvShader(key.Hash(),
+        key.unique_hashes[static_cast<int>(Shader::Stage::Geometry) + 1],
+        Shader::Stage::Compute, gs_code);
+    vk::ShaderModule gs_spv = BuildShader(device, gs_code);
+    {
+        const auto name{fmt::format("VTG-GS-Compute {:016x}",
+            key.unique_hashes[static_cast<int>(Shader::Stage::Geometry) + 1])};
+        gs_spv.SetObjectNameEXT(name.c_str());
+    }
+
+    try {
+        const auto gs_pipeline_name{fmt::format("VTG-GS-Compute {:016x}",
+            key.unique_hashes[static_cast<int>(Shader::Stage::Geometry) + 1])};
+        vtg_set->gs_compute = std::make_unique<VtgComputePipeline>(
+            device, descriptor_pool, gs_program_copy.info, std::move(gs_spv),
+            vulkan_pipeline_cache, gs_pipeline_name);
+    } catch (const std::exception& e) {
+        LOG_ERROR(Render_Vulkan, "Failed to create GS compute pipeline: {}", e.what());
+        vtg_compute_cache.emplace(key, nullptr);
+        return nullptr;
+    }
+
+    LOG_INFO(Render_Vulkan,
+        "VTG-as-Compute pipeline set created successfully "
+        "(vs_output_size={}, gs_output_size={}, max_output_verts={}, threads_per_prim={})",
+        vs_output_size, gs_output_size,
+        vtg_set->gs_max_output_vertices, vtg_set->gs_threads_per_prim);
+
+    // Generate passthrough VS for the final draw.
+    // This VS reads from the GS output SSBO and writes to standard VS outputs.
+    try {
+        // Use GS output map for the passthrough VS (it reads GS output data).
+        const auto& passthrough_output_map = vtg_set->has_geometry_shader
+            ? gs_output_map : vs_output_map;
+        const auto& passthrough_res = vtg_set->has_geometry_shader
+            ? [&]() -> const Shader::VtgAsCompute::ResourceReservations& {
+                // For GS mode, the passthrough VS reads from geometry_vertex_output SSBO.
+                // Use gs_res which already has output_size_per_invocation = gs_output_size.
+                static thread_local Shader::VtgAsCompute::ResourceReservations pt_res;
+                pt_res = gs_res;
+                pt_res.vertex_output_ssbo_binding = gs_res.geometry_vertex_output_ssbo_binding;
+                return pt_res;
+            }()
+            : res;
+
+        Shader::IR::Program passthrough_program =
+            Shader::Optimization::GenerateVertexPassthroughForCompute(
+                pools.inst, pools.block, passthrough_res, passthrough_output_map,
+                gs_program.info.stores, gs_program.info.used_clip_distances,
+                gs_program.info.stores[Shader::IR::Attribute::Layer]);
+
+        // Propagate legacy_stores_mapping from GS to passthrough VS.
+        // This ensures FS ConvertLegacyToGeneric uses matching generic slots
+        // when mapping legacy loads (e.g. ColorFrontDiffuse -> Generic5X).
+        passthrough_program.info.legacy_stores_mapping = gs_program.info.legacy_stores_mapping;
+
+        // Compile passthrough VS.
+        // Use a persistent Bindings object so FS compilation starts after VS bindings.
+        Shader::Backend::Bindings pt_binding{};
+        std::vector<u32> pt_code{Shader::Backend::SPIRV::EmitSPIRV(profile, {}, passthrough_program, pt_binding)};
+        device.SaveShader(pt_code);
+        VideoCommon::DumpSpirvShader(key.Hash(),
+            key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1],
+            Shader::Stage::VertexB, pt_code, "PT_VB");
+        vk::ShaderModule pt_spv = BuildShader(device, pt_code);
+        {
+            const auto name{fmt::format("VTG-Passthrough-VS {:016x}",
+                key.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1])};
+            pt_spv.SetObjectNameEXT(name.c_str());
+        }
+
+        // Create a modified graphics pipeline key for the passthrough pipeline.
+        // Copy the original key but clear the GS hash.
+        GraphicsPipelineCacheKey pt_key = key;
+        pt_key.unique_hashes[gs_index] = 0;
+
+        // Override topology to match GS output topology (not the original draw topology).
+        // GS output index buffer uses strip + primitive restart format.
+        if (vtg_set->has_geometry_shader) {
+            switch (vtg_set->gs_output_topology_vertices) {
+            case 1:
+                pt_key.state.topology.Assign(Maxwell::PrimitiveTopology::Points);
+                break;
+            case 2:
+                pt_key.state.topology.Assign(Maxwell::PrimitiveTopology::LineStrip);
+                break;
+            default: // 3 = TriangleStrip
+                pt_key.state.topology.Assign(Maxwell::PrimitiveTopology::TriangleStrip);
+                break;
+            }
+            pt_key.state.dynamic_state.primitive_restart_enable.Assign(1);
+        }
+
+        // Build modules and infos arrays for the passthrough pipeline.
+        // Only VS (passthrough) and FS are needed.
+        std::array<vk::ShaderModule, Maxwell::MaxShaderStage> pt_modules{};
+        std::array<const Shader::Info*, Maxwell::MaxShaderStage> pt_infos{};
+
+        // VS at stage index 0 (VertexB - 1 = 0)
+        pt_modules[0] = std::move(pt_spv);
+        pt_infos[0] = &passthrough_program.info;
+
+        // Re-translate FS for the passthrough pipeline.
+        const u32 fs_index = static_cast<u32>(Maxwell::ShaderType::Pixel);
+        if (key.unique_hashes[fs_index] != 0) {
+            // FS was already translated in programs[fs_index].
+            auto& fs_program = programs[fs_index];
+            const Shader::IR::Program* prev_stage = &passthrough_program;
+            const auto runtime_info = MakeRuntimeInfo(programs, pt_key, fs_program, prev_stage);
+            Shader::Maxwell::ConvertLegacyToGeneric(fs_program, runtime_info);
+            // Use pt_binding which was advanced past VS bindings by EmitSPIRV.
+            std::vector<u32> fs_code{
+                Shader::Backend::SPIRV::EmitSPIRV(profile, runtime_info, fs_program, pt_binding)};
+            device.SaveShader(fs_code);
+            VideoCommon::DumpSpirvShader(key.Hash(),
+                key.unique_hashes[fs_index], Shader::Stage::Fragment, fs_code, "PT_FS");
+            const u32 fs_stage_index = fs_index - 1; // Fragment stage index = 4
+            pt_modules[fs_stage_index] = BuildShader(device, fs_code);
+            {
+                const auto name{fmt::format("VTG-Passthrough-FS {:016x}",
+                    key.unique_hashes[fs_index])};
+                pt_modules[fs_stage_index].SetObjectNameEXT(name.c_str());
+            }
+            pt_infos[fs_stage_index] = &fs_program.info;
+        }
+
+        auto passthrough_pipeline = std::make_unique<GraphicsPipeline>(
+            scheduler, buffer_cache, texture_cache, vulkan_pipeline_cache, &shader_notify,
+            device, descriptor_pool, guest_descriptor_queue, nullptr, nullptr,
+            render_pass_cache, pt_key, std::move(pt_modules), pt_infos);
+
+        vtg_set->passthrough_pipeline = passthrough_pipeline.get();
+
+        // Store the passthrough pipeline in the graphics cache so it stays alive.
+        graphics_cache.emplace(pt_key, std::move(passthrough_pipeline));
+
+        LOG_INFO(Render_Vulkan, "Passthrough pipeline created for VTG-as-Compute");
+    } catch (const std::exception& e) {
+        LOG_ERROR(Render_Vulkan, "Failed to create passthrough pipeline: {}", e.what());
+        // Continue without passthrough pipeline - will fall back to degraded draw.
+    }
+
+    auto* result = vtg_set.get();
+    vtg_compute_cache.emplace(key, std::move(vtg_set));
+    return result;
 }
 
 std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
@@ -929,6 +1279,7 @@ std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
 #endif
     }
 
+    dbgscpHookEmitSpirv(hash, key.unique_hash, Shader::Stage::Compute);
     std::vector<u32> code{EmitSPIRV(profile, program)};
     device.SaveShader(code);
     VideoCommon::DumpSpirvShader(hash, key.unique_hash, Shader::Stage::Compute, code);
@@ -940,7 +1291,7 @@ std::unique_ptr<ComputePipeline> PipelineCache::CreateComputePipeline(
         }
     }
     vk::ShaderModule spv_module{BuildShader(device, code)};
-    if (device.HasDebuggingToolAttached()) {
+    {
         const auto name{fmt::format("Shader {:016x}", key.unique_hash)};
         spv_module.SetObjectNameEXT(name.c_str());
     }

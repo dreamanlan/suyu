@@ -3,6 +3,8 @@
 
 #include <list>
 
+#include <fmt/format.h>
+
 #include "common/assert.h"
 #include "common/polyfill_ranges.h"
 
@@ -105,10 +107,19 @@ void SMAA::CreateShaders() {
         ARRAY_TO_SPAN(SMAA_BLENDING_WEIGHT_CALCULATION_FRAG_SPV),
         ARRAY_TO_SPAN(SMAA_NEIGHBORHOOD_BLENDING_FRAG_SPV),
     };
+    static constexpr const char* stage_names[] = {
+        "SMAA EdgeDetection", "SMAA BlendingWeight", "SMAA NeighborhoodBlending",
+    };
 
     for (size_t i = 0; i < MaxSMAAStage; i++) {
         m_vertex_shaders[i] = CreateWrappedShaderModule(m_device, vert_shader_sources[i]);
         m_fragment_shaders[i] = CreateWrappedShaderModule(m_device, frag_shader_sources[i]);
+        if (m_device.HasDebuggingToolAttached()) {
+            m_vertex_shaders[i].SetObjectNameEXT(
+                fmt::format("{} Vert", stage_names[i]).c_str());
+            m_fragment_shaders[i].SetObjectNameEXT(
+                fmt::format("{} Frag", stage_names[i]).c_str());
+        }
     }
 }
 

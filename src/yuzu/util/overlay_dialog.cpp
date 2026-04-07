@@ -170,9 +170,17 @@ void OverlayDialog::MoveAndResizeWindow() {
         BASE_FONT_SIZE * (((width / BASE_WIDTH) + (height / BASE_HEIGHT)) / 2.0f) / dpi_scale;
     const auto button_text_font_size = BASE_FONT_SIZE * (height / BASE_HEIGHT) / dpi_scale;
 
-    QFont title_text_font(QStringLiteral("MS Shell Dlg 2"), title_text_font_size, QFont::Normal);
-    QFont body_text_font(QStringLiteral("MS Shell Dlg 2"), body_text_font_size, QFont::Normal);
-    QFont button_text_font(QStringLiteral("MS Shell Dlg 2"), button_text_font_size, QFont::Normal);
+#if _WIN32
+    const char* font_family = "MS Shell Dlg 2";
+#elif __APPLE__
+    const char* font_family = "SF Pro Text";
+#else
+    const char* font_family = "Arial";
+#endif
+
+    QFont title_text_font(tr(font_family), title_text_font_size, QFont::Normal);
+    QFont body_text_font(tr(font_family), body_text_font_size, QFont::Normal);
+    QFont button_text_font(tr(font_family), button_text_font_size, QFont::Normal);
 
     if (use_rich_text) {
         ui->label_title_rich->setFont(title_text_font);

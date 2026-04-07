@@ -146,6 +146,10 @@ std::unique_ptr<TranslationMap> InitializeTranslations(QWidget* parent) {
     INSERT(
         Settings, use_asynchronous_gpu_emulation, tr("Use asynchronous GPU emulation"),
         tr("Uses an extra CPU thread for rendering.\nThis option should always remain enabled."));
+    INSERT(Settings, use_hardware_bcn, tr("Use Hardware BCn"),
+           tr("Enables hardware-accelerated BCn texture decompression.\n"
+              "When enabled, uses GPU hardware support for BCn formats if available.\n"
+              "Disable this if you experience issues with BCn texture rendering."));
     INSERT(Settings, nvdec_emulation, tr("NVDEC emulation:"),
            tr("Specifies how videos should be decoded.\nIt can either use the CPU or the GPU for "
               "decoding, or perform no decoding at all (black screen on videos).\n"
@@ -158,6 +162,11 @@ std::unique_ptr<TranslationMap> InitializeTranslations(QWidget* parent) {
               "CPU Asynchronously: Use the CPU to decode ASTC textures as they arrive. Completely "
               "eliminates ASTC decoding\nstuttering at the cost of rendering issues while the "
               "texture is being decoded."));
+    INSERT(Settings, bcn_decode_mode, tr("BCn Decoding Method:"),
+           tr("This option controls how BCn compressed textures should be decoded.\n"
+              "CPU: Use the CPU for decoding, most compatible but slower.\n"
+              "GPU: Use the GPU's compute shaders to decode BCn textures, faster but may have "
+              "issues on some hardware."));
     INSERT(
         Settings, astc_recompression, tr("ASTC Recompression Method:"),
         tr("Almost all desktop and laptop dedicated GPUs lack support for ASTC textures, forcing "
@@ -227,6 +236,8 @@ std::unique_ptr<TranslationMap> InitializeTranslations(QWidget* parent) {
               "unlocked."));
     INSERT(Settings, barrier_feedback_loops, tr("Barrier feedback loops"),
            tr("Improves rendering of transparency effects in specific games."));
+    INSERT(Settings, enable_broken_views, tr("Enable broken views"),
+           tr("Enables broken views for testing purposes."));
 
     // Renderer (Debug)
 
@@ -318,6 +329,11 @@ std::unique_ptr<ComboboxTranslationMap> ComboboxEnumeration(QWidget* parent) {
                               PAIR(AstcDecodeMode, Cpu, tr("CPU")),
                               PAIR(AstcDecodeMode, Gpu, tr("GPU")),
                               PAIR(AstcDecodeMode, CpuAsynchronous, tr("CPU Asynchronous")),
+                          }});
+    translations->insert({Settings::EnumMetadata<Settings::BcnDecodeMode>::Index(),
+                          {
+                              PAIR(BcnDecodeMode, Cpu, tr("CPU")),
+                              PAIR(BcnDecodeMode, Gpu, tr("GPU")),
                           }});
     translations->insert(
         {Settings::EnumMetadata<Settings::AstcRecompression>::Index(),

@@ -98,6 +98,9 @@ void Scheduler::RequestRenderpass(const Framebuffer* framebuffer) {
         render_area.height == state.render_area.height) {
         return;
     }
+    if (query_cache) {
+        query_cache->NotifySegment(false);
+    }
     EndRenderPass();
     state.renderpass = renderpass;
     state.framebuffer = framebuffer_handle;
@@ -122,10 +125,19 @@ void Scheduler::RequestRenderpass(const Framebuffer* framebuffer) {
     num_renderpass_images = framebuffer->NumImages();
     renderpass_images = framebuffer->Images();
     renderpass_image_ranges = framebuffer->ImageRanges();
+    if (query_cache) {
+        query_cache->NotifySegment(true);
+    }
 }
 
 void Scheduler::RequestOutsideRenderPassOperationContext() {
+    if (query_cache) {
+        query_cache->NotifySegment(false);
+    }
     EndRenderPass();
+    if (query_cache) {
+        query_cache->NotifySegment(true);
+    }
 }
 
 bool Scheduler::UpdateGraphicsPipeline(GraphicsPipeline* pipeline) {

@@ -5,6 +5,8 @@
 
 #include "shader_recompiler/environment.h"
 #include "shader_recompiler/frontend/ir/program.h"
+#include "shader_recompiler/object_pool.h"
+#include "shader_recompiler/vtg_as_compute.h"
 
 namespace Shader {
 struct HostTranslateInfo;
@@ -34,5 +36,19 @@ void VertexATransformPass(IR::Program& program);
 void VertexBTransformPass(IR::Program& program);
 void JoinTextureInfo(Info& base, Info& source);
 void JoinStorageInfo(Info& base, Info& source);
+
+// VTG-as-Compute (Vertex/Geometry shader emulation via Compute)
+void VertexToComputePass(IR::Program& program,
+                          const VtgAsCompute::ResourceReservations& res,
+                          const VtgAsCompute::IoOffsetMap& output_map);
+void GeometryToComputePass(IR::Program& program,
+                            const VtgAsCompute::ResourceReservations& res,
+                            const VtgAsCompute::IoOffsetMap& input_map,
+                            const VtgAsCompute::IoOffsetMap& output_map);
+IR::Program GenerateVertexPassthroughForCompute(
+    ObjectPool<IR::Inst>& inst_pool, ObjectPool<IR::Block>& block_pool,
+    const VtgAsCompute::ResourceReservations& res,
+    const VtgAsCompute::IoOffsetMap& output_map,
+    const VaryingState& output_state, u32 used_clip_distances, bool uses_layer);
 
 } // namespace Shader::Optimization

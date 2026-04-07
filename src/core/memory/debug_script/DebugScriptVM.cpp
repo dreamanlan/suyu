@@ -318,15 +318,33 @@ namespace
         va_start(vl, fmt);
         int r = std::vsnprintf(buf, c_buf_size, fmt, vl);
         va_end(vl);
+        // Guard against vsnprintf returning negative (error) or exceeding buffer size
+        if (r < 0) {
+            r = 0;
+        } else if (r >= c_buf_size) {
+            r = c_buf_size - 1;
+        }
+        buf[r] = '\0';
         print_string(buf);
         return r;
+    }
+    // Helper to safely accumulate snprintf return value, guarding against negative (error) and truncation overflow
+    static inline void safe_accumulate_snprintf_result(int& ct, int ret, std::size_t buf_size) {
+        if (ret < 0) {
+            // Encoding error, do not advance ct
+            return;
+        }
+        ct += ret;
+        if (ct >= static_cast<int>(buf_size)) {
+            ct = static_cast<int>(buf_size) - 1;
+        }
     }
     static int script_snprintf(char* buffer, std::size_t buf_size, const char* fmt, int64_t args[]) {
         const char* p = fmt;
         int i = 0;
         int ct = 0;
 
-        while (*p) {
+        while (*p && ct < static_cast<int>(buf_size)) {
             if (*p == '%') {
                 char tmpFmt[64] = { *p };
                 int nextTmpIx = 1;
@@ -338,62 +356,62 @@ namespace
                     switch (*p) {
                     case 'd':
                     case 'i':
-                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, args[i++]);
+                        safe_accumulate_snprintf_result(ct, snprintf(buffer + ct, buf_size - ct, tmpFmt, args[i++]), buf_size);
                         cont = false;
                         break;
                     case 'u':
-                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, args[i++]);
+                        safe_accumulate_snprintf_result(ct, snprintf(buffer + ct, buf_size - ct, tmpFmt, args[i++]), buf_size);
                         cont = false;
                         break;
                     case 'o':
-                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, args[i++]);
+                        safe_accumulate_snprintf_result(ct, snprintf(buffer + ct, buf_size - ct, tmpFmt, args[i++]), buf_size);
                         cont = false;
                         break;
                     case 'x':
-                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, args[i++]);
+                        safe_accumulate_snprintf_result(ct, snprintf(buffer + ct, buf_size - ct, tmpFmt, args[i++]), buf_size);
                         cont = false;
                         break;
                     case 'X':
-                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, args[i++]);
+                        safe_accumulate_snprintf_result(ct, snprintf(buffer + ct, buf_size - ct, tmpFmt, args[i++]), buf_size);
                         cont = false;
                         break;
                     case 'f':
                     case 'F':
-                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, *reinterpret_cast<double*>(&args[i++]));
+                        safe_accumulate_snprintf_result(ct, snprintf(buffer + ct, buf_size - ct, tmpFmt, *reinterpret_cast<double*>(&args[i++])), buf_size);
                         cont = false;
                         break;
                     case 'e':
                     case 'E':
-                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, *reinterpret_cast<double*>(&args[i++]));
+                        safe_accumulate_snprintf_result(ct, snprintf(buffer + ct, buf_size - ct, tmpFmt, *reinterpret_cast<double*>(&args[i++])), buf_size);
                         break;
                     case 'g':
                     case 'G':
-                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, *reinterpret_cast<double*>(&args[i++]));
+                        safe_accumulate_snprintf_result(ct, snprintf(buffer + ct, buf_size - ct, tmpFmt, *reinterpret_cast<double*>(&args[i++])), buf_size);
                         cont = false;
                         break;
                     case 'a':
                     case 'A':
-                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, *reinterpret_cast<double*>(&args[i++]));
+                        safe_accumulate_snprintf_result(ct, snprintf(buffer + ct, buf_size - ct, tmpFmt, *reinterpret_cast<double*>(&args[i++])), buf_size);
                         cont = false;
                         break;
                     case 'c':
-                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, args[i++]);
+                        safe_accumulate_snprintf_result(ct, snprintf(buffer + ct, buf_size - ct, tmpFmt, args[i++]), buf_size);
                         cont = false;
                         break;
                     case 's':
-                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, reinterpret_cast<const char*>(args[i++]));
+                        safe_accumulate_snprintf_result(ct, snprintf(buffer + ct, buf_size - ct, tmpFmt, reinterpret_cast<const char*>(args[i++])), buf_size);
                         cont = false;
                         break;
                     case 'p':
-                        ct += snprintf(buffer + ct, buf_size - ct, tmpFmt, reinterpret_cast<const void*>(args[i++]));
+                        safe_accumulate_snprintf_result(ct, snprintf(buffer + ct, buf_size - ct, tmpFmt, reinterpret_cast<const void*>(args[i++])), buf_size);
                         cont = false;
                         break;
                     case 'n':
-                        ct += snprintf(buffer + ct, buf_size - ct, "%d", ct);
+                        safe_accumulate_snprintf_result(ct, snprintf(buffer + ct, buf_size - ct, "%d", ct), buf_size);
                         cont = false;
                         break;
                     case '%':
-                        ct += snprintf(buffer + ct, buf_size - ct, "%s", tmpFmt);
+                        safe_accumulate_snprintf_result(ct, snprintf(buffer + ct, buf_size - ct, "%s", tmpFmt), buf_size);
                         cont = false;
                         break;
                     }

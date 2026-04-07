@@ -14,6 +14,7 @@
 #include <queue>
 
 #include <boost/thread/thread.hpp>
+#include <boost/thread/condition_variable.hpp>
 
 #include "common/polyfill_thread.h"
 #include "common/thread.h"
@@ -44,7 +45,7 @@ public:
         : workers_queued{num_workers}, thread_name{std::move(name)} {
         const auto lambda = [this, func]() {
             Common::SetCurrentThreadName(thread_name.c_str());
-            {
+            try {
                 [[maybe_unused]] std::conditional_t<with_state, StateType, int> state{func()};
                 while (!boost::this_thread::interruption_requested()) {
                     Task task;
@@ -53,8 +54,9 @@ public:
                             wait_condition.notify_all();
                         }
                         std::unique_lock lock{queue_mutex};
-                        Common::CondvarWait(condition, lock, {},
-                                            [this] { return !requests.empty(); });
+                        // Use boost condition_variable_any::wait as interruption point
+                        condition.wait(lock,
+                                       [this] { return !requests.empty(); });
                         if (boost::this_thread::interruption_requested()) {
                             break;
                         }
@@ -68,6 +70,8 @@ public:
                     }
                     ++work_done;
                 }
+            } catch (const boost::thread_interrupted&) {
+                // Thread was interrupted, fall through to cleanup
             }
             ++workers_stopped;
             wait_condition.notify_all();
@@ -110,8 +114,8 @@ public:
 private:
     std::queue<Task> requests;
     std::mutex queue_mutex;
-    std::condition_variable_any condition;
-    std::condition_variable wait_condition;
+    boost::condition_variable_any condition;
+    boost::condition_variable_any wait_condition;
     std::atomic<size_t> work_scheduled{};
     std::atomic<size_t> work_done{};
     std::atomic<size_t> workers_stopped{};

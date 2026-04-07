@@ -136,6 +136,9 @@ void WindowAdaptPass::CreatePipelineLayout() {
 
 void WindowAdaptPass::CreateVertexShader() {
     vertex_shader = BuildShader(device, VULKAN_PRESENT_VERT_SPV);
+    if (device.HasDebuggingToolAttached()) {
+        vertex_shader.SetObjectNameEXT("Present Vert");
+    }
 }
 
 void WindowAdaptPass::CreateRenderPass(VkFormat frame_format) {

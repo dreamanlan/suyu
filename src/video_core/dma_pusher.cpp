@@ -118,6 +118,9 @@ bool DmaPusher::Step() {
 
 void DmaPusher::ProcessCommands(std::span<const CommandHeader> commands) {
     for (std::size_t index = 0; index < commands.size();) {
+        if (!system.IsPoweredOn()) [[unlikely]] {
+            break;
+        }
         const CommandHeader& command_header = commands[index];
 
         if (dma_state.method_count) {

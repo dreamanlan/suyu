@@ -1264,4 +1264,22 @@ if (YUZU_ENABLE_LTO)
   set_property(TARGET core PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
+# GPU捕获管理器条件编译
+if (APPLE)
+    # Apple平台（macOS、iOS等）使用Metal实现
+    target_sources(core PRIVATE
+        memory/debug_script/GpuCaptureManager_Metal.mm
+        memory/debug_script/GpuCaptureManager.h
+    )
+    # .mm文件需要Objective-C支持，与C++ PCH不兼容
+    set_source_files_properties(memory/debug_script/GpuCaptureManager_Metal.mm
+        PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+else()
+    # 其他平台使用RenderDoc实现
+    target_sources(core PRIVATE
+        memory/debug_script/GpuCaptureManager_RenderDoc.cpp
+        memory/debug_script/GpuCaptureManager.h
+    )
+endif()
+
 create_target_directory_groups(core)

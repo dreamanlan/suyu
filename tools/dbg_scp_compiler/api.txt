@@ -60,3 +60,9 @@ defexternapi(SetWatchPoint,void,noparams,[int,int,int,int,int]);
 defexternapi(GetWatchPoint,int,noparams,[int,int,int,int]){
 	minparamnum(0);
 };
+defexternapi(FormatMemory,string,noparams,[int,int,int,int]){
+	minparamnum(2);
+};
+defexternapi(TriggerFrameCapture,int,noparams,[]);
+defexternapi(StartFrameCapture,int,noparams,[]);
+defexternapi(EndFrameCapture,int,noparams,[]);

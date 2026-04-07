@@ -112,6 +112,9 @@ inline size_t hash_combine_helper(size_t seed, size_t value) {
 struct TextureBufferDescriptorHash {
     size_t operator()(const TextureBufferDescriptor& desc) const {
         size_t h = 0;
+        h = hash_combine_helper(h, std::hash<u32>{}(static_cast<u32>(desc.format)));
+        h = hash_combine_helper(h, std::hash<bool>{}(desc.is_integer));
+        h = hash_combine_helper(h, std::hash<bool>{}(desc.is_signed));
         h = hash_combine_helper(h, std::hash<bool>{}(desc.has_secondary));
         h = hash_combine_helper(h, std::hash<u32>{}(desc.cbuf_index));
         h = hash_combine_helper(h, std::hash<u32>{}(desc.cbuf_offset));
@@ -152,8 +155,7 @@ struct TextureDescriptorHash {
         h = hash_combine_helper(h, std::hash<u32>{}(desc.secondary_shift_left));
         h = hash_combine_helper(h, std::hash<u32>{}(desc.count));
         h = hash_combine_helper(h, std::hash<u32>{}(desc.size_shift));
-        h = hash_combine_helper(h, std::hash<u32>{}(desc.sampler_index));
-        // Note: is_multisample is a mutable flag, not part of identity
+        // Note: is_multisample and sampler_index are not part of identity
         return h;
     }
 };
@@ -518,6 +520,24 @@ bool IsTexturePixelFormatInteger(TextureMetadataCache& cache, Environment& env, 
     return cache.GetOrCreate(env, cbuf).is_integer;
 }
 
+bool IsTexturePixelFormatSignedInteger(TextureMetadataCache& cache, Environment& env, const ConstBufferAddr& cbuf) {
+    const auto fmt = cache.GetOrCreate(env, cbuf).pixel_format;
+    switch (fmt) {
+    case TexturePixelFormat::A8B8G8R8_SINT:
+    case TexturePixelFormat::R8_SINT:
+    case TexturePixelFormat::R16G16B16A16_SINT:
+    case TexturePixelFormat::R32G32B32A32_SINT:
+    case TexturePixelFormat::R32G32_SINT:
+    case TexturePixelFormat::R16_SINT:
+    case TexturePixelFormat::R16G16_SINT:
+    case TexturePixelFormat::R8G8_SINT:
+    case TexturePixelFormat::R32_SINT:
+        return true;
+    default:
+        return false;
+    }
+}
+
 /// Descriptor manager with O(1) lookup optimization
 /// Uses hash maps instead of linear search for descriptor deduplication
 /// Performance: 5-10x faster for shaders with 50+ textures
@@ -814,9 +834,14 @@ void TexturePass(Environment& env, IR::Program& program, const HostTranslateInfo
             }
             break;
         }
-        default:
+default:
             if (flags.type == TextureType::Buffer) {
+                const bool is_integer{IsTexturePixelFormatInteger(metadata_cache, env, cbuf)};
+                const bool is_signed{IsTexturePixelFormatSignedInteger(metadata_cache, env, cbuf)};
                 index = descriptors.Add(TextureBufferDescriptor{
+                    .format = flags.image_format,
+                    .is_integer = is_integer,
+                    .is_signed = is_signed,
                     .has_secondary = cbuf.has_secondary,
                     .cbuf_index = cbuf.index,
                     .cbuf_offset = cbuf.offset,

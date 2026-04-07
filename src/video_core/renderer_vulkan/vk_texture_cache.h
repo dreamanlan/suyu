@@ -77,10 +77,6 @@ public:
 
     void ConvertImage(Framebuffer* dst, ImageView& dst_view, ImageView& src_view);
 
-    bool CanAccelerateImageUpload(Image&) const noexcept {
-        return false;
-    }
-
     bool CanUploadMSAA() const noexcept {
         // TODO: Implement buffer to MSAA uploads
         return false;
@@ -93,10 +89,7 @@ public:
 
     void TransitionImageLayout(Image& image);
 
-    bool HasBrokenTextureViewFormats() const noexcept {
-        // No known Vulkan driver has broken image views
-        return false;
-    }
+    bool HasBrokenTextureViewFormats() const noexcept;
 
     bool HasNativeBgr() const noexcept {
         // All known Vulkan drivers can natively handle BGR textures
@@ -118,6 +111,9 @@ public:
     BlitImageHelper& blit_image_helper;
     RenderPassCache& render_pass_cache;
     std::optional<ASTCDecoderPass> astc_decoder_pass;
+    std::optional<BCnDecoderPass> bcn_decoder_pass;
+    std::optional<BC6HDecoderPass> bc6h_decoder_pass;
+    std::optional<BC7DecoderPass> bc7_decoder_pass;
     std::unique_ptr<MSAACopyPass> msaa_copy_pass;
     const Settings::ResolutionScalingInfo& resolution;
     std::array<std::vector<VkFormat>, VideoCore::Surface::MaxPixelFormat> view_formats;
@@ -262,6 +258,7 @@ private:
     struct StorageViews {
         std::array<vk::ImageView, Shader::NUM_TEXTURE_TYPES> signeds;
         std::array<vk::ImageView, Shader::NUM_TEXTURE_TYPES> unsigneds;
+        std::array<vk::ImageView, Shader::NUM_TEXTURE_TYPES> identity;
     };
 
     [[nodiscard]] vk::ImageView MakeView(VkFormat vk_format, VkImageAspectFlags aspect_mask);

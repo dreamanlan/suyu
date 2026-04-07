@@ -1286,7 +1286,7 @@ void DeduceBlitImages(ImageInfo& dst_info, ImageInfo& src_info, const ImageBase*
 }
 
 u32 MapSizeBytes(const ImageBase& image) {
-    if (True(image.flags & ImageFlagBits::AcceleratedUpload)) {
+    if (True(image.flags & ImageFlagBits::AcceleratedUpload) && image.CanGpuAccelerate()) {
         return image.guest_size_bytes;
     } else if (True(image.flags & ImageFlagBits::Converted)) {
         return image.converted_size_bytes;

@@ -33,6 +33,7 @@
 #include "video_core/renderer_vulkan/vk_state_tracker.h"
 #include "video_core/renderer_vulkan/vk_texture_cache.h"
 #include "video_core/renderer_vulkan/vk_update_descriptor.h"
+#include "video_core/renderer_vulkan/vk_vtg_as_compute.h"
 #include "video_core/shader_cache.h"
 #include "video_core/texture_cache/texture_cache_base.h"
 #include "video_core/vulkan_common/vulkan_device.h"
@@ -62,6 +63,71 @@ struct DrawParams {
     u32 first_index;
     bool is_indexed;
 };
+
+// Get the byte size of a single component for a vertex attribute format.
+// For packed formats (A2B10G10R10, B10G11R11), returns 4 (the whole element).
+u32 GetVertexAttribComponentSize(Maxwell::VertexAttribute::Size size) {
+    switch (size) {
+    case Maxwell::VertexAttribute::Size::Size_R32_G32_B32_A32:
+    case Maxwell::VertexAttribute::Size::Size_R32_G32_B32:
+    case Maxwell::VertexAttribute::Size::Size_R32_G32:
+    case Maxwell::VertexAttribute::Size::Size_R32:
+    case Maxwell::VertexAttribute::Size::Size_A2_B10_G10_R10:
+    case Maxwell::VertexAttribute::Size::Size_B10_G11_R11:
+        return 4;
+    case Maxwell::VertexAttribute::Size::Size_R16_G16_B16_A16:
+    case Maxwell::VertexAttribute::Size::Size_R16_G16_B16:
+    case Maxwell::VertexAttribute::Size::Size_R16_G16:
+    case Maxwell::VertexAttribute::Size::Size_R16:
+        return 2;
+    case Maxwell::VertexAttribute::Size::Size_R8_G8_B8_A8:
+    case Maxwell::VertexAttribute::Size::Size_X8_B8_G8_R8:
+    case Maxwell::VertexAttribute::Size::Size_R8_G8_B8:
+    case Maxwell::VertexAttribute::Size::Size_R8_G8:
+    case Maxwell::VertexAttribute::Size::Size_G8_R8:
+    case Maxwell::VertexAttribute::Size::Size_R8:
+    case Maxwell::VertexAttribute::Size::Size_A8:
+        return 1;
+    default:
+        return 4;
+    }
+}
+
+// Map Maxwell vertex attribute Type enum to numeric type index for shader decoding.
+// 0=Float, 1=Uint, 2=Sint, 3=Unorm, 4=Snorm, 5=Uscaled, 6=Sscaled
+u32 GetVertexAttribNumericType(Maxwell::VertexAttribute::Type type) {
+    switch (type) {
+    case Maxwell::VertexAttribute::Type::Float:
+        return 0;
+    case Maxwell::VertexAttribute::Type::UInt:
+        return 1;
+    case Maxwell::VertexAttribute::Type::SInt:
+        return 2;
+    case Maxwell::VertexAttribute::Type::UNorm:
+        return 3;
+    case Maxwell::VertexAttribute::Type::SNorm:
+        return 4;
+    case Maxwell::VertexAttribute::Type::UScaled:
+        return 5;
+    case Maxwell::VertexAttribute::Type::SScaled:
+        return 6;
+    default:
+        return 0;
+    }
+}
+
+// Get the packed format type for a vertex attribute size.
+// 0=normal (non-packed), 1=A2B10G10R10, 2=B10G11R11
+u32 GetVertexAttribPackedFormat(Maxwell::VertexAttribute::Size size) {
+    switch (size) {
+    case Maxwell::VertexAttribute::Size::Size_A2_B10_G10_R10:
+        return 1;
+    case Maxwell::VertexAttribute::Size::Size_B10_G11_R11:
+        return 2;
+    default:
+        return 0;
+    }
+}
 
 VkViewport GetViewportState(const Device& device, const Maxwell& regs, size_t index, float scale) {
     const auto& src = regs.viewport_transform[index];
@@ -310,21 +376,559 @@ void RasterizerVulkan::PrepareDraw(bool indirect_draw, bool is_indexed, Func&& d
     std::scoped_lock lock{buffer_cache.mutex, texture_cache.mutex};
     // update engine as channel may be different.
     pipeline->SetEngine(maxwell3d, gpu_memory);
-    pipeline->Configure(is_indexed, line_mode);
 
-    UpdateDynamicStates();
+    // Skip Configure for VTG path to avoid creating an empty render pass
+    // that gets immediately ended by RequestOutsideRenderPassOperationContext.
+    // VTG path has its own ConfigureVtgPassthrough that handles resource binding.
+    const bool is_vtg_path = pipeline_cache.GetVtgPipelineSet(gkey) != nullptr;
+    if (!is_vtg_path) {
+        pipeline->Configure(is_indexed, line_mode);
+        UpdateDynamicStates();
+    }
 
     HandleTransformFeedback();
     query_cache.CounterEnable(VideoCommon::QueryType::ZPassPixelCount64,
                               maxwell3d->regs.zpass_pixel_count_enable);
-    draw_func();
+    draw_func(line_mode);
 }
 
 void RasterizerVulkan::Draw(bool is_indexed, u32 instance_count) {
-    PrepareDraw(false, is_indexed, [this, is_indexed, instance_count] {
+    PrepareDraw(false, is_indexed, [this, is_indexed, instance_count](bool line_mode) {
         const auto& draw_state = maxwell3d->draw_manager->GetDrawState();
         const u32 num_instances{instance_count};
         const DrawParams draw_params{MakeDrawParams(draw_state, num_instances, is_indexed)};
+
+        // Check if this pipeline needs VTG-as-Compute dispatch.
+        const auto& gkey = pipeline_cache.CurrentGraphicsKey();
+        VtgPipelineSet* vtg_set = pipeline_cache.GetVtgPipelineSet(gkey);
+        if (vtg_set && vtg_set->vs_compute) {
+
+            auto&& pThis = this;
+            auto&& vshash = gkey.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1];
+            auto&& geohash = gkey.unique_hashes[static_cast<int>(Shader::Stage::Geometry) + 1];
+            auto&& pshash = gkey.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1];
+            bool logVTG = false;
+            DBGSCP_HOOK_VOID("RasterizerVulkan::Draw::VTG", logVTG, pThis, vshash,
+                             geohash, pshash);
+
+            // Lazily create the VTG compute context.
+            if (!vtg_compute_ctx) {
+                vtg_compute_ctx = std::make_unique<VtgAsComputeContext>(
+                    device, memory_allocator, scheduler);
+            }
+
+            const auto& res = vtg_set->reservations;
+            const u32 vertex_count = draw_params.num_vertices;
+            const u32 inst_count = draw_params.num_instances;
+
+            // Set the input topology from Maxwell3D state.
+            const u32 input_topology = static_cast<u32>(draw_state.topology);
+            vtg_compute_ctx->SetTopology(input_topology);
+
+            // Prepare GPU buffers for this draw call.
+            vtg_compute_ctx->PrepareBuffers(
+                vertex_count, inst_count,
+                draw_params.base_vertex, draw_params.base_instance,
+                res.output_size_per_invocation,
+                vtg_set->gs_reservations.output_size_per_invocation,
+                vtg_set->gs_max_output_vertices,
+                vtg_set->gs_threads_per_prim,
+                vtg_set->gs_output_topology_vertices,
+                vtg_set->has_geometry_shader, logVTG);
+
+            // Prepare extra SSBOs for VS compute dispatch:
+            // extra_ssbos layout matches ResourceReservations binding order:
+            //   [0] = index buffer (binding 3)
+            //   [1] = topology remap (binding 4)
+            //   [2..33] = vertex buffers per location (binding 5..36)
+            boost::container::small_vector<VtgComputePipeline::SsboBinding, 40> vs_extra_ssbos;
+
+            // Get vertex info data reference for geometry counts.
+            auto& vi_data = vtg_compute_ctx->GetVertexInfoData();
+
+            // Index buffer SSBO (binding = index_buffer_ssbo_binding = 3).
+            if (is_indexed && draw_state.index_buffer.count > 0) {
+                const GPUVAddr ib_gpu_addr = draw_state.index_buffer.StartAddress();
+                const u32 ib_size = draw_state.index_buffer.count *
+                                    draw_state.index_buffer.FormatSizeInBytes();
+                const auto [ib_buffer, ib_offset] = buffer_cache.ObtainBuffer(
+                    ib_gpu_addr, ib_size,
+                    VideoCommon::ObtainBufferSynchronize::FullSynchronize,
+                    VideoCommon::ObtainBufferOperation::DoNothing);
+                vs_extra_ssbos.push_back({ib_buffer->Handle(), 0,
+                                          static_cast<VkDeviceSize>(ib_offset + ib_size)});
+                // Set the index buffer base offset in the VertexInfoBuffer.
+                // The offset is in elements (not bytes) relative to the buffer start.
+                const u32 ib_format_size = draw_state.index_buffer.FormatSizeInBytes();
+                const u32 ib_elem_offset = ib_offset / ib_format_size;
+                vtg_compute_ctx->SetIndexBufferOffset(ib_elem_offset);
+                // Store index element size (1/2/4 bytes) for sub-u32 index extraction in shader.
+                vi_data.geometry_counts[1] = ib_format_size;
+            } else {
+                // Non-indexed draw: use a sequential index buffer (0, 1, 2, ...).
+                const VkBuffer seq_ib = vtg_compute_ctx->GetOrCreateSequentialIndexBuffer(vertex_count);
+                vs_extra_ssbos.push_back({seq_ib, 0, vtg_compute_ctx->GetSequentialIndexBufferSize()});
+                vtg_compute_ctx->SetIndexBufferOffset(0);
+                // Sequential index buffer is always u32 (4 bytes per element).
+                vi_data.geometry_counts[1] = 4;
+            }
+
+            // Topology remap SSBO (binding = topology_remap_ssbo_binding = 4).
+            // For VS, this is not used but must be bound to satisfy the descriptor layout.
+            vs_extra_ssbos.push_back({vtg_compute_ctx->GetTopologyRemapBuffer(), 0,
+                                      vtg_compute_ctx->GetTopologyRemapBufferSize()});
+
+            // Vertex buffer SSBOs (binding = vertex_buffer_ssbo_base_binding + location).
+            // Bind per attribute location (not per vertex stream), matching shader expectations.
+            const auto& regs = maxwell3d->regs;
+            for (u32 loc = 0; loc < 32; ++loc) {
+                const auto& attrib = regs.vertex_attrib_format[loc];
+                const u32 buf_idx = attrib.buffer;
+                const auto& vb = regs.vertex_streams[buf_idx];
+                const bool is_constant = attrib.constant;
+
+                if (!is_constant && vb.IsEnabled()) {
+                    const GPUVAddr vb_gpu_addr = vb.Address();
+                    const GPUVAddr vb_limit_addr = regs.vertex_stream_limits[buf_idx].Address();
+                    const u32 vb_size = static_cast<u32>(
+                        vb_limit_addr >= vb_gpu_addr ? vb_limit_addr - vb_gpu_addr + 1 : 0);
+                    const u32 vb_stride = vb.stride;
+                    const bool instanced = regs.vertex_stream_instances.IsInstancingEnabled(buf_idx);
+                    const u32 divisor = instanced ? vb.frequency : 0;
+
+                    if (vb_gpu_addr != 0 && vb_size > 0) {
+                        // Compute attribute offset within the vertex buffer.
+                        const u32 attrib_offset = attrib.offset;
+                        const GPUVAddr attrib_addr = vb_gpu_addr + attrib_offset;
+                        const u32 attrib_buf_size = (vb_size > attrib_offset)
+                            ? (vb_size - attrib_offset) : 0;
+
+                        if (attrib_buf_size > 0) {
+                            const auto [vb_buffer, vb_offset] = buffer_cache.ObtainBuffer(
+                                attrib_addr, attrib_buf_size,
+                                VideoCommon::ObtainBufferSynchronize::FullSynchronize,
+                                VideoCommon::ObtainBufferOperation::DoNothing);
+                            vs_extra_ssbos.push_back({vb_buffer->Handle(), 0,
+                                                      static_cast<VkDeviceSize>(vb_offset + attrib_buf_size)});
+
+                            // Set stride and offset in VertexInfoBuffer.
+                            // Stride and offset are in component-sized units (divided by componentSize).
+                            const u32 comp_size = GetVertexAttribComponentSize(attrib.size);
+                            const u32 num_type = GetVertexAttribNumericType(attrib.type);
+                            const u32 packed_fmt = GetVertexAttribPackedFormat(attrib.size);
+                            vi_data.vertex_strides[loc].stride = vb_stride / comp_size;
+                            vi_data.vertex_strides[loc].component_count = attrib.ComponentCount();
+                            vi_data.vertex_strides[loc].component_size = comp_size;
+                            vi_data.vertex_strides[loc].numeric_type = num_type;
+                            vi_data.vertex_offsets[loc].offset = vb_offset / comp_size;
+                            vi_data.vertex_offsets[loc].divisor = divisor;
+                            vi_data.vertex_offsets[loc].packed_format = packed_fmt;
+                        } else {
+                            vs_extra_ssbos.push_back({VK_NULL_HANDLE, 0, VkDeviceSize{4}});
+                            vi_data.vertex_strides[loc] = {};
+                            vi_data.vertex_offsets[loc] = {};
+                        }
+                    } else {
+                        vs_extra_ssbos.push_back({VK_NULL_HANDLE, 0, VkDeviceSize{4}});
+                        vi_data.vertex_strides[loc] = {};
+                        vi_data.vertex_offsets[loc] = {};
+                    }
+                } else {
+                    vs_extra_ssbos.push_back({VK_NULL_HANDLE, 0, VkDeviceSize{4}});
+                    vi_data.vertex_strides[loc] = {};
+                    vi_data.vertex_offsets[loc] = {};
+                }
+            }
+
+            // Upload VertexInfoBuffer UBO data (after all fields are set).
+            vtg_compute_ctx->UploadVertexInfo();
+
+            // VTG diagnostic logging: sampled output (every 10 calls, max 10 times).
+            {
+                static u32 vtg_log_call_count = 0;
+                static u32 vtg_log_output_count = 0;
+                if (logVTG) {
+                    const u32 call_idx = vtg_log_call_count++;
+                    if (vtg_log_output_count < 10 && (call_idx % 10) == 0) {
+                        ++vtg_log_output_count;
+                        LOG_DBGSCP(Render_Vulkan,
+                            "VTG dispatch #{}: verts={} insts={} topology={} hasGS={} "
+                            "vsDispatch=({},{},1) outputSize={}",
+                            call_idx, vertex_count, inst_count, input_topology,
+                            vtg_set->has_geometry_shader,
+                            vtg_compute_ctx->GetVertexDispatchX(),
+                            vtg_compute_ctx->GetVertexDispatchY(),
+                            res.output_size_per_invocation);
+                        if (vtg_set->has_geometry_shader) {
+                            LOG_DBGSCP(Render_Vulkan,
+                                "VTG GS params: prims={} maxOutVerts={} threadsPerPrim={} "
+                                "outTopoVerts={} gsDispatch=({},{},{}) gsOutputSize={}",
+                                vtg_compute_ctx->GetGeometryDispatchX() * 32,
+                                vtg_set->gs_max_output_vertices,
+                                vtg_set->gs_threads_per_prim,
+                                vtg_set->gs_output_topology_vertices,
+                                vtg_compute_ctx->GetGeometryDispatchX(),
+                                vtg_compute_ctx->GetGeometryDispatchY(),
+                                vtg_compute_ctx->GetGeometryDispatchZ(),
+                                vtg_set->gs_reservations.output_size_per_invocation);
+                        }
+                        for (u32 loc = 0; loc < 32; ++loc) {
+                            const auto& s = vi_data.vertex_strides[loc];
+                            const auto& o = vi_data.vertex_offsets[loc];
+                            if (s.stride != 0 || s.component_count != 0 || o.offset != 0) {
+                                LOG_DBGSCP(Render_Vulkan,
+                                    "VTG attrib[{}]: stride={} compCnt={} compSize={} "
+                                    "numType={} offset={} divisor={} packedFmt={} "
+                                    "ssbo=(handle={:#x} size={})",
+                                    loc, s.stride, s.component_count, s.component_size,
+                                    s.numeric_type, o.offset, o.divisor, o.packed_format,
+                                    reinterpret_cast<uintptr_t>(vs_extra_ssbos[2 + loc].buffer),
+                                    vs_extra_ssbos[2 + loc].size);
+                            }
+                        }
+                    }
+                } else {
+                    vtg_log_call_count = 0;
+                    vtg_log_output_count = 0;
+                }
+            }
+
+            // Exit the current render pass for compute dispatch.
+            scheduler.RequestOutsideRenderPassOperationContext();
+
+            // Collect original shader constant buffers for VS compute dispatch.
+            // VS stage = shader_stages[0] (VertexB).
+            boost::container::small_vector<VtgComputePipeline::UboBinding, 8> vs_extra_ubos;
+            const auto& vs_info = vtg_set->vs_compute->GetInfo();
+            const auto& vs_stage = maxwell3d->state.shader_stages[0];
+            for (const auto& cbuf_desc : vs_info.constant_buffer_descriptors) {
+                if (cbuf_desc.index == 1) continue; // Skip VertexInfoBuffer
+                const auto& cb = vs_stage.const_buffers[cbuf_desc.index];
+                if (cb.enabled && cb.address != 0) {
+                    const u32 cb_size = std::min(
+                        vs_info.constant_buffer_used_sizes[cbuf_desc.index], cb.size);
+                    if (cb_size > 0) {
+                        const auto [cb_buffer, cb_offset] = buffer_cache.ObtainBuffer(
+                            cb.address, cb_size,
+                            VideoCommon::ObtainBufferSynchronize::FullSynchronize,
+                            VideoCommon::ObtainBufferOperation::DoNothing);
+                        vs_extra_ubos.push_back({
+                            cbuf_desc.index, cb_buffer->Handle(),
+                            static_cast<VkDeviceSize>(cb_offset),
+                            static_cast<VkDeviceSize>(cb_size)});
+                        continue;
+                    }
+                }
+                vs_extra_ubos.push_back({cbuf_desc.index, VK_NULL_HANDLE, 0, 4});
+            }
+
+            // Step 1: Dispatch VS compute shader.
+            vtg_set->vs_compute->Dispatch(
+                scheduler, *vtg_compute_ctx,
+                vtg_compute_ctx->GetVertexDispatchX(),
+                vtg_compute_ctx->GetVertexDispatchY(),
+                1, vtg_set->has_geometry_shader,
+                vs_extra_ssbos, vs_extra_ubos);
+
+
+            // Step 2: If GS exists, insert barrier and dispatch GS compute shader.
+            if (vtg_set->has_geometry_shader && vtg_set->gs_compute) {
+                vtg_compute_ctx->InsertComputeBarrier();
+
+                // Update topology remap buffer for the current input topology.
+                vtg_compute_ctx->UpdateTopologyRemapBuffer(
+                    vtg_compute_ctx->GetCachedTopology(), vertex_count);
+
+                // GS extra SSBOs: must match binding order starting from binding 3.
+                // [0] = index buffer (binding 3, dummy for GS)
+                // [1] = topology remap (binding 4)
+                const std::array<VtgComputePipeline::SsboBinding, 2> gs_extra_ssbos{{
+                    {VK_NULL_HANDLE, 0, VkDeviceSize{4}},
+                    {vtg_compute_ctx->GetTopologyRemapBuffer(), 0,
+                     vtg_compute_ctx->GetTopologyRemapBufferSize()},
+                }};
+
+                // Collect original shader constant buffers for GS compute dispatch.
+                // GS stage = shader_stages[3] (Geometry).
+                boost::container::small_vector<VtgComputePipeline::UboBinding, 8> gs_extra_ubos;
+                const auto& gs_info = vtg_set->gs_compute->GetInfo();
+                const auto& gs_stage = maxwell3d->state.shader_stages[3];
+                for (const auto& cbuf_desc : gs_info.constant_buffer_descriptors) {
+                    if (cbuf_desc.index == 1) continue; // Skip VertexInfoBuffer
+                    const auto& cb = gs_stage.const_buffers[cbuf_desc.index];
+                    if (cb.enabled && cb.address != 0) {
+                        const u32 cb_size = std::min(
+                            gs_info.constant_buffer_used_sizes[cbuf_desc.index], cb.size);
+                        if (cb_size > 0) {
+                            const auto [cb_buffer, cb_offset] = buffer_cache.ObtainBuffer(
+                                cb.address, cb_size,
+                                VideoCommon::ObtainBufferSynchronize::FullSynchronize,
+                                VideoCommon::ObtainBufferOperation::DoNothing);
+                            gs_extra_ubos.push_back({
+                                cbuf_desc.index, cb_buffer->Handle(),
+                                static_cast<VkDeviceSize>(cb_offset),
+                                static_cast<VkDeviceSize>(cb_size)});
+                            continue;
+                        }
+                    }
+                    gs_extra_ubos.push_back({cbuf_desc.index, VK_NULL_HANDLE, 0, 4});
+                }
+
+                // Fill index buffer with primitive restart markers before GS dispatch.
+                // Unwritten slots will be safely skipped during DrawIndexed.
+                vtg_compute_ctx->FillGeometryIndexBufferWithRestart();
+
+                vtg_set->gs_compute->Dispatch(
+                    scheduler, *vtg_compute_ctx,
+                    vtg_compute_ctx->GetGeometryDispatchX(),
+                    vtg_compute_ctx->GetGeometryDispatchY(),
+                    vtg_compute_ctx->GetGeometryDispatchZ(),
+                    vtg_set->has_geometry_shader,
+                    gs_extra_ssbos, gs_extra_ubos);
+            }
+
+            // Step 3: Insert compute-to-graphics barrier.
+            vtg_compute_ctx->InsertComputeToGraphicsBarrier();
+
+            // GPU readback diagnostic: read GS index/vertex output buffers (first 3 times only).
+            if (vtg_set->has_geometry_shader) {
+                static u32 vtg_readback_count = 0;
+                if (!logVTG) {
+                    vtg_readback_count = 0;
+                } else if (vtg_readback_count < 3) {
+                    ++vtg_readback_count;
+
+                    // Flush and wait for GPU to finish all recorded commands.
+                    scheduler.Finish();
+
+                    const u32 ib_read_count = std::min(
+                        vtg_compute_ctx->GetGeometryIndexCount(), 32u);
+                    const VkDeviceSize ib_read_bytes =
+                        static_cast<VkDeviceSize>(ib_read_count) * sizeof(u32);
+                    const u32 vb_read_count = std::min(
+                        static_cast<u32>(vtg_compute_ctx->GetGeometryVertexOutputBufferSize() / 4), 32u);
+                    const VkDeviceSize vb_read_bytes =
+                        static_cast<VkDeviceSize>(vb_read_count) * sizeof(u32);
+                    const u32 vs_read_count = std::min(
+                        static_cast<u32>(vtg_compute_ctx->GetVertexOutputBufferSize() / 4), 32u);
+                    const VkDeviceSize vs_read_bytes =
+                        static_cast<VkDeviceSize>(vs_read_count) * sizeof(u32);
+                    const VkDeviceSize staging_size = ib_read_bytes + vb_read_bytes + vs_read_bytes;
+
+                    if (staging_size > 0) {
+                        // Create a host-visible staging buffer for readback.
+                        const VkBufferCreateInfo staging_ci{
+                            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                            .pNext = nullptr,
+                            .flags = 0,
+                            .size = staging_size,
+                            .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+                            .queueFamilyIndexCount = 0,
+                            .pQueueFamilyIndices = nullptr,
+                        };
+                        auto staging_buf = memory_allocator.CreateBuffer(
+                            staging_ci, MemoryUsage::Download);
+
+                        // Record copy commands.
+                        const VkBuffer gs_ib = vtg_compute_ctx->GetGeometryIndexOutputBuffer();
+                        const VkBuffer gs_vb = vtg_compute_ctx->GetGeometryVertexOutputBuffer();
+                        const VkBuffer vs_out = vtg_compute_ctx->GetVertexOutputBuffer();
+                        const VkBuffer staging = *staging_buf;
+                        scheduler.Record([gs_ib, gs_vb, vs_out, staging,
+                                          ib_read_bytes, vb_read_bytes, vs_read_bytes](vk::CommandBuffer cmdbuf) {
+                            if (ib_read_bytes > 0) {
+                                const VkBufferCopy ib_copy{0, 0, ib_read_bytes};
+                                cmdbuf.CopyBuffer(gs_ib, staging, ib_copy);
+                            }
+                            if (vb_read_bytes > 0) {
+                                const VkBufferCopy vb_copy{0, ib_read_bytes, vb_read_bytes};
+                                cmdbuf.CopyBuffer(gs_vb, staging, vb_copy);
+                            }
+                            if (vs_read_bytes > 0) {
+                                const VkBufferCopy vs_copy{0, ib_read_bytes + vb_read_bytes, vs_read_bytes};
+                                cmdbuf.CopyBuffer(vs_out, staging, vs_copy);
+                            }
+                        });
+
+                        // Flush and wait for the copy to complete.
+                        scheduler.Finish();
+
+                        // Read back the data.
+                        auto mapped = staging_buf.Mapped();
+                        if (!mapped.empty()) {
+                            const auto* ib_data = reinterpret_cast<const u32*>(mapped.data());
+                            const auto* vb_data = reinterpret_cast<const u32*>(
+                                mapped.data() + ib_read_bytes);
+                            const auto* vs_data = reinterpret_cast<const u32*>(
+                                mapped.data() + ib_read_bytes + vb_read_bytes);
+
+                            // Log GS index buffer contents (first 32 values).
+                            std::string ib_str;
+                            u32 valid_count = 0;
+                            u32 restart_count = 0;
+                            for (u32 i = 0; i < ib_read_count; ++i) {
+                                if (ib_data[i] == 0xFFFFFFFF) {
+                                    ++restart_count;
+                                } else {
+                                    ++valid_count;
+                                }
+                                if (i < 32) {
+                                    if (!ib_str.empty()) ib_str += ",";
+                                    ib_str += fmt::format("{}", ib_data[i]);
+                                }
+                            }
+                            LOG_DBGSCP(Render_Vulkan,
+                                "VTG readback #{}: GS IB first {} values: [{}]",
+                                vtg_readback_count, std::min(ib_read_count, 32u), ib_str);
+                            LOG_DBGSCP(Render_Vulkan,
+                                "VTG readback #{}: GS IB stats (first {}): valid={} restart={}",
+                                vtg_readback_count, ib_read_count, valid_count, restart_count);
+
+                            // Log GS vertex output buffer contents (first 32 values as hex).
+                            std::string vb_str;
+                            bool vb_all_zero = true;
+                            for (u32 i = 0; i < vb_read_count; ++i) {
+                                if (vb_data[i] != 0) vb_all_zero = false;
+                                if (i < 32) {
+                                    if (!vb_str.empty()) vb_str += ",";
+                                    vb_str += fmt::format("{:#010x}", vb_data[i]);
+                                }
+                            }
+                            LOG_DBGSCP(Render_Vulkan,
+                                "VTG readback #{}: GS VB first {} values: [{}]",
+                                vtg_readback_count, std::min(vb_read_count, 32u), vb_str);
+                            LOG_DBGSCP(Render_Vulkan,
+                                "VTG readback #{}: GS VB allZero={}",
+                                vtg_readback_count, vb_all_zero);
+
+                            // Log VS output buffer contents (first 32 values as hex).
+                            std::string vs_str;
+                            bool vs_all_zero = true;
+                            for (u32 i = 0; i < vs_read_count; ++i) {
+                                if (vs_data[i] != 0) vs_all_zero = false;
+                                if (i < 32) {
+                                    if (!vs_str.empty()) vs_str += ",";
+                                    vs_str += fmt::format("{:#010x}", vs_data[i]);
+                                }
+                            }
+                            LOG_DBGSCP(Render_Vulkan,
+                                "VTG readback #{}: VS OUT first {} values: [{}]",
+                                vtg_readback_count, std::min(vs_read_count, 32u), vs_str);
+                            LOG_DBGSCP(Render_Vulkan,
+                                "VTG readback #{}: VS OUT allZero={}",
+                                vtg_readback_count, vs_all_zero);
+                        } else {
+                            LOG_DBGSCP(Render_Vulkan,
+                                "VTG readback #{}: staging buffer map failed", vtg_readback_count);
+                        }
+
+                        // Re-request outside render pass context after Finish().
+                        scheduler.RequestOutsideRenderPassOperationContext();
+                    }
+                }
+            }
+
+            // Step 4: Execute the passthrough draw.
+            // The passthrough pipeline reads from the VTG output SSBOs.
+            if (vtg_set->passthrough_pipeline) {
+                // Determine the VTG output SSBO for the passthrough VS to read from.
+                VkBuffer vtg_output_ssbo;
+                VkDeviceSize vtg_output_ssbo_size;
+                if (vtg_set->has_geometry_shader) {
+                    vtg_output_ssbo = vtg_compute_ctx->GetGeometryVertexOutputBuffer();
+                    vtg_output_ssbo_size = vtg_compute_ctx->GetGeometryVertexOutputBufferSize();
+                } else {
+                    vtg_output_ssbo = vtg_compute_ctx->GetVertexOutputBuffer();
+                    vtg_output_ssbo_size = vtg_compute_ctx->GetVertexOutputBufferSize();
+                }
+
+                // Configure the passthrough pipeline: bind descriptor set, pipeline, render pass.
+                auto* pt_pipeline = vtg_set->passthrough_pipeline;
+                pt_pipeline->SetEngine(maxwell3d, gpu_memory);
+                pt_pipeline->ConfigureVtgPassthrough(vtg_output_ssbo, vtg_output_ssbo_size,
+                                                     line_mode, logVTG);
+
+                // Force re-emit all dynamic states for the passthrough draw.
+                // VTG compute dispatches end the previous render pass, and
+                // ConfigureVtgPassthrough starts a new one. MoltenVK resets Metal
+                // render state (cull mode, depth/stencil, etc.) on each new render
+                // encoder, so we must invalidate the state tracker to ensure all
+                // dynamic states are re-emitted via vkCmd* calls.
+                state_tracker.InvalidateCommandBufferState();
+                UpdateDynamicStates();
+
+                if (vtg_set->has_geometry_shader) {
+                    // GS index buffer uses 0xFFFFFFFF as primitive restart marker.
+                    // Must explicitly enable primitive restart since UpdateDynamicStates
+                    // reads from Maxwell regs which may have it disabled.
+                    if (device.IsExtExtendedDynamicState2Supported()) {
+                        scheduler.Record([](vk::CommandBuffer cmdbuf) {
+                            cmdbuf.SetPrimitiveRestartEnableEXT(true);
+                        });
+                    }
+                    // GS mode: indexed draw using the GS index output buffer.
+                    // Primitive restart is used with index value -1 (0xFFFFFFFF).
+                    const u32 index_count = vtg_compute_ctx->GetGeometryIndexCount();
+                    const VkBuffer ib_handle =
+                        vtg_compute_ctx->GetGeometryIndexOutputBuffer();
+                    {
+                        static u32 pt_draw_log_count = 0;
+                        if (logVTG) {
+                            if (pt_draw_log_count < 10) {
+                                ++pt_draw_log_count;
+                                const auto& tregs = maxwell3d->regs;
+                                LOG_DBGSCP(Render_Vulkan,
+                                    "VTG passthrough DrawIndexed: indexCount={} "
+                                    "gsVbSize={} gsIbSize={} vsOutSize={} "
+                                    "pipeline={} topology={} primRestart={} "
+                                    "ibHandle={}",
+                                    index_count,
+                                    vtg_compute_ctx->GetGeometryVertexOutputBufferSize(),
+                                    vtg_compute_ctx->GetGeometryIndexOutputBufferSize(),
+                                    vtg_compute_ctx->GetVertexOutputBufferSize(),
+                                    static_cast<const void*>(pt_pipeline),
+                                    static_cast<u32>(tregs.draw.topology.Value()),
+                                    tregs.primitive_restart.enabled,
+                                    reinterpret_cast<const void*>(ib_handle));
+                            }
+                        } else {
+                            pt_draw_log_count = 0;
+                        }
+                    }
+                    scheduler.Record([ib_handle, index_count](
+                                         vk::CommandBuffer cmdbuf) {
+                        cmdbuf.BindIndexBuffer(ib_handle, 0, VK_INDEX_TYPE_UINT32);
+                        cmdbuf.DrawIndexed(index_count, 1, 0, 0, 0);
+                    });
+                } else {
+                    // VS-only mode: non-indexed draw.
+                    const u32 total_vertices = vertex_count * inst_count;
+                    scheduler.Record([total_vertices](vk::CommandBuffer cmdbuf) {
+                        cmdbuf.Draw(total_vertices, 1, 0, 0);
+                    });
+                }
+            } else {
+                // Fallback: no passthrough pipeline available.
+                // Execute the original draw (degraded mode - GS output is lost).
+                LOG_WARNING(Render_Vulkan,
+                    "VTG-as-Compute: no passthrough pipeline, falling back to degraded draw");
+                scheduler.Record([draw_params](vk::CommandBuffer cmdbuf) {
+                    if (draw_params.is_indexed) {
+                        cmdbuf.DrawIndexed(draw_params.num_vertices,
+                                           draw_params.num_instances,
+                                           draw_params.first_index,
+                                           draw_params.base_vertex,
+                                           draw_params.base_instance);
+                    } else {
+                        cmdbuf.Draw(draw_params.num_vertices, draw_params.num_instances,
+                                    draw_params.base_vertex, draw_params.base_instance);
+                    }
+                });
+            }
+            return;
+        }
+
         scheduler.Record([draw_params](vk::CommandBuffer cmdbuf) {
             if (draw_params.is_indexed) {
                 cmdbuf.DrawIndexed(draw_params.num_vertices, draw_params.num_instances,
@@ -341,7 +945,7 @@ void RasterizerVulkan::Draw(bool is_indexed, u32 instance_count) {
 void RasterizerVulkan::DrawIndirect() {
     const auto& params = maxwell3d->draw_manager->GetIndirectParams();
     buffer_cache.SetDrawIndirect(&params);
-    PrepareDraw(true, params.is_indexed, [this, &params] {
+    PrepareDraw(true, params.is_indexed, [this, &params](bool /*line_mode*/) {
         const auto indirect_buffer = buffer_cache.GetDrawIndirectBuffer();
         const auto& buffer = indirect_buffer.first;
         const auto& offset = indirect_buffer.second;
@@ -1033,6 +1637,9 @@ bool AccelerateDMA::BufferToImage(const Tegra::DMA::ImageCopy& copy_info,
 
 void RasterizerVulkan::UpdateDynamicStates() {
     auto& regs = maxwell3d->regs;
+    if (state_tracker.ChangePrimitiveTopology(regs.draw.topology)) {
+        state_tracker.InvalidatePrimitiveRestartEnable();
+    }
     UpdateViewportsState(regs);
     UpdateScissorsState(regs);
     UpdateDepthBias(regs);
@@ -1052,7 +1659,6 @@ void RasterizerVulkan::UpdateDynamicStates() {
             UpdateDepthWriteEnable(regs);
             UpdateStencilTestEnable(regs);
             if (device.IsExtExtendedDynamicState2Supported()) {
-                UpdatePrimitiveRestartEnable(regs);
                 UpdateRasterizerDiscardEnable(regs);
                 UpdateDepthBiasEnable(regs);
             }
@@ -1060,6 +1666,9 @@ void RasterizerVulkan::UpdateDynamicStates() {
                 UpdateLogicOpEnable(regs);
                 UpdateDepthClampEnable(regs);
             }
+        }
+        if (device.IsExtExtendedDynamicState2Supported()) {
+            UpdatePrimitiveRestartEnable(regs);
         }
         if (device.IsExtExtendedDynamicState2ExtrasSupported()) {
             UpdateLogicOp(regs);
@@ -1363,10 +1972,41 @@ void RasterizerVulkan::UpdateDepthWriteEnable(Tegra::Engines::Maxwell3D::Regs& r
 }
 
 void RasterizerVulkan::UpdatePrimitiveRestartEnable(Tegra::Engines::Maxwell3D::Regs& regs) {
+#if __APPLE__
+    //we cant SetDepthWriteEnableEXT on MoltenVK ?
+    return;
+#endif
     if (!state_tracker.TouchPrimitiveRestartEnable()) {
         return;
     }
-    scheduler.Record([enable = regs.primitive_restart.enabled](vk::CommandBuffer cmdbuf) {
+    bool enable = regs.primitive_restart.enabled;
+
+    const auto topology = regs.draw.topology;
+
+    // MoltenVK workaround: Metal does not support disabling primitive restart for strip topologies.
+    if (device.IsMoltenVK() && !enable &&
+        (topology == Maxwell::PrimitiveTopology::TriangleStrip ||
+         topology == Maxwell::PrimitiveTopology::LineStrip ||
+         topology == Maxwell::PrimitiveTopology::TriangleStripAdjacency ||
+         topology == Maxwell::PrimitiveTopology::LineStripAdjacency ||
+         topology == Maxwell::PrimitiveTopology::TriangleFan ||
+         topology == Maxwell::PrimitiveTopology::Polygon)) {
+        enable = true;
+    }
+
+    if (enable) {
+        const bool is_list = topology == Maxwell::PrimitiveTopology::Points ||
+                             topology == Maxwell::PrimitiveTopology::Lines ||
+                             topology == Maxwell::PrimitiveTopology::Triangles ||
+                             topology == Maxwell::PrimitiveTopology::LinesAdjacency ||
+                             topology == Maxwell::PrimitiveTopology::TrianglesAdjacency ||
+                             topology == Maxwell::PrimitiveTopology::Patches;
+        if (is_list && !device.IsTopologyListPrimitiveRestartSupported()) {
+            enable = false;
+        }
+    }
+
+    scheduler.Record([enable](vk::CommandBuffer cmdbuf) {
         cmdbuf.SetPrimitiveRestartEnableEXT(enable);
     });
 }

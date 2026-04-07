@@ -84,7 +84,7 @@ public:
     }
 
     VkSemaphore CurrentRenderSemaphore() const {
-        return *render_semaphores[frame_index];
+        return *render_semaphores[image_index];
     }
 
     u32 GetWidth() const {

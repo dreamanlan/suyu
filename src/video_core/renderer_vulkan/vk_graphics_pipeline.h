@@ -118,6 +118,12 @@ public:
         gpu_memory = gpu_memory_;
     }
 
+    // Configure and bind this pipeline for VTG-as-Compute passthrough draw.
+    // The VS stage SSBO is bound directly to vtg_ssbo (the VTG output buffer),
+    // while the FS stage resources are resolved normally from Maxwell3D state.
+    void ConfigureVtgPassthrough(VkBuffer vtg_ssbo, VkDeviceSize vtg_ssbo_size, bool line_mode,
+                                 bool logVTG);
+
 private:
     template <typename Spec>
     void ConfigureImpl(bool is_indexed,

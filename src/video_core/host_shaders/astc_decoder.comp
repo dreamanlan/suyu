@@ -31,6 +31,8 @@ UNIFORM(3) uint block_size;
 UNIFORM(4) uint x_shift;
 UNIFORM(5) uint block_height;
 UNIFORM(6) uint block_height_mask;
+
+UNIFORM(7) uint input_size_bytes;       // readable input size from the bound buffer region
 END_PUSH_CONSTANTS
 
 struct EncodingData {
@@ -1187,6 +1189,16 @@ void main() {
     if (any(greaterThanEqual(coord, imageSize(dest_image)))) {
         return;
     }
+
+    // Bounds check: Ensure the read does not exceed the input buffer size.
+    // An ASTC block is always 128 bits (16 bytes).
+    if (offset + 16 > input_size_bytes) {
+        // If out of bounds, fill the block with a default error color (transparent)
+        // and exit to prevent invalid memory access.
+        FillError(coord);
+        return;
+    }
+
     local_buff = astc_data[offset / 16];
     DecompressBlock(coord);
 }

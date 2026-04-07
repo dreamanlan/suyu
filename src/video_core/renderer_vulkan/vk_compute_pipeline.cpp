@@ -153,8 +153,7 @@ void ComputePipeline::ReplaceShader(const std::vector<uint32_t>& code,
                                     const ComputePipelineCacheKey& key) {
     auto&& cprog = Vulkan::BuildShader(device, code);
     spv_module = std::move(cprog);
-
-    if (device.HasDebuggingToolAttached()) {
+    {
         const std::string name{fmt::format("Shader {:016x}", key.unique_hash)};
         spv_module.SetObjectNameEXT(name.c_str());
     }

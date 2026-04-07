@@ -42,7 +42,7 @@ struct HookWrap
 template<typename... ArgsT>
 static inline HookWrap<ArgsT...> CreateHookWrap(int hookId, ArgsT&... args)
 {
-    bool retry = false;
+    static thread_local bool retry = false;
     return HookWrap<ArgsT...>(hookId, retry, args...);
 }
 template<typename... ArgsT>

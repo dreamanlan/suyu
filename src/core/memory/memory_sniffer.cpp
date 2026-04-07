@@ -9,6 +9,7 @@
 #include "common/hex_util.h"
 #include "common/microprofile.h"
 #include "common/swap.h"
+#include "common/settings.h"
 #include "core/arm/debug.h"
 #include "core/core.h"
 #include "core/memory.h"
@@ -16,6 +17,8 @@
 #include "core/memory/debug_script/DebugScriptEntry.h"
 #include "core/memory/debug_script/DbgScpHook.h"
 
+extern void InitGpuCaptureManager();
+extern void ShutdownGpuCaptureManager();
 void dbgscpHookOnFastmemCallback(bool& retry, u64 fcAddr, u64 thisAddr, u64& host_pc, int failType)
 {
     DBGSCP_HOOK_VOID("dbgscpHookOnFastmemCallback", retry, fcAddr, thisAddr, host_pc, failType);
@@ -217,9 +220,13 @@ struct MemorySniffer::Impl {
 
 MemorySniffer::MemorySniffer(Core::System& system_) : system{system_} {
     impl = std::make_unique<Impl>(system_);
+    if (Settings::values.enable_renderdoc_hotkey) {
+        InitGpuCaptureManager();
+    }
 }
 
 MemorySniffer::~MemorySniffer() {
+    ShutdownGpuCaptureManager();
 }
 
 void MemorySniffer::Initialize() {

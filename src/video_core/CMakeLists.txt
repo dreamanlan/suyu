@@ -245,6 +245,8 @@ set(sources
     renderer_vulkan/vk_turbo_mode.h
     renderer_vulkan/vk_update_descriptor.cpp
     renderer_vulkan/vk_update_descriptor.h
+    renderer_vulkan/vk_vtg_as_compute.cpp
+    renderer_vulkan/vk_vtg_as_compute.h
     shader_cache.cpp
     shader_cache.h
     shader_environment.cpp
@@ -259,6 +261,7 @@ set(sources
     texture_cache/accelerated_swizzle.h
     texture_cache/decode_bc.cpp
     texture_cache/decode_bc.h
+    texture_cache/dds_writer.h
     texture_cache/descriptor_table.h
     texture_cache/formatter.cpp
     texture_cache/formatter.h

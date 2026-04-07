@@ -507,6 +507,12 @@ bool IsPixelFormatASTC(PixelFormat format);
 
 bool IsPixelFormatBCn(PixelFormat format);
 
+bool IsPixelFormatBC1to5(PixelFormat format);
+
+bool IsPixelFormatBC6or7(PixelFormat format);
+
+bool IsPixelFormatCompressed(PixelFormat format);
+
 bool IsPixelFormatSRGB(PixelFormat format);
 
 bool IsPixelFormatInteger(PixelFormat format);

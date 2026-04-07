@@ -1075,7 +1075,7 @@ void TextureCache<P>::UploadImageContents(Image& image, StagingBuffer& staging) 
     const std::span<u8> mapped_span = staging.mapped_span;
     const GPUVAddr gpu_addr = image.gpu_addr;
 
-    if (True(image.flags & ImageFlagBits::AcceleratedUpload)) {
+    if (True(image.flags & ImageFlagBits::AcceleratedUpload) && image.CanGpuAccelerate()) {
         gpu_memory->ReadBlock(gpu_addr, mapped_span.data(), mapped_span.size_bytes(),
                               VideoCommon::CacheType::NoTextureCache);
         const auto uploads = FullUploadSwizzles(image.info);
@@ -1436,6 +1436,14 @@ ImageId TextureCache<P>::JoinImages(const ImageInfo& info, GPUVAddr gpu_addr, DA
             join_copies_to_do.emplace_back(JoinCopy{true, overlap_id});
         } else if (IsSubresource(overlap.info, new_image_base, overlap.gpu_addr, options,
                                  broken_views, native_bgr)) {
+            join_right_aliased_ids.push_back(overlap_id);
+            overlap.flags |= ImageFlagBits::Alias;
+            join_copies_to_do.emplace_back(JoinCopy{true, overlap_id});
+        } else if (broken_views && IsSubCopy(new_info, overlap, gpu_addr)) {
+            join_left_aliased_ids.push_back(overlap_id);
+            overlap.flags |= ImageFlagBits::Alias;
+            join_copies_to_do.emplace_back(JoinCopy{true, overlap_id});
+        } else if (broken_views && IsSubCopy(overlap.info, new_image_base, overlap.gpu_addr)) {
             join_right_aliased_ids.push_back(overlap_id);
             overlap.flags |= ImageFlagBits::Alias;
             join_copies_to_do.emplace_back(JoinCopy{true, overlap_id});
@@ -2396,14 +2404,26 @@ void TextureCache<P>::CopyImage(ImageId dst_id, ImageId src_id, std::vector<Imag
     const auto dst_format_type = GetFormatType(dst.info.format);
     const auto src_format_type = GetFormatType(src.info.format);
     bool otherConditionChecked = true;
+
+    bool broken_views = runtime.HasBrokenTextureViewFormats();
 #ifdef __APPLE__
-    if (dst.info.format >= PixelFormat::BC1_RGBA_UNORM && dst.info.format <= PixelFormat::BC6H_SFLOAT) {
-        dst.info.format = PixelFormat::A8B8G8R8_UNORM;
-    }
-    if (BytesPerBlock(dst.info.format) != BytesPerBlock(src.info.format)) {
-        otherConditionChecked = false;
-    }
+    {
+#else
+    if (broken_views) {
 #endif
+        if (dst.info.format >= PixelFormat::BC1_RGBA_UNORM && dst.info.format <= PixelFormat::BC6H_SFLOAT) {
+            dst.info.format = PixelFormat::A8B8G8R8_UNORM;
+        }
+#ifdef __APPLE__
+        if (BytesPerBlock(dst.info.format) != BytesPerBlock(src.info.format)) {
+            otherConditionChecked = false;
+        }
+#endif
+        if (broken_views && dst.info.format != src.info.format) {
+            otherConditionChecked = false;
+        }
+    }
+
     if (src_format_type == dst_format_type && otherConditionChecked) {
         if constexpr (HAS_EMULATED_COPIES) {
             if (!runtime.CanImageBeCopied(dst, src)) {
@@ -2412,8 +2432,10 @@ void TextureCache<P>::CopyImage(ImageId dst_id, ImageId src_id, std::vector<Imag
         }
         return runtime.CopyImage(dst, src, copies);
     }
-    UNIMPLEMENTED_IF(dst.info.type != ImageType::e2D);
-    UNIMPLEMENTED_IF(src.info.type != ImageType::e2D);
+    if (dst.info.type != ImageType::e2D || src.info.type != ImageType::e2D) {
+        LOG_WARNING(Render_Vulkan, "Unimplemented format copy for non-2D images");
+        return;
+    }
     if (runtime.ShouldReinterpret(dst, src)) {
         return runtime.ReinterpretImage(dst, src, copies);
     }

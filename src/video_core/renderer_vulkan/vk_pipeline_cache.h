@@ -26,6 +26,7 @@
 #include "video_core/renderer_vulkan/vk_compute_pipeline.h"
 #include "video_core/renderer_vulkan/vk_graphics_pipeline.h"
 #include "video_core/renderer_vulkan/vk_texture_cache.h"
+#include "video_core/renderer_vulkan/vk_vtg_as_compute.h"
 #include "video_core/shader_cache.h"
 
 namespace Core {
@@ -114,6 +115,9 @@ public:
 
     [[nodiscard]] ComputePipeline* CurrentComputePipeline(ComputePipelineCacheKey& ckey);
 
+    // Get VTG compute pipeline set for the current graphics key, or nullptr if not needed.
+    [[nodiscard]] VtgPipelineSet* GetVtgPipelineSet(const GraphicsPipelineCacheKey& key);
+
     void LoadDiskResources(u64 title_id, std::stop_token stop_loading,
                            const VideoCore::DiskResourceLoadCallback& callback);
 
@@ -164,6 +168,7 @@ private:
 
     std::unordered_map<ComputePipelineCacheKey, std::unique_ptr<ComputePipeline>> compute_cache;
     std::unordered_map<GraphicsPipelineCacheKey, std::unique_ptr<GraphicsPipeline>> graphics_cache;
+    std::unordered_map<GraphicsPipelineCacheKey, std::unique_ptr<VtgPipelineSet>> vtg_compute_cache;
     std::unordered_map<u64, std::unordered_map<Shader::Stage, std::vector<uint32_t>>> replace_shaders;
 
     ShaderPools main_pools;

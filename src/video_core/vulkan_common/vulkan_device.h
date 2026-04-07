@@ -124,7 +124,6 @@ VK_DEFINE_HANDLE(VmaAllocator)
     FEATURE_NAME(features, dualSrcBlend)                                                           \
     FEATURE_NAME(features, fillModeNonSolid)                                                       \
     FEATURE_NAME(features, fragmentStoresAndAtomics)                                               \
-    FEATURE_NAME(features, geometryShader)                                                         \
     FEATURE_NAME(features, imageCubeArray)                                                         \
     FEATURE_NAME(features, independentBlend)                                                       \
     FEATURE_NAME(features, largePoints)                                                            \
@@ -150,6 +149,7 @@ VK_DEFINE_HANDLE(VmaAllocator)
 
 // Define features where the absence of the feature may result in a degraded experience.
 #define FOR_EACH_VK_RECOMMENDED_FEATURE(FEATURE_NAME)                                              \
+    FEATURE_NAME(features, geometryShader)                                                         \
     FEATURE_NAME(custom_border_color, customBorderColors)                                          \
     FEATURE_NAME(depth_bias_control, depthBiasControl)                                             \
     FEATURE_NAME(depth_bias_control, leastRepresentableValueForceUnormRepresentation)              \
@@ -403,6 +403,11 @@ public:
     /// Returns true if the device supports VK_NV_viewport_array2.
     bool IsNvViewportArray2Supported() const {
         return extensions.viewport_array2;
+    }
+
+    /// Returns true if the device supports hardware geometry shaders.
+    bool IsGeometryShaderSupported() const {
+        return features.features.geometryShader;
     }
 
     /// Returns true if the device supports VK_NV_geometry_shader_passthrough.

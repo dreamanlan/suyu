@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright 2021 yuzu Emulator Project
+// SPDX-FileCopyrightText: Copyright 2021 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include <algorithm>
@@ -31,7 +31,8 @@ enum class Operation {
 
 Id ImageType(EmitContext& ctx, const TextureDescriptor& desc) {
     const spv::ImageFormat format{spv::ImageFormat::Unknown};
-    const Id type{ctx.F32[1]};
+    // IMPORTANT: TypeImage requires a scalar type, not a vector type
+    const Id type{ctx.TypeFloat(32)};
     const bool depth{desc.is_depth};
     const bool ms{desc.is_multisample};
     switch (desc.type) {
@@ -549,6 +550,28 @@ EmitContext::EmitContext(const Profile& profile_, const RuntimeInfo& runtime_inf
     DefineConstantBufferIndirectFunctions(program.info);
     DefineStorageBuffers(program.info, storage_binding);
     DefineTextureBuffers(program.info, texture_binding);
+
+    // Check if StorageImageExtendedFormats capability is needed for any image buffers or images
+    // Add once globally to avoid redundant capability declarations
+    bool needs_storage_image_extended_formats = false;
+    for (const ImageBufferDescriptor& desc : program.info.image_buffer_descriptors) {
+        if (desc.format != ImageFormat::Typeless) {
+            needs_storage_image_extended_formats = true;
+            break;
+        }
+    }
+    if (!needs_storage_image_extended_formats) {
+        for (const ImageDescriptor& desc : program.info.image_descriptors) {
+            if (desc.format != ImageFormat::Typeless) {
+                needs_storage_image_extended_formats = true;
+                break;
+            }
+        }
+    }
+    if (needs_storage_image_extended_formats) {
+        AddCapability(spv::Capability::StorageImageExtendedFormats);
+    }
+
     DefineImageBuffers(program.info, image_binding);
     DefineTextures(program.info, texture_binding, bindings.texture_scaling_index);
     DefineImages(program.info, image_binding, bindings.image_scaling_index);
@@ -1013,22 +1036,41 @@ void EmitContext::DefineGlobalMemoryFunctions(const Info& info) {
                                auto&& callback) {
         AddLabel();
         const size_t num_buffers{info.storage_buffers_descriptors.size()};
+        size_t current_ssbo_index{0};
         for (size_t index = 0; index < num_buffers; ++index) {
+            const auto& ssbo{info.storage_buffers_descriptors[index]};
             if (!info.nvn_buffer_used[index]) {
+                current_ssbo_index += ssbo.count;
                 continue;
             }
-            const auto& ssbo{info.storage_buffers_descriptors[index]};
-            const Id ssbo_addr_cbuf_offset{Const(ssbo.cbuf_offset / 8)};
-            const Id ssbo_size_cbuf_offset{Const(ssbo.cbuf_offset / 4 + 2)};
-            const Id ssbo_addr_pointer{OpAccessChain(
-                uniform_types.U32x2, cbufs[ssbo.cbuf_index].U32x2, zero, ssbo_addr_cbuf_offset)};
-            const Id ssbo_size_pointer{OpAccessChain(uniform_types.U32, cbufs[ssbo.cbuf_index].U32,
-                                                     zero, ssbo_size_cbuf_offset)};
+            Id unaligned_addr{};
+            Id ssbo_size{};
+            if (profile.support_descriptor_aliasing) {
+                const Id ssbo_addr_cbuf_offset{Const(ssbo.cbuf_offset / 8)};
+                const Id ssbo_size_cbuf_offset{Const(ssbo.cbuf_offset / 4 + 2)};
+                const Id ssbo_addr_pointer{OpAccessChain(
+                    uniform_types.U32x2, cbufs[ssbo.cbuf_index].U32x2, zero, ssbo_addr_cbuf_offset)};
+                const Id ssbo_size_pointer{OpAccessChain(uniform_types.U32, cbufs[ssbo.cbuf_index].U32,
+                                                         zero, ssbo_size_cbuf_offset)};
+                unaligned_addr = OpBitcast(U64, OpLoad(U32[2], ssbo_addr_pointer));
+                ssbo_size = OpUConvert(U64, OpLoad(U32[1], ssbo_size_pointer));
+            } else {
+                const u32 base_index{ssbo.cbuf_offset / 16};
+                const u32 sub_offset{(ssbo.cbuf_offset % 16) / 4};
+                const Id cbuf_pointer{OpAccessChain(uniform_types.U32x4,
+                                                    cbufs[ssbo.cbuf_index].U32x4, zero,
+                                                    Const(base_index))};
+                const Id cbuf_value{OpLoad(U32[4], cbuf_pointer)};
+                const Id addr_low{OpCompositeExtract(U32[1], cbuf_value, sub_offset)};
+                const Id addr_high{OpCompositeExtract(U32[1], cbuf_value, sub_offset + 1)};
+                const Id addr_vec{OpCompositeConstruct(U32[2], addr_low, addr_high)};
+                unaligned_addr = OpBitcast(U64, addr_vec);
+                const Id size_val{OpCompositeExtract(U32[1], cbuf_value, sub_offset + 2)};
+                ssbo_size = OpUConvert(U64, size_val);
+            }
 
             const u64 ssbo_align_mask{~(profile.min_ssbo_alignment - 1U)};
-            const Id unaligned_addr{OpBitcast(U64, OpLoad(U32[2], ssbo_addr_pointer))};
             const Id ssbo_addr{OpBitwiseAnd(U64, unaligned_addr, Constant(U64, ssbo_align_mask))};
-            const Id ssbo_size{OpUConvert(U64, OpLoad(U32[1], ssbo_size_pointer))};
             const Id ssbo_end{OpIAdd(U64, ssbo_addr, ssbo_size)};
             const Id cond{OpLogicalAnd(U1, OpUGreaterThanEqual(U1, addr, ssbo_addr),
                                        OpULessThan(U1, addr, ssbo_end))};
@@ -1037,12 +1079,21 @@ void EmitContext::DefineGlobalMemoryFunctions(const Info& info) {
             OpSelectionMerge(else_label, spv::SelectionControlMask::MaskNone);
             OpBranchConditional(cond, then_label, else_label);
             AddLabel(then_label);
-            const Id ssbo_id{ssbos[index].*ssbo_member};
-            const Id ssbo_offset{OpUConvert(U32[1], OpISub(U64, addr, ssbo_addr))};
-            const Id ssbo_index{OpShiftRightLogical(U32[1], ssbo_offset, Const(shift))};
-            const Id ssbo_pointer{OpAccessChain(element_pointer, ssbo_id, zero, ssbo_index)};
-            callback(ssbo_pointer);
+
+            Id ssbo_id;
+            Id ssbo_index;
+            if (profile.support_descriptor_aliasing) {
+                ssbo_id = ssbos[current_ssbo_index].*ssbo_member;
+                const Id ssbo_offset{OpUConvert(U32[1], OpISub(U64, addr, ssbo_addr))};
+                ssbo_index = OpShiftRightLogical(U32[1], ssbo_offset, Const(shift));
+            } else {
+                ssbo_id = ssbos[current_ssbo_index].U32;
+                const Id ssbo_offset{OpUConvert(U32[1], OpISub(U64, addr, ssbo_addr))};
+                ssbo_index = OpShiftRightLogical(U32[1], ssbo_offset, Const(2u));
+            }
+            callback(ssbo_id, ssbo_index);
             AddLabel(else_label);
+            current_ssbo_index += ssbo.count;
         }
     }};
     const auto define_load{[&](DefPtr ssbo_member, Id element_pointer, Id type, u32 shift) {
@@ -1050,7 +1101,30 @@ void EmitContext::DefineGlobalMemoryFunctions(const Info& info) {
         const Id func_id{OpFunction(type, spv::FunctionControlMask::MaskNone, function_type)};
         const Id addr{OpFunctionParameter(U64)};
         define_body(ssbo_member, addr, element_pointer, shift,
-                    [&](Id ssbo_pointer) { OpReturnValue(OpLoad(type, ssbo_pointer)); });
+                    [&](Id ssbo_id, Id ssbo_index) {
+                        if (profile.support_descriptor_aliasing) {
+                            OpReturnValue(OpLoad(type, OpAccessChain(element_pointer, ssbo_id, zero, ssbo_index)));
+                        } else {
+                            const Id ptr{OpAccessChain(storage_types.U32.element, ssbo_id, zero, ssbo_index)};
+                            if (type.value == U32[1].value) {
+                                OpReturnValue(OpLoad(type, ptr));
+                            } else if (type.value == U32[2].value) {
+                                const Id val0{OpLoad(U32[1], ptr)};
+                                const Id ptr1{OpAccessChain(storage_types.U32.element, ssbo_id, zero, OpIAdd(U32[1], ssbo_index, Const(1u)))};
+                                const Id val1{OpLoad(U32[1], ptr1)};
+                                OpReturnValue(OpCompositeConstruct(type, val0, val1));
+                            } else if (type.value == U32[4].value) {
+                                const Id val0{OpLoad(U32[1], ptr)};
+                                const Id ptr1{OpAccessChain(storage_types.U32.element, ssbo_id, zero, OpIAdd(U32[1], ssbo_index, Const(1u)))};
+                                const Id val1{OpLoad(U32[1], ptr1)};
+                                const Id ptr2{OpAccessChain(storage_types.U32.element, ssbo_id, zero, OpIAdd(U32[1], ssbo_index, Const(2u)))};
+                                const Id val2{OpLoad(U32[1], ptr2)};
+                                const Id ptr3{OpAccessChain(storage_types.U32.element, ssbo_id, zero, OpIAdd(U32[1], ssbo_index, Const(3u)))};
+                                const Id val3{OpLoad(U32[1], ptr3)};
+                                OpReturnValue(OpCompositeConstruct(type, val0, val1, val2, val3));
+                            }
+                        }
+                    });
         OpReturnValue(ConstantNull(type));
         OpFunctionEnd();
         return func_id;
@@ -1060,8 +1134,27 @@ void EmitContext::DefineGlobalMemoryFunctions(const Info& info) {
         const Id func_id{OpFunction(void_id, spv::FunctionControlMask::MaskNone, function_type)};
         const Id addr{OpFunctionParameter(U64)};
         const Id data{OpFunctionParameter(type)};
-        define_body(ssbo_member, addr, element_pointer, shift, [&](Id ssbo_pointer) {
-            OpStore(ssbo_pointer, data);
+        define_body(ssbo_member, addr, element_pointer, shift, [&](Id ssbo_id, Id ssbo_index) {
+            if (profile.support_descriptor_aliasing) {
+                OpStore(OpAccessChain(element_pointer, ssbo_id, zero, ssbo_index), data);
+            } else {
+                const Id ptr{OpAccessChain(storage_types.U32.element, ssbo_id, zero, ssbo_index)};
+                if (type.value == U32[1].value) {
+                    OpStore(ptr, data);
+                } else if (type.value == U32[2].value) {
+                    OpStore(ptr, OpCompositeExtract(U32[1], data, 0));
+                    const Id ptr1{OpAccessChain(storage_types.U32.element, ssbo_id, zero, OpIAdd(U32[1], ssbo_index, Const(1u)))};
+                    OpStore(ptr1, OpCompositeExtract(U32[1], data, 1));
+                } else if (type.value == U32[4].value) {
+                    OpStore(ptr, OpCompositeExtract(U32[1], data, 0));
+                    const Id ptr1{OpAccessChain(storage_types.U32.element, ssbo_id, zero, OpIAdd(U32[1], ssbo_index, Const(1u)))};
+                    OpStore(ptr1, OpCompositeExtract(U32[1], data, 1));
+                    const Id ptr2{OpAccessChain(storage_types.U32.element, ssbo_id, zero, OpIAdd(U32[1], ssbo_index, Const(2u)))};
+                    OpStore(ptr2, OpCompositeExtract(U32[1], data, 2));
+                    const Id ptr3{OpAccessChain(storage_types.U32.element, ssbo_id, zero, OpIAdd(U32[1], ssbo_index, Const(3u)))};
+                    OpStore(ptr3, OpCompositeExtract(U32[1], data, 3));
+                }
+            }
             OpReturn();
         });
         OpReturn();
@@ -1376,22 +1469,29 @@ void EmitContext::DefineTextureBuffers(const Info& info, u32& binding) {
     if (info.texture_buffer_descriptors.empty()) {
         return;
     }
-    const spv::ImageFormat format{spv::ImageFormat::Unknown};
-    image_buffer_type = TypeImage(F32[1], spv::Dim::Buffer, 0U, false, false, 1, format);
-
-    const Id type{TypePointer(spv::StorageClass::UniformConstant, image_buffer_type)};
     texture_buffers.reserve(info.texture_buffer_descriptors.size());
     for (const TextureBufferDescriptor& desc : info.texture_buffer_descriptors) {
         if (desc.count != 1) {
             throw NotImplementedException("Array of texture buffers");
         }
-        const Id id{AddGlobalVariable(type, spv::StorageClass::UniformConstant)};
+
+        // Determine the correct sampled type based on the descriptor format
+        // IMPORTANT: TypeImage requires a scalar type, not a vector type
+        const Id sampled_type{desc.is_integer ? TypeInt(32, desc.is_signed) : TypeFloat(32)};
+        const spv::ImageFormat buffer_format{desc.format != ImageFormat::Typeless ? GetImageFormat(desc.format) : spv::ImageFormat::Unknown};
+        const Id image_type{TypeImage(sampled_type, spv::Dim::Buffer, 0U, false, false, 1, buffer_format)};
+        const Id pointer_type{TypePointer(spv::StorageClass::UniformConstant, image_type)};
+
+        const Id id{AddGlobalVariable(pointer_type, spv::StorageClass::UniformConstant)};
         Decorate(id, spv::Decoration::Binding, binding);
         Decorate(id, spv::Decoration::DescriptorSet, 0U);
         Name(id, NameOf(stage, desc, "texbuf"));
         texture_buffers.push_back({
             .id = id,
+            .image_type = image_type,
             .count = desc.count,
+            .is_integer = desc.is_integer,
+            .is_signed = desc.is_signed,
         });
         if (profile.supported_spirv >= 0x00010400) {
             interfaces.push_back(id);
@@ -1402,12 +1502,15 @@ void EmitContext::DefineTextureBuffers(const Info& info, u32& binding) {
 
 void EmitContext::DefineImageBuffers(const Info& info, u32& binding) {
     image_buffers.reserve(info.image_buffer_descriptors.size());
+
     for (const ImageBufferDescriptor& desc : info.image_buffer_descriptors) {
         if (desc.count != 1) {
             throw NotImplementedException("Array of image buffers");
         }
         const spv::ImageFormat format{GetImageFormat(desc.format)};
-        const Id sampled_type{desc.is_integer ? U32[1] : F32[1]};
+        // IMPORTANT: TypeImage requires a scalar type, not a vector type
+        const Id sampled_type{desc.is_integer ? TypeInt(32, false) : TypeFloat(32)};
+
         const Id image_type{
             TypeImage(sampled_type, spv::Dim::Buffer, false, false, false, 2, format)};
         const Id pointer_type{TypePointer(spv::StorageClass::UniformConstant, image_type)};
@@ -1746,11 +1849,14 @@ void EmitContext::DefineTexturesPooled(const Info& info, u32& binding, u32& scal
 
 void EmitContext::DefineImages(const Info& info, u32& binding, u32& scaling_index) {
     images.reserve(info.image_descriptors.size());
+
     for (const ImageDescriptor& desc : info.image_descriptors) {
         if (desc.count != 1) {
             throw NotImplementedException("Array of images");
         }
-        const Id sampled_type{desc.is_integer ? U32[1] : F32[1]};
+        // IMPORTANT: TypeImage requires a scalar type, not a vector type
+        const Id sampled_type{desc.is_integer ? TypeInt(32, false) : TypeFloat(32)};
+
         const Id image_type{ImageType(*this, desc, sampled_type)};
         const Id pointer_type{TypePointer(spv::StorageClass::UniformConstant, image_type)};
         const Id id{AddGlobalVariable(pointer_type, spv::StorageClass::UniformConstant)};

@@ -1,0 +1,966 @@
+// SPDX-License-Identifier: MPL-2.0
+#version 460 core
+
+// Removed 64-bit integer usage and extensions.
+// #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+// #extension GL_ARB_gpu_shader_int64 : require
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) readonly restrict buffer InputBuffer {
+    uint input_data[];
+};
+
+layout(binding = 1, rgba16f) uniform writeonly image2DArray dest_image;
+
+layout(push_constant) uniform PushConstants {
+    uint num_blocks_x;
+    uint num_blocks_y;
+    uint layer_stride;       // bytes per layer
+    uint block_size;
+    uint x_shift;
+    uint block_height;
+    uint block_height_mask;
+    uint is_signed;
+
+    uint input_size_bytes;       // readable input size from the bound buffer region
+};
+
+const uint GOB_SIZE_X_SHIFT = 6;
+const uint GOB_SIZE_Y_SHIFT = 3;
+const uint GOB_SIZE_SHIFT   = GOB_SIZE_X_SHIFT + GOB_SIZE_Y_SHIFT;
+
+// BC6H block is 16 bytes.
+const uint BYTES_PER_BLOCK_LOG2 = 4;
+const uint SWIZZLE_X_BITS = 0x12Fu;
+const uint SWIZZLE_Y_BITS = 0x0D0u;
+
+uint pdep32(uint value, uint mask) {
+    uint result = 0u;
+    uint src_bit_index = 0u;
+    for (uint dst_bit = 0u; dst_bit < 32u; ++dst_bit) {
+        uint dst_mask = 1u << dst_bit;
+        if ((mask & dst_mask) != 0u) {
+            uint src_mask = 1u << src_bit_index;
+            if ((value & src_mask) != 0u) {
+                result |= dst_mask;
+            }
+            src_bit_index++;
+        }
+    }
+    return result;
+}
+
+uint SwizzleOffset(uvec2 pos_bytes_xy) {
+    uint x_bytes = pos_bytes_xy.x;
+    uint y_rows = pos_bytes_xy.y;
+    uint swizzled_x = pdep32(x_bytes, SWIZZLE_X_BITS);
+    uint swizzled_y = pdep32(y_rows, SWIZZLE_Y_BITS);
+    return swizzled_x | swizzled_y;
+}
+
+uint ComputeBlockByteAddress(uvec3 block_id) {
+    uvec3 pos = block_id;
+    pos.x <<= BYTES_PER_BLOCK_LOG2;
+
+    const uint swizzle = SwizzleOffset(pos.xy);
+    const uint block_y = pos.y >> GOB_SIZE_Y_SHIFT;
+
+    uint offset = 0u;
+    offset += pos.z * layer_stride;
+    offset += (block_y >> block_height) * block_size;
+    offset += (block_y & block_height_mask) << GOB_SIZE_SHIFT;
+    offset += (pos.x >> GOB_SIZE_X_SHIFT) << x_shift;
+    offset += swizzle;
+    return offset;
+}
+
+uvec4 LoadBlock128(uint byte_address) {
+    uint w = byte_address >> 2;
+    return uvec4(input_data[w + 0], input_data[w + 1], input_data[w + 2], input_data[w + 3]);
+}
+
+// ---------------- BC6H tables (from your CPU code) ----------------
+
+const uint BC6H_MaxPartitions = 64u;
+
+const uint BC6H_PartitionTable2[64][16] = uint[64][16](
+    uint[16]( 0,0,1,1, 0,0,1,1, 0,0,1,1, 0,0,1,1 ),
+    uint[16]( 0,0,0,1, 0,0,0,1, 0,0,0,1, 0,0,0,1 ),
+    uint[16]( 0,1,1,1, 0,1,1,1, 0,1,1,1, 0,1,1,1 ),
+    uint[16]( 0,0,0,1, 0,0,1,1, 0,0,1,1, 0,1,1,1 ),
+    uint[16]( 0,0,0,0, 0,0,0,1, 0,0,0,1, 0,0,1,1 ),
+    uint[16]( 0,0,1,1, 0,1,1,1, 0,1,1,1, 1,1,1,1 ),
+    uint[16]( 0,0,0,1, 0,0,1,1, 0,1,1,1, 1,1,1,1 ),
+    uint[16]( 0,0,0,0, 0,0,0,1, 0,0,1,1, 0,1,1,1 ),
+    uint[16]( 0,0,0,0, 0,0,0,0, 0,0,0,1, 0,0,1,1 ),
+    uint[16]( 0,0,1,1, 0,1,1,1, 1,1,1,1, 1,1,1,1 ),
+    uint[16]( 0,0,0,0, 0,0,0,1, 0,1,1,1, 1,1,1,1 ),
+    uint[16]( 0,0,0,0, 0,0,0,0, 0,0,0,1, 0,1,1,1 ),
+    uint[16]( 0,0,0,1, 0,1,1,1, 1,1,1,1, 1,1,1,1 ),
+    uint[16]( 0,0,0,0, 0,0,0,0, 1,1,1,1, 1,1,1,1 ),
+    uint[16]( 0,0,0,0, 1,1,1,1, 1,1,1,1, 1,1,1,1 ),
+    uint[16]( 0,0,0,0, 0,0,0,0, 0,0,0,0, 1,1,1,1 ),
+    uint[16]( 0,0,0,0, 1,0,0,0, 1,1,1,0, 1,1,1,1 ),
+    uint[16]( 0,1,1,1, 0,0,0,1, 0,0,0,0, 0,0,0,0 ),
+    uint[16]( 0,0,0,0, 0,0,0,0, 1,0,0,0, 1,1,1,0 ),
+    uint[16]( 0,1,1,1, 0,0,1,1, 0,0,0,1, 0,0,0,0 ),
+    uint[16]( 0,0,1,1, 0,0,0,1, 0,0,0,0, 0,0,0,0 ),
+    uint[16]( 0,0,0,0, 1,0,0,0, 1,1,0,0, 1,1,1,0 ),
+    uint[16]( 0,0,0,0, 0,0,0,0, 1,0,0,0, 1,1,0,0 ),
+    uint[16]( 0,1,1,1, 0,0,1,1, 0,0,1,1, 0,0,0,1 ),
+    uint[16]( 0,0,1,1, 0,0,0,1, 0,0,0,1, 0,0,0,0 ),
+    uint[16]( 0,0,0,0, 1,0,0,0, 1,0,0,0, 1,1,0,0 ),
+    uint[16]( 0,1,1,0, 0,1,1,0, 0,1,1,0, 0,1,1,0 ),
+    uint[16]( 0,0,1,1, 0,1,1,0, 0,1,1,0, 1,1,0,0 ),
+    uint[16]( 0,0,0,1, 0,1,1,1, 1,1,1,0, 1,0,0,0 ),
+    uint[16]( 0,0,0,0, 1,1,1,1, 1,1,1,1, 0,0,0,0 ),
+    uint[16]( 0,1,1,1, 0,0,0,1, 1,0,0,0, 1,1,1,0 ),
+    uint[16]( 0,0,1,1, 1,0,0,1, 1,0,0,1, 1,1,0,0 ),
+    uint[16]( 0,1,0,1, 0,1,0,1, 0,1,0,1, 0,1,0,1 ),
+    uint[16]( 0,0,0,0, 1,1,1,1, 0,0,0,0, 1,1,1,1 ),
+    uint[16]( 0,1,0,1, 1,0,1,0, 0,1,0,1, 1,0,1,0 ),
+    uint[16]( 0,0,1,1, 0,0,1,1, 1,1,0,0, 1,1,0,0 ),
+    uint[16]( 0,0,1,1, 1,1,0,0, 0,0,1,1, 1,1,0,0 ),
+    uint[16]( 0,1,0,1, 0,1,0,1, 1,0,1,0, 1,0,1,0 ),
+    uint[16]( 0,1,1,0, 1,0,0,1, 0,1,1,0, 1,0,0,1 ),
+    uint[16]( 0,1,0,1, 1,0,1,0, 1,0,1,0, 0,1,0,1 ),
+    uint[16]( 0,1,1,1, 0,0,1,1, 1,1,0,0, 1,1,1,0 ),
+    uint[16]( 0,0,0,1, 0,0,1,1, 1,1,0,0, 1,0,0,0 ),
+    uint[16]( 0,0,1,1, 0,0,1,0, 0,1,0,0, 1,1,0,0 ),
+    uint[16]( 0,0,1,1, 1,0,1,1, 1,1,0,1, 1,1,0,0 ),
+    uint[16]( 0,1,1,0, 1,0,0,1, 1,0,0,1, 0,1,1,0 ),
+    uint[16]( 0,0,1,1, 1,1,0,0, 1,1,0,0, 0,0,1,1 ),
+    uint[16]( 0,1,1,0, 0,1,1,0, 1,0,0,1, 1,0,0,1 ),
+    uint[16]( 0,0,0,0, 0,1,1,0, 0,1,1,0, 0,0,0,0 ),
+    uint[16]( 0,1,0,0, 1,1,1,0, 0,1,0,0, 0,0,0,0 ),
+    uint[16]( 0,0,1,0, 0,1,1,1, 0,0,1,0, 0,0,0,0 ),
+    uint[16]( 0,0,0,0, 0,0,1,0, 0,1,1,1, 0,0,1,0 ),
+    uint[16]( 0,0,0,0, 0,1,0,0, 1,1,1,0, 0,1,0,0 ),
+    uint[16]( 0,1,1,0, 1,1,0,0, 1,0,0,1, 0,0,1,1 ),
+    uint[16]( 0,0,1,1, 0,1,1,0, 1,1,0,0, 1,0,0,1 ),
+    uint[16]( 0,1,1,0, 0,0,1,1, 1,0,0,1, 1,1,0,0 ),
+    uint[16]( 0,0,1,1, 1,0,0,1, 1,1,0,0, 0,1,1,0 ),
+    uint[16]( 0,1,1,0, 1,1,0,0, 1,1,0,0, 1,0,0,1 ),
+    uint[16]( 0,1,1,0, 0,0,1,1, 0,0,1,1, 1,0,0,1 ),
+    uint[16]( 0,1,1,1, 1,1,1,0, 1,0,0,0, 0,0,0,1 ),
+    uint[16]( 0,0,0,1, 1,0,0,0, 1,1,1,0, 0,1,1,1 ),
+    uint[16]( 0,0,0,0, 1,1,1,1, 0,0,1,1, 0,0,1,1 ),
+    uint[16]( 0,0,1,1, 0,0,1,1, 1,1,1,1, 0,0,0,0 ),
+    uint[16]( 0,0,1,0, 0,0,1,0, 1,1,1,0, 1,1,1,0 ),
+    uint[16]( 0,1,0,0, 0,1,0,0, 0,1,1,1, 0,1,1,1 )
+);
+
+const uint BC6H_AnchorTable2[64] = uint[64](
+    0xf,0xf,0xf,0xf,0xf,0xf,0xf,0xf, 0xf,0xf,0xf,0xf,0xf,0xf,0xf,0xf,
+    0xf,0x2,0x8,0x2,0x2,0x8,0x8,0xf, 0x2,0x8,0x2,0x2,0x8,0x8,0x2,0x2,
+    0xf,0xf,0x6,0x8,0x2,0x8,0xf,0xf, 0x2,0x8,0x2,0x2,0x2,0xf,0xf,0x6,
+    0x6,0x2,0x6,0x8,0xf,0xf,0x2,0x2, 0xf,0xf,0xf,0xf,0xf,0x2,0x2,0xf
+);
+
+// ---------------- BC6H core (ported from CPU) ----------------
+
+int bc6h_extendSign(int val, int sizeBits) {
+    int mask = 1 << (sizeBits - 1);
+    return (val ^ mask) - mask;
+}
+
+struct BC6H_RGBf {
+    int channel[3];
+    int sizeBits[3];
+    bool isSigned;
+};
+
+void bc6h_rgbf_extendSign(inout BC6H_RGBf v) {
+    for (int i = 0; i < 3; i++) {
+        v.channel[i] = bc6h_extendSign(v.channel[i], v.sizeBits[i]);
+    }
+}
+
+void bc6h_rgbf_resolveDelta(inout BC6H_RGBf delta, BC6H_RGBf base) {
+    for (int i = 0; i < 3; i++) {
+        delta.sizeBits[i] = base.sizeBits[i];
+        delta.channel[i] = (base.channel[i] + delta.channel[i]) & ((1 << base.sizeBits[i]) - 1);
+    }
+    if (delta.isSigned) {
+        bc6h_rgbf_extendSign(delta);
+    }
+}
+
+void bc6h_unquantizeUnsigned(inout BC6H_RGBf v) {
+    for (int i = 0; i < 3; i++) {
+        if (v.sizeBits[i] >= 15 || v.channel[i] == 0) {
+            // keep
+        } else if (v.channel[i] == ((1 << v.sizeBits[i]) - 1)) {
+            v.channel[i] = 0xFFFF;
+        } else {
+            uint tmp = uint(v.channel[i]);
+            v.channel[i] = int(((tmp << 16) + 0x8000u) >> uint(v.sizeBits[i]));
+        }
+        v.sizeBits[i] = 16;
+    }
+}
+
+void bc6h_unquantizeSigned(inout BC6H_RGBf v) {
+    for (int i = 0; i < 3; i++) {
+        if (v.sizeBits[i] >= 16 || v.channel[i] == 0) {
+            v.sizeBits[i] = 16;
+            continue;
+        }
+        int value = bc6h_extendSign(int(v.channel[i] & 0xFFFF), 16);
+        int result = value;
+        bool signBit = value < 0;
+        if (signBit) {
+            value = -value;
+        }
+
+        if (value >= ((1 << (v.sizeBits[i] - 1)) - 1)) {
+            result = 0x7FFF;
+        } else {
+            result = (((value << 15) + 0x4000) >> (v.sizeBits[i] - 1));
+        }
+        if (signBit) {
+            result = -result;
+        }
+
+        v.channel[i] = result & 0xFFFF;
+        v.sizeBits[i] = 16;
+    }
+}
+
+void bc6h_unquantize(inout BC6H_RGBf v) {
+    if (v.isSigned) {
+        bc6h_unquantizeSigned(v);
+    } else {
+        bc6h_unquantizeUnsigned(v);
+    }
+}
+
+struct BC6H_ModeDesc {
+    int number;
+    bool hasDelta;
+    int partitionCount; // 1 or 2
+    int endpointBits;
+    int deltaBits[3];
+};
+
+struct BC6H_BlockDesc {
+    int type;     // 0..3 endpoints, 4 mode, 5 partition, 6 end
+    int channel;  // 0..2
+    int MSB;
+    int LSB;
+    BC6H_ModeDesc modeDesc; // only valid when type==Mode
+};
+
+const int BC6H_EP0 = 0;
+const int BC6H_EP1 = 1;
+const int BC6H_EP2 = 2;
+const int BC6H_EP3 = 3;
+const int BC6H_Mode = 4;
+const int BC6H_Partition = 5;
+const int BC6H_End = 6;
+
+const int BC6H_R = 0;
+const int BC6H_G = 1;
+const int BC6H_B = 2;
+const int BC6H_None = 3;
+
+int bc6h_modeToIndex(uint mode) {
+    if (mode <= 3u) return int(mode);
+    else if ((mode & 2u) != 0u) {
+        if (mode <= 18u) return int(mode / 2u) + 1 + int(mode & 1u);
+        else if (mode == 22u || mode == 26u || mode == 30u) return int(mode / 4u) + 6;
+    }
+    return -1;
+}
+
+const BC6H_ModeDesc BC6H_ModeDesc_Zero =
+    BC6H_ModeDesc(0, false, 0, 0, int[3](0, 0, 0));
+
+const BC6H_BlockDesc BC6H_BlockDesc_Zero =
+    BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero);
+
+// ---- blockDescs: 14 modes x up to 26 desc
+// Note: This array is directly translated from CPU source code (to save space, not fully listed here).
+// In practice, you can generate this from include/ scripts or use precomputed data.
+const BC6H_BlockDesc BC6H_blockDescs[14][26] = BC6H_BlockDesc[14][26](
+    // Mode 0 (index 0)
+    BC6H_BlockDesc[26](
+        BC6H_BlockDesc(BC6H_Mode,BC6H_None,1,0, BC6H_ModeDesc(0,true,2,10, int[3](5,5,5))),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,4,4, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP2,BC6H_B,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_R,9,0, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP0,BC6H_G,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_R,4,0, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP3,BC6H_G,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_G,4,0, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP3,BC6H_B,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_B,4,0, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP3,BC6H_B,1,1, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_B,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_R,4,0, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP3,BC6H_B,2,2, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_R,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,3,3, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_Partition,BC6H_None,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_End,BC6H_None,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero)
+    ),
+
+    // Mode 1 (index 1)
+    BC6H_BlockDesc[26](
+        BC6H_BlockDesc(BC6H_Mode,BC6H_None,1,0, BC6H_ModeDesc(1,true,2,7, int[3](6,6,6))),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,5,5, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP3,BC6H_G,5,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_R,6,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,1,0, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP2,BC6H_B,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_G,6,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_B,5,5, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP3,BC6H_B,2,2, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,6,0, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP3,BC6H_B,3,3, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,5,5, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP3,BC6H_B,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_R,5,0, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP2,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_G,5,0, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP3,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_B,5,0, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP2,BC6H_B,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_R,5,0, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP3,BC6H_R,5,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_Partition,BC6H_None,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_End,BC6H_None,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero)
+    ),
+
+    // Mode 2 (index 2)
+    BC6H_BlockDesc[26](
+        BC6H_BlockDesc(BC6H_Mode,BC6H_None,4,0, BC6H_ModeDesc(2,true,2,11, int[3](5,4,4))),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_R,9,0, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP0,BC6H_G,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_R,4,0, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP0,BC6H_R,10,10, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_G,3,0, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP0,BC6H_G,10,10, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_G,3,0, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP1,BC6H_B,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,10,10, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,1,1, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP2,BC6H_B,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_R,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,2,2, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP3,BC6H_R,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,3,3, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_Partition,BC6H_None,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_End,BC6H_None,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero)
+    ),
+
+    // Mode 3 (index 3)  (note: CPU says modeDesc.hasDelta=false, partitionCount=1, endpointBits=10)
+    BC6H_BlockDesc[26](
+        BC6H_BlockDesc(BC6H_Mode,BC6H_None,4,0, BC6H_ModeDesc(3,false,1,10, int[3](0,0,0))),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_R,9,0, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP0,BC6H_G,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_R,9,0, BC6H_ModeDesc_Zero), BC6H_BlockDesc(BC6H_EP1,BC6H_G,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_B,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_End,BC6H_None,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero)
+    ),
+
+    // Mode 6, Index 4
+    BC6H_BlockDesc[26](
+        BC6H_BlockDesc(BC6H_Mode,BC6H_None,4,0, BC6H_ModeDesc(6,true,2,11, int[3](4,5,4))),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_R,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_G,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_R,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_R,10,10, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_G,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_G,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_G,10,10, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_B,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,10,10, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,1,1, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_B,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_R,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,2,2, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_R,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,3,3, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_Partition,BC6H_None,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_End,BC6H_None,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero)
+    ),
+
+    // Mode 7, Index 5
+    BC6H_BlockDesc[26](
+        BC6H_BlockDesc(BC6H_Mode,BC6H_None,4,0, BC6H_ModeDesc(7,true,1,11, int[3](9,9,9))),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_R,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_G,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_R,8,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_R,10,10, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_G,8,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_G,10,10, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_B,8,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,10,10, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_End,BC6H_None,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero)
+    ),
+
+    // Mode 10, Index 6
+    BC6H_BlockDesc[26](
+        BC6H_BlockDesc(BC6H_Mode,BC6H_None,4,0, BC6H_ModeDesc(10,true,2,11, int[3](4,4,5))),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_R,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_G,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_R,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_R,10,10, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_B,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_G,10,10, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_B,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,10,10, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_B,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_R,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,1,1, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,2,2, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_R,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,3,3, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_Partition,BC6H_None,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_End,BC6H_None,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero)
+    ),
+
+    // Mode 11, Index 7
+    BC6H_BlockDesc[26](
+        BC6H_BlockDesc(BC6H_Mode,BC6H_None,4,0, BC6H_ModeDesc(11,true,1,12, int[3](8,8,8))),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_R,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_G,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_R,7,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_R,10,11, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_G,7,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_G,10,11, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_B,7,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,10,11, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_End,BC6H_None,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero)
+    ),
+
+    // Mode 14, Index 8
+    BC6H_BlockDesc[26](
+        BC6H_BlockDesc(BC6H_Mode,BC6H_None,4,0, BC6H_ModeDesc(14,true,2,9, int[3](5,5,5))),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_R,8,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_B,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_G,8,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,8,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_R,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_G,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_G,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_B,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,1,1, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_B,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_R,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,2,2, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_R,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,3,3, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_Partition,BC6H_None,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_End,BC6H_None,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero)
+    ),
+
+    // Mode 15, Index 9
+    BC6H_BlockDesc[26](
+        BC6H_BlockDesc(BC6H_Mode,BC6H_None,4,0, BC6H_ModeDesc(15,true,1,16, int[3](4,4,4))),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_R,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_G,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,9,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_R,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_R,10,15, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_G,10,15, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_B,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,10,15, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_End,BC6H_None,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero)
+    ),
+
+    // Mode 18, Index 10
+    BC6H_BlockDesc[26](
+        BC6H_BlockDesc(BC6H_Mode,BC6H_None,4,0, BC6H_ModeDesc(18,true,2,8, int[3](6,5,5))),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_R,7,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_G,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_B,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_G,7,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,2,2, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,7,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,3,3, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_R,5,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_G,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_B,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,1,1, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_B,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_R,5,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_R,5,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_Partition,BC6H_None,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_End,BC6H_None,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero)
+    ),
+
+    // Mode 22, Index 11
+    BC6H_BlockDesc[26](
+        BC6H_BlockDesc(BC6H_Mode,BC6H_None,4,0, BC6H_ModeDesc(22,true,2,8, int[3](5,6,5))),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_R,7,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_B,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_G,7,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,5,5, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,7,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_G,5,5, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_R,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_G,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_G,5,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_B,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,1,1, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_B,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_R,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,2,2, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_R,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,3,3, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_Partition,BC6H_None,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_End,BC6H_None,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero)
+    ),
+
+    // Mode 26, Index 12
+    BC6H_BlockDesc[26](
+        BC6H_BlockDesc(BC6H_Mode,BC6H_None,4,0, BC6H_ModeDesc(26,true,2,8, int[3](5,5,6))),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_R,7,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,1,1, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_B,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_G,7,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_B,5,5, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,7,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,5,5, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_R,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_G,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_G,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_B,5,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_B,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_R,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,2,2, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_R,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,3,3, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_Partition,BC6H_None,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_End,BC6H_None,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero),BC6H_BlockDesc(0, 0, 0, 0, BC6H_ModeDesc_Zero)
+    ),
+
+    // Mode 30, Index 13
+    BC6H_BlockDesc[26](
+        BC6H_BlockDesc(BC6H_Mode,BC6H_None,4,0, BC6H_ModeDesc(30,false,2,6, int[3](0,0,0))),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_R,5,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_G,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,0,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,1,1, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_B,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_G,5,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,5,5, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_B,5,5, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,2,2, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP0,BC6H_B,5,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_G,5,5, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,3,3, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,5,5, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_B,4,4, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_R,5,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_G,5,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_G,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP1,BC6H_B,5,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_B,3,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP2,BC6H_R,5,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_EP3,BC6H_R,5,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_Partition,BC6H_None,4,0, BC6H_ModeDesc_Zero),
+        BC6H_BlockDesc(BC6H_End,BC6H_None,0,0, BC6H_ModeDesc_Zero)
+    )
+);
+
+// ConsumeBits: Fully corresponds to CPU Data.consumeBits()
+// Implementation uses four 32-bit words (little-endian) to emulate 128-bit shift.
+// The function assumes numBits <= 32 in actual usage (matches BC6H usage).
+struct BC6H_Data {
+    uvec4 words; // words.x == least-significant 32 bits
+};
+
+uint bc6h_consumeBits(inout BC6H_Data d, uint MSB, uint LSB) {
+    bool reversed = (MSB < LSB);
+    if (reversed) {
+        uint t = MSB;
+        MSB = LSB;
+        LSB = t;
+    }
+    uint numBits = MSB - LSB + 1u;
+    if (numBits == 0u) return 0u;
+
+    uint mask = (numBits == 32u) ? 0xFFFFFFFFu : ((1u << numBits) - 1u);
+
+    // Read lower numBits from the 128-bit stream (LSB side)
+    uint bits = d.words.x & mask;
+
+    // Shift the 128-bit stream right by numBits
+    if (numBits == 32u) {
+        d.words.x = d.words.y;
+        d.words.y = d.words.z;
+        d.words.z = d.words.w;
+        d.words.w = 0u;
+    } else {
+        uint s = numBits;
+        uint inv = 32u - s;
+        uint x = (d.words.x >> s) | (d.words.y << inv);
+        uint y = (d.words.y >> s) | (d.words.z << inv);
+        uint z = (d.words.z >> s) | (d.words.w << inv);
+        uint w = (d.words.w >> s);
+        d.words = uvec4(x, y, z, w);
+    }
+
+    if (reversed) {
+        uint tmp = 0u;
+        for (uint i = 0u; i < numBits; i++) {
+            tmp = (tmp << 1u) | (bits & 1u);
+            bits >>= 1u;
+        }
+        bits = tmp;
+    }
+
+    return (bits << LSB);
+}
+
+uint bc6h_half1() {
+    return 0x3C00u;
+}
+
+vec4 bc6h_writeColorFromHalfBits(uint r16, uint g16, uint b16) {
+    // r16/g16/b16 are half float bit-patterns
+    vec2 rg = unpackHalf2x16(r16 | (g16 << 16));
+    vec2 ba = unpackHalf2x16(b16 | (uint(bc6h_half1()) << 16));
+    return vec4(rg.x, rg.y, ba.x, ba.y);
+}
+
+uint bc6h_weight3[8]  = uint[8](0, 9, 18, 27, 37, 46, 55, 64);
+uint bc6h_weight4[16] = uint[16](0, 4, 9, 13, 17, 21, 26, 30, 34, 38, 43, 47, 51, 55, 60, 64);
+
+// Interpolates endpoints and applies the final BC6H half-range scaling exactly like CPU.
+uvec3 bc6h_interpolate(BC6H_RGBf e0, BC6H_RGBf e1, uint idxValue, int numBits, bool signedFmt)
+{
+    uint w = (numBits == 3) ? bc6h_weight3[idxValue] : bc6h_weight4[idxValue];
+    uint e0w = 64u - w;
+    uint e1w = w;
+
+    uvec3 outv = uvec3(0u);
+
+    for (int c = 0; c < 3; c++) {
+        int e0c = e0.channel[c];
+        int e1c = e1.channel[c];
+
+        if (signedFmt) {
+            e0c = bc6h_extendSign(e0c, 16);
+            e1c = bc6h_extendSign(e1c, 16);
+        }
+
+        int e0Value = e0c * int(e0w);
+        int e1Value = e1c * int(e1w);
+
+        int interp = (e0Value + e1Value + 32) >> 6;
+        uint tmp = uint(interp);
+
+        if (signedFmt) {
+            uint halfBits;
+            if ((tmp & 0x80000000u) != 0u) {
+                uint mag = (~tmp + 1u);
+                halfBits = ((mag * 31u) >> 5) | 0x8000u;
+            } else {
+                halfBits = (tmp * 31u) >> 5;
+            }
+            // Don't return -0.0f, normalize it to 0.0f (must be after if-else)
+            if (halfBits == 0x8000u) halfBits = 0u;
+            outv[c] = (halfBits & 0xFFFFu);
+        } else {
+            outv[c] = ((tmp * 31u) >> 6) & 0xFFFFu;
+        }
+    }
+
+    return outv;
+}
+
+// BitReader helper: read N LSBs from BC6H_Data stream.
+uint bc6h_readBits(inout BC6H_Data d, uint n) {
+    if (n == 0u) return 0u;
+    return (bc6h_consumeBits(d, n - 1u, 0u) >> 0);
+}
+
+// Decodes BC6H mode exactly like CPU code and advances the bitstream.
+bool bc6h_decodeMode(inout BC6H_Data d, out BC6H_ModeDesc md, out int modeIndex)
+{
+    uint mode;
+    // Test bit 1 of stream: original used (d.low64 & 0x2) == 0
+    if ((d.words.x & 0x2u) == 0u) {
+        mode = bc6h_consumeBits(d, 1u, 0u);
+    } else {
+        mode = bc6h_consumeBits(d, 4u, 0u);
+    }
+
+    int idx = bc6h_modeToIndex(mode);
+    if (idx < 0) {
+        return false;
+    }
+
+    modeIndex = idx;
+    md = BC6H_blockDescs[modeIndex][0].modeDesc;
+    return true;
+}
+
+int bc6h_subsetIndex(BC6H_ModeDesc md, uint partitionIdx, int texel) {
+    if (md.partitionCount == 1) return 0;
+    return int(BC6H_PartitionTable2[partitionIdx][texel]);
+}
+
+int bc6h_anchorIndex(BC6H_ModeDesc md, uint partitionIdx, int subset) {
+    if (md.partitionCount == 1) return 0;
+    // BC6H: subset 0 anchor is always texel 0, subset 1 anchor from table
+    return (subset == 0) ? 0 : int(BC6H_AnchorTable2[partitionIdx] & 0xFu);
+}
+
+// Parses endpoints/partition exactly like the CPU blockDesc loop.
+// IMPORTANT: 'd' must already have consumed the mode bits.
+void bc6h_parseBlock(inout BC6H_Data d,
+                     bool signedFmt,
+                     int modeIndex,
+                     out BC6H_ModeDesc md,
+                     out BC6H_RGBf e[4],
+                     out uint partitionIdx)
+{
+    md = BC6H_blockDescs[modeIndex][0].modeDesc;
+
+    // Initialize endpoints
+    for (int ep = 0; ep < 4; ep++) {
+        e[ep].isSigned = signedFmt;
+        for (int c = 0; c < 3; c++) {
+            e[ep].channel[c] = 0;
+            e[ep].sizeBits[c] = 0;
+        }
+    }
+
+    partitionIdx = 0u;
+
+    // CPU sets endpoint bit sizes from modeDesc before decoding values.
+    // e0 sizes = endpointBits
+    for (int c = 0; c < 3; c++) {
+        e[0].sizeBits[c] = md.endpointBits;
+        if (md.hasDelta) {
+            e[1].sizeBits[c] = md.deltaBits[c];
+            e[2].sizeBits[c] = md.deltaBits[c];
+            e[3].sizeBits[c] = md.deltaBits[c];
+        } else {
+            e[1].sizeBits[c] = md.endpointBits;
+            e[2].sizeBits[c] = md.endpointBits;
+            e[3].sizeBits[c] = md.endpointBits;
+        }
+    }
+
+    // Consume fields as described by the table, but DO NOT consume bits for Mode desc.
+    for (int i = 0; i < 26; i++) {
+        BC6H_BlockDesc bd = BC6H_blockDescs[modeIndex][i];
+        if (bd.type == BC6H_End) break;
+
+        if (bd.type == BC6H_Mode) {
+            // No bit consumption here (CPU already consumed mode bits earlier).
+            continue;
+        }
+
+        uint bits = bc6h_consumeBits(d, uint(bd.MSB), uint(bd.LSB));
+
+        if (bd.type == BC6H_Partition) {
+            // Partition is a 5-bit value located at [4:0] in the returned 'bits' (LSB=0).
+            partitionIdx |= bits;
+        } else {
+            // Endpoint field
+            int ep = bd.type;      // EP0..EP3
+            int ch = bd.channel;   // R/G/B
+            e[ep].channel[ch] |= int(bits);
+        }
+    }
+
+    // Sign extension rules must match CPU:
+    // if signed: sign-extend all used endpoints
+    // else if hasDelta: sign-extend endpoints 1..(partitionCount*2-1) only (delta endpoints)
+    int usedEndpoints = md.partitionCount * 2;
+    if (signedFmt) {
+        for (int ep = 0; ep < usedEndpoints; ep++) {
+            bc6h_rgbf_extendSign(e[ep]);
+        }
+    } else if (md.hasDelta) {
+        for (int ep = 1; ep < usedEndpoints; ep++) {
+            bc6h_rgbf_extendSign(e[ep]);
+        }
+    }
+
+    // Resolve deltas exactly like CPU:
+    // for ep=1..usedEndpoints-1: e[ep] = e0 + delta(ep)
+    if (md.hasDelta) {
+        for (int ep = 1; ep < usedEndpoints; ep++) {
+            bc6h_rgbf_resolveDelta(e[ep], e[0]);
+        }
+    }
+
+    // Unquantize only used endpoints
+    for (int ep = 0; ep < usedEndpoints; ep++) {
+        bc6h_unquantize(e[ep]);
+    }
+}
+
+// -------------------- main --------------------
+void main() {
+    uint bx = gl_GlobalInvocationID.x;
+    uint by = gl_GlobalInvocationID.y;
+    uint layer = gl_GlobalInvocationID.z;
+    if (bx >= num_blocks_x || by >= num_blocks_y) {
+        return;
+    }
+
+    ivec2 base_px = ivec2(int(bx * 4u), int(by * 4u));
+    int layer_i = int(layer);
+    ivec3 img_size = imageSize(dest_image);
+
+    uvec3 pos = uvec3(bx, by, layer);
+    uint byte_address = ComputeBlockByteAddress(pos);
+
+    // ---------------------------------------------------------
+    // Bounds check
+    // ---------------------------------------------------------
+    // BC6H blocks are 16 bytes. Check if reading this block would exceed the buffer size.
+    if (byte_address + 16u > input_size_bytes) {
+        if (gl_LocalInvocationIndex == 0u) {
+            for (uint y = 0u; y < 4u; y++) {
+                for (uint x = 0u; x < 4u; x++) {
+                    ivec3 p = ivec3(base_px + ivec2(int(x), int(y)), layer_i);
+                    if (p.x < img_size.x && p.y < img_size.y && p.z < img_size.z) {
+                        imageStore(dest_image, p, vec4(0.0, 0.0, 0.0, 0.0));
+                    }
+                }
+            }
+        }
+        return;
+    }
+    // ---------------------------------------------------------
+
+    uvec4 w = LoadBlock128(byte_address);
+
+    bool signedFmt = (is_signed != 0u);
+
+    // Prepare 128-bit stream as four 32-bit words (little-endian)
+    BC6H_Data d;
+    d.words = uvec4(w.x, w.y, w.z, w.w);
+
+    BC6H_ModeDesc md;
+    int modeIndex;
+    if (!bc6h_decodeMode(d, md, modeIndex)) {
+        for (uint y = 0u; y < 4u; y++) {
+            for (uint x = 0u; x < 4u; x++) {
+                ivec3 p = ivec3(base_px + ivec2(int(x), int(y)), layer_i);
+                if (p.x < img_size.x && p.y < img_size.y && p.z < img_size.z) {
+                    imageStore(dest_image, p, vec4(0.0, 0.0, 0.0, 1.0));
+                }
+            }
+        }
+        return;
+    }
+
+    // ---- Parse endpoints/partition from the remaining bitstream (d continues) ----
+    BC6H_RGBf e[4];
+    uint partitionIdx;
+    bc6h_parseBlock(d, signedFmt, modeIndex, md, e, partitionIdx);
+    // Note: bc6h_parseBlock() already unquantizes used endpoints, matching CPU.
+
+    // ---- Index params ----
+    int indexBits = (md.partitionCount == 2) ? 3 : 4;
+
+    // ---- Decode 4x4 texels ----
+    for (int y = 0; y < 4; y++) {
+        for (int x = 0; x < 4; x++) {
+            int texel = x + y * 4;
+
+            uint idxValue;
+            int numBits;
+            int firstEndpoint = 0;
+            bool isAnchor = false;
+
+            if (md.partitionCount == 1) {
+                numBits = 4;
+                isAnchor = (texel == 0);
+            } else {
+                numBits = 3;
+                isAnchor = (texel == 0) || (texel == int(BC6H_AnchorTable2[partitionIdx]));
+                firstEndpoint = int(BC6H_PartitionTable2[partitionIdx][texel]) * 2;
+            }
+
+            // Read index bits: CPU does consumeBits(numBits - isAnchor - 1, 0)
+            // which reads (numBits - isAnchor - 1) - 0 + 1 = numBits - isAnchor bits
+            // bc6h_readBits(d, n) calls bc6h_consumeBits(d, n-1, 0) which reads n bits
+            // So we need to call bc6h_readBits(d, numBits - isAnchor)
+            uint bitsToRead = uint(numBits - (isAnchor ? 1 : 0));
+            idxValue = bc6h_readBits(d, bitsToRead);
+
+            // Check bounds after consuming index bits to match CPU behavior
+            ivec3 store_pos = ivec3(base_px + ivec2(int(x), int(y)), layer_i);
+            if (store_pos.x >= img_size.x || store_pos.y >= img_size.y || store_pos.z >= img_size.z) {
+                continue;
+            }
+
+            uvec3 rgb16 = bc6h_interpolate(e[firstEndpoint + 0],
+                                           e[firstEndpoint + 1],
+                                           idxValue,
+                                           numBits,
+                                           signedFmt);
+
+            vec4 col = bc6h_writeColorFromHalfBits(rgb16.x, rgb16.y, rgb16.z);
+
+            // Clamp to valid color range before writing to prevent out-of-range values.
+            col = clamp(col, 0.0, 1.0);
+
+            imageStore(dest_image, store_pos, col);
+        }
+    }
+}

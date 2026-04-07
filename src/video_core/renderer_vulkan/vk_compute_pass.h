@@ -34,7 +34,8 @@ public:
                          vk::Span<VkDescriptorUpdateTemplateEntry> templates,
                          const DescriptorBankInfo& bank_info,
                          vk::Span<VkPushConstantRange> push_constants, std::span<const u32> code,
-                         std::optional<u32> optional_subgroup_size = std::nullopt);
+                         std::optional<u32> optional_subgroup_size = std::nullopt,
+                         const char* debug_name = nullptr);
     ~ComputePass();
 
 protected:
@@ -147,6 +148,63 @@ private:
     ComputePassDescriptorQueue& compute_pass_descriptor_queue;
     std::array<vk::ShaderModule, 2> modules;
     std::array<vk::Pipeline, 2> pipelines;
+};
+
+class BCnDecoderPass final : public ComputePass {
+public:
+    explicit BCnDecoderPass(const Device& device_, Scheduler& scheduler_,
+                            DescriptorPool& descriptor_pool_,
+                            StagingBufferPool& staging_buffer_pool_,
+                            ComputePassDescriptorQueue& compute_pass_descriptor_queue_,
+                            MemoryAllocator& memory_allocator_);
+    ~BCnDecoderPass();
+
+    void Decode(Image& image, const StagingBufferRef& map,
+                std::span<const VideoCommon::SwizzleParameters> swizzles);
+
+private:
+    Scheduler& scheduler;
+    StagingBufferPool& staging_buffer_pool;
+    ComputePassDescriptorQueue& compute_pass_descriptor_queue;
+    MemoryAllocator& memory_allocator;
+};
+
+class BC6HDecoderPass final : public ComputePass {
+public:
+    explicit BC6HDecoderPass(const Device& device_, Scheduler& scheduler_,
+                             DescriptorPool& descriptor_pool_,
+                             StagingBufferPool& staging_buffer_pool_,
+                             ComputePassDescriptorQueue& compute_pass_descriptor_queue_,
+                             MemoryAllocator& memory_allocator_);
+    ~BC6HDecoderPass();
+
+    void Decode(Image& image, const StagingBufferRef& map,
+                std::span<const VideoCommon::SwizzleParameters> swizzles);
+
+private:
+    Scheduler& scheduler;
+    StagingBufferPool& staging_buffer_pool;
+    ComputePassDescriptorQueue& compute_pass_descriptor_queue;
+    MemoryAllocator& memory_allocator;
+};
+
+class BC7DecoderPass final : public ComputePass {
+public:
+    explicit BC7DecoderPass(const Device& device_, Scheduler& scheduler_,
+                            DescriptorPool& descriptor_pool_,
+                            StagingBufferPool& staging_buffer_pool_,
+                            ComputePassDescriptorQueue& compute_pass_descriptor_queue_,
+                            MemoryAllocator& memory_allocator_);
+    ~BC7DecoderPass();
+
+    void Decode(Image& image, const StagingBufferRef& map,
+                std::span<const VideoCommon::SwizzleParameters> swizzles);
+
+private:
+    Scheduler& scheduler;
+    StagingBufferPool& staging_buffer_pool;
+    ComputePassDescriptorQueue& compute_pass_descriptor_queue;
+    MemoryAllocator& memory_allocator;
 };
 
 } // namespace Vulkan

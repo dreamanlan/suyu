@@ -22,6 +22,7 @@
 #include "video_core/renderer_vulkan/vk_staging_buffer_pool.h"
 #include "video_core/renderer_vulkan/vk_texture_cache.h"
 #include "video_core/renderer_vulkan/vk_update_descriptor.h"
+#include "video_core/renderer_vulkan/vk_vtg_as_compute.h"
 #include "video_core/vulkan_common/vulkan_memory_allocator.h"
 #include "video_core/vulkan_common/vulkan_wrapper.h"
 
@@ -207,6 +208,9 @@ private:
     PipelineCache pipeline_cache;
     AccelerateDMA accelerate_dma;
     FenceManager fence_manager;
+
+    // VTG-as-Compute context for geometry shader emulation on devices without HW GS.
+    std::unique_ptr<VtgAsComputeContext> vtg_compute_ctx;
 
     vk::Event wfi_event;
 

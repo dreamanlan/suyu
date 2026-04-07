@@ -58,7 +58,10 @@ struct SamplerDefinition {
 
 struct TextureBufferDefinition {
     Id id;
+    Id image_type;
     u32 count;
+    bool is_integer;
+    bool is_signed;
 };
 
 struct ImageBufferDefinition {
@@ -70,6 +73,7 @@ struct ImageBufferDefinition {
 
 struct ImageDefinition {
     Id id;
+    Id pointer_type;
     Id image_type;
     u32 count;
     bool is_integer;
@@ -261,8 +265,7 @@ public:
     Id output_f32{};
     Id output_u32{};
 
-    Id image_buffer_type{};
-    Id image_u32{};
+Id image_u32{};
 
     std::array<UniformDefinitions, Info::MAX_CBUFS> cbufs{};
     std::array<StorageDefinitions, Info::MAX_SSBOS> ssbos{};

@@ -164,6 +164,7 @@ struct QueryCacheBase<Traits>::QueryCacheBaseImpl {
     Tegra::GPU& gpu;
     std::array<StreamerInterface*, static_cast<size_t>(QueryType::MaxQueryTypes)> streamers;
     u64 streamer_mask;
+    u64 enabled_counters_mask = 0;
     std::mutex flush_guard;
     std::deque<u64> flushes_pending;
     std::vector<QueryCacheBase<Traits>::QueryLocation> pending_unregister;
@@ -191,8 +192,10 @@ void QueryCacheBase<Traits>::CounterEnable(QueryType counter_type, bool is_enabl
         return;
     }
     if (is_enabled) {
+        impl->enabled_counters_mask |= (1ULL << index);
         streamer->StartCounter();
     } else {
+        impl->enabled_counters_mask &= ~(1ULL << index);
         streamer->PauseCounter();
     }
 }
@@ -205,6 +208,7 @@ void QueryCacheBase<Traits>::CounterClose(QueryType counter_type) {
         UNREACHABLE();
         return;
     }
+    impl->enabled_counters_mask &= ~(1ULL << index);
     streamer->CloseCounter();
 }
 
@@ -259,7 +263,7 @@ void QueryCacheBase<Traits>::CounterReport(GPUVAddr addr, QueryType counter_type
     u8* pointer_timestamp = impl->device_memory.template GetPointer<u8>(cpu_addr + 8);
     bool is_synced = !Settings::IsGPULevelHigh() && is_fence;
     std::function<void()> operation([this, is_synced, streamer, query_base = query, query_location,
-                                     pointer, pointer_timestamp] {
+                                     cpu_addr] {
         if (True(query_base->flags & QueryFlagBits::IsInvalidated)) {
             if (!is_synced) [[likely]] {
                 impl->pending_unregister.push_back(query_location);
@@ -270,11 +274,22 @@ void QueryCacheBase<Traits>::CounterReport(GPUVAddr addr, QueryType counter_type
             ASSERT(false);
             return;
         }
+        // Resolve pointers at execution time to avoid dangling pointers from unmapped memory
+        u8* pointer = impl->device_memory.template GetPointer<u8>(cpu_addr);
+        if (!pointer) [[unlikely]] {
+            if (!is_synced) [[likely]] {
+                impl->pending_unregister.push_back(query_location);
+            }
+            return;
+        }
         query_base->value += streamer->GetAmendValue();
         streamer->SetAccumulationValue(query_base->value);
         if (True(query_base->flags & QueryFlagBits::HasTimestamp)) {
+            u8* pointer_timestamp = impl->device_memory.template GetPointer<u8>(cpu_addr + 8);
             u64 timestamp = impl->gpu.GetTicks();
-            std::memcpy(pointer_timestamp, &timestamp, sizeof(timestamp));
+            if (pointer_timestamp) {
+                std::memcpy(pointer_timestamp, &timestamp, sizeof(timestamp));
+            }
             std::memcpy(pointer, &query_base->value, sizeof(query_base->value));
         } else {
             u32 value = static_cast<u32>(query_base->value);
@@ -369,9 +384,25 @@ template <typename Traits>
 void QueryCacheBase<Traits>::NotifySegment(bool resume) {
     if (resume) {
         impl->runtime.ResumeHostConditionalRendering();
+        u64 mask = impl->enabled_counters_mask;
+        while (mask != 0) {
+            size_t position = std::countr_zero(mask);
+            mask &= ~(1ULL << position);
+            auto* streamer = impl->streamers[position];
+            if (streamer) {
+                streamer->StartCounter();
+            }
+        }
     } else {
-        CounterClose(VideoCommon::QueryType::ZPassPixelCount64);
-        CounterClose(VideoCommon::QueryType::StreamingByteCount);
+        u64 mask = impl->enabled_counters_mask;
+        while (mask != 0) {
+            size_t position = std::countr_zero(mask);
+            mask &= ~(1ULL << position);
+            auto* streamer = impl->streamers[position];
+            if (streamer) {
+                streamer->PauseCounter();
+            }
+        }
         impl->runtime.PauseHostConditionalRendering();
     }
 }

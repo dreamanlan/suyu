@@ -10,6 +10,7 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <string_view>
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
@@ -27,7 +28,7 @@ class Memorymanager;
 namespace VideoCommon {
 
 void DumpTextShader(u64 pipeline_hash, u64 shader_hash, Shader::Stage stage, const std::string& code);
-void DumpSpirvShader(u64 pipeline_hash, u64 shader_hash, Shader::Stage stage, const std::vector<u32>& code);
+void DumpSpirvShader(u64 pipeline_hash, u64 shader_hash, Shader::Stage stage, const std::vector<u32>& code, std::string_view prefix_override = {});
 
 class GenericEnvironment : public Shader::Environment {
 public:

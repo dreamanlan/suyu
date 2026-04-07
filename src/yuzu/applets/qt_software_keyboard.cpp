@@ -599,11 +599,19 @@ void QtSoftwareKeyboardDialog::RescaleKeyboardElements(float width, float height
     const auto label_button_font_size =
         BASE_LABEL_BUTTON_FONT_SIZE * (height / BASE_HEIGHT) / dpi_scale;
 
-    QFont header_font(QStringLiteral("MS Shell Dlg 2"), header_font_size, QFont::Normal);
-    QFont sub_font(QStringLiteral("MS Shell Dlg 2"), sub_font_size, QFont::Normal);
-    QFont editor_font(QStringLiteral("MS Shell Dlg 2"), editor_font_size, QFont::Normal);
-    QFont char_button_font(QStringLiteral("MS Shell Dlg 2"), char_button_font_size, QFont::Normal);
-    QFont label_button_font(QStringLiteral("MS Shell Dlg 2"), label_button_font_size,
+#if _WIN32
+    const char* font_family = "MS Shell Dlg 2";
+#elif __APPLE__
+    const char* font_family = "SF Pro Text";
+#else
+    const char* font_family = "Arial";
+#endif
+
+    QFont header_font(tr(font_family), header_font_size, QFont::Normal);
+    QFont sub_font(tr(font_family), sub_font_size, QFont::Normal);
+    QFont editor_font(tr(font_family), editor_font_size, QFont::Normal);
+    QFont char_button_font(tr(font_family), char_button_font_size, QFont::Normal);
+    QFont label_button_font(tr(font_family), label_button_font_size,
                             QFont::Normal);
 
     ui->label_header->setFont(header_font);

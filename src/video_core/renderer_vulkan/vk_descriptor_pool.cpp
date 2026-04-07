@@ -8,6 +8,7 @@
 
 #include "common/common_types.h"
 #include "common/polyfill_ranges.h"
+#include "common/settings.h"
 #include "video_core/renderer_vulkan/vk_descriptor_pool.h"
 #include "video_core/renderer_vulkan/vk_resource_pool.h"
 #include "video_core/renderer_vulkan/vk_scheduler.h"
@@ -23,6 +24,7 @@ constexpr s32 SCORE_THRESHOLD = 3;
 struct DescriptorBank {
     DescriptorBankInfo info;
     std::vector<vk::DescriptorPool> pools;
+    bool use_separated{};
 };
 
 bool DescriptorBankInfo::IsSuperset(const DescriptorBankInfo& subset) const noexcept {
@@ -38,6 +40,33 @@ static u32 Accumulate(const Descriptors& descriptors) {
         count += descriptor.count;
     }
     return count;
+}
+
+bool IsSeparated(const Device& device) {
+    const auto texture_pool_mode = Settings::values.texture_pool_mode.GetValue();
+    switch (texture_pool_mode) {
+    case Settings::TexturePoolMode::Automatic:
+        // Match the logic from spirv_emit_context.cpp
+        if (device.IsTexturePoolSupported()) {
+            // Pooled mode uses separated descriptors (VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE + VK_DESCRIPTOR_TYPE_SAMPLER)
+            return true;
+        } else {
+#ifdef __APPLE__
+            // Metal: use separated mode to avoid 16-sampler limit
+            return true;
+#else
+            // Traditional combined mode
+            return false;
+#endif
+        }
+    case Settings::TexturePoolMode::Combined:
+        return false;
+    case Settings::TexturePoolMode::Separated:
+    case Settings::TexturePoolMode::Pooled:
+        // Both Separated and Pooled modes use separated descriptors
+        return true;
+    }
+    return false;
 }
 
 static DescriptorBankInfo MakeBankInfo(std::span<const Shader::Info> infos) {
@@ -56,7 +85,7 @@ static DescriptorBankInfo MakeBankInfo(std::span<const Shader::Info> infos) {
 }
 
 static void AllocatePool(const Device& device, DescriptorBank& bank) {
-    std::array<VkDescriptorPoolSize, 6> pool_sizes;
+    std::array<VkDescriptorPoolSize, 7> pool_sizes;
     size_t pool_cursor{};
     const u32 sets_per_pool = device.GetSetsPerPool();
     const auto add = [&](VkDescriptorType type, u32 count) {
@@ -72,7 +101,17 @@ static void AllocatePool(const Device& device, DescriptorBank& bank) {
     add(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, info.storage_buffers);
     add(VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, info.texture_buffers);
     add(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, info.image_buffers);
-    add(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, info.textures);
+
+    const bool use_separated = IsSeparated(device) && !info.force_combined;
+    bank.use_separated = use_separated;
+
+    if (use_separated) {
+        add(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, info.textures);
+        add(VK_DESCRIPTOR_TYPE_SAMPLER, info.textures);
+    } else {
+        add(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, info.textures);
+    }
+
     add(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, info.images);
     bank.pools.push_back(device.GetLogical().CreateDescriptorPool({
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
@@ -143,9 +182,13 @@ DescriptorAllocator DescriptorPool::Allocator(VkDescriptorSetLayout layout,
 }
 
 DescriptorBank& DescriptorPool::Bank(const DescriptorBankInfo& reqs) {
+    const bool use_separated = IsSeparated(device) && !reqs.force_combined;
     std::shared_lock read_lock{banks_mutex};
-    const auto it = std::ranges::find_if(bank_infos, [&reqs](const DescriptorBankInfo& bank) {
-        return std::abs(bank.score - reqs.score) < SCORE_THRESHOLD && bank.IsSuperset(reqs);
+    const auto it = std::ranges::find_if(bank_infos, [&](const DescriptorBankInfo& bank) {
+        const size_t index = &bank - bank_infos.data();
+        const auto& current_bank = *banks[index];
+        return current_bank.use_separated == use_separated &&
+               std::abs(bank.score - reqs.score) < SCORE_THRESHOLD && bank.IsSuperset(reqs);
     });
     if (it != bank_infos.end()) {
         return *banks[std::distance(bank_infos.begin(), it)].get();

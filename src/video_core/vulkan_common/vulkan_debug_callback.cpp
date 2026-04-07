@@ -4,6 +4,7 @@
 #include <string_view>
 #include "common/logging/log.h"
 #include "video_core/vulkan_common/vulkan_debug_callback.h"
+#include "core/memory/debug_script/DbgScpHook.h"
 
 namespace Vulkan {
 namespace {
@@ -51,94 +52,10 @@ VkBool32 DebugUtilCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
         break;
     }
 
+    DBGSCP_HOOK("Vulkan::DebugUtilCallback", VkBool32, severity, type, data->pMessage,
+                data->pMessageIdName, data->messageIdNumber, data, user_data);
+
     const std::string_view message{data->pMessage};
-    // Filter out sampler custom border color errors that are false positives
-    if (message.find("borderColor is VK_BORDER_COLOR_FLOAT_CUSTOM_EXT but there is no VkSamplerCustomBorderColorCreateInfoEXT") != std::string_view::npos) {
-        return VK_FALSE;
-    }
-
-    // Filter out sampler custom border color format validation errors
-    if (message.find("has a custom border color with format = VK_FORMAT_UNDEFINED and is used to sample an image view") != std::string_view::npos &&
-        (message.find("VK_FORMAT_B4G4R4A4_UNORM_PACK16") != std::string_view::npos ||
-         message.find("VK_FORMAT_B5G6R5_UNORM_PACK16") != std::string_view::npos ||
-         message.find("VK_FORMAT_A1B5G5R5_UNORM_PACK16") != std::string_view::npos ||
-         message.find("VK_FORMAT_B5G5R5A1_UNORM_PACK16") != std::string_view::npos)) {
-        return VK_FALSE;
-    }
-
-    // Filter out R32_FLOAT format related validation errors that are false positives
-    if (message.find("requires FLOAT component type") != std::string_view::npos &&
-        (message.find("VK_FORMAT_R32_UINT") != std::string_view::npos ||
-         message.find("VK_FORMAT_R32G32_UINT") != std::string_view::npos ||
-         message.find("VK_FORMAT_R32G32B32A32_UINT") != std::string_view::npos ||
-         message.find("VK_FORMAT_R8_UINT") != std::string_view::npos ||
-         message.find("VK_FORMAT_A8B8G8R8_UINT_PACK32") != std::string_view::npos)) {
-        return VK_FALSE;
-    }
-
-    // Filter out non-identity swizzle validation errors for storage images that are false positives
-    if (message.find("has a non-identiy swizzle component") != std::string_view::npos &&
-        message.find("VK_DESCRIPTOR_TYPE_STORAGE_IMAGE") != std::string_view::npos) {
-        return VK_FALSE;
-    }
-
-    // Filter out 3D image layerCount validation warnings that are false positives
-    if (message.find("layerCount is 1 for a 3D image") != std::string_view::npos &&
-        message.find("VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT") != std::string_view::npos) {
-        return VK_FALSE;
-    }
-
-    // Filter out descriptor pool type mismatch warnings that are false positives
-    if (message.find("binding") != std::string_view::npos &&
-        message.find("was created with VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE") != std::string_view::npos &&
-        message.find("was not created with any VkDescriptorPoolSize::type with VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE") != std::string_view::npos) {
-        return VK_FALSE;
-    }
-
-    // Filter out vertex buffer stride validation errors that are false positives
-    if (message.find("The pStrides value") != std::string_view::npos &&
-        message.find("is not 0 and less than the extent of the binding for the attribute") != std::string_view::npos) {
-        return VK_FALSE;
-    }
-
-    // Filter out color blend feature validation errors for integer formats that don't support blending
-    if (message.find("does not have VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT") != std::string_view::npos &&
-        message.find("vkCmdSetColorBlendEnableEXT") != std::string_view::npos &&
-        message.find("was set to VK_TRUE") != std::string_view::npos) {
-        return VK_FALSE;
-    }
-
-    // Filter out query related validation errors that are false positives
-    if (message.find("query (") != std::string_view::npos && message.find("was started outside a renderpass") != std::string_view::npos) {
-        return VK_FALSE;
-    }
-
-    // Filter out query subpass validation errors that are false positives
-    if (message.find("query ") != std::string_view::npos && message.find("from VkQueryPool") != std::string_view::npos &&
-        message.find("was began in subpass") != std::string_view::npos && message.find("but never ended") != std::string_view::npos) {
-        return VK_FALSE;
-    }
-
-    // Filter out conditional rendering stage mask errors when feature is not enabled
-    if (message.find("dstStageMask includes VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT") != std::string_view::npos &&
-        message.find("conditionalRendering feature is not enabled") != std::string_view::npos) {
-        return VK_FALSE;
-    }
-
-    // Filter out conditional rendering access mask validation errors
-    if (message.find("dstAccessMask") != std::string_view::npos &&
-        message.find("VK_ACCESS_INDIRECT_COMMAND_READ_BIT") != std::string_view::npos &&
-        message.find("VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT") != std::string_view::npos) {
-        return VK_FALSE;
-    }
-
-    // Filter out sampler addressMode validation errors caused by GL_CLAMP emulation hack
-    if (message.find("addressModeU (51966) does not fall within the begin..end range") != std::string_view::npos ||
-        message.find("addressModeV (51966) does not fall within the begin..end range") != std::string_view::npos ||
-        message.find("addressModeW (51966) does not fall within the begin..end range") != std::string_view::npos) {
-        return VK_FALSE;
-    }
-
     if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
         LOG_CRITICAL(Render_Vulkan, "{}", message);
     } else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {

@@ -347,8 +347,7 @@ void GraphicsPipeline::ReplaceShader(Shader::Stage stage, const std::vector<uint
     case Shader::Stage::VertexB: {
         auto&& vprog = Vulkan::BuildShader(device, code);
         spv_modules[static_cast<int>(stage)] = std::move(vprog);
-
-        if (device.HasDebuggingToolAttached()) {
+        {
             const std::string name{fmt::format("Shader {:016x}", gkey.unique_hashes[static_cast<int>(stage) + 1])};
             spv_modules[static_cast<int>(stage)].SetObjectNameEXT(name.c_str());
         }
@@ -357,8 +356,7 @@ void GraphicsPipeline::ReplaceShader(Shader::Stage stage, const std::vector<uint
     case Shader::Stage::Fragment: {
         auto&& fprog = Vulkan::BuildShader(device, code);
         spv_modules[static_cast<int>(stage)] = std::move(fprog);
-
-        if (device.HasDebuggingToolAttached()) {
+        {
             const std::string name{fmt::format("Shader {:016x}", gkey.unique_hashes[static_cast<int>(stage) + 1])};
             spv_modules[static_cast<int>(stage)].SetObjectNameEXT(name.c_str());
         }
@@ -565,7 +563,7 @@ void GraphicsPipeline::ConfigureImpl(bool is_indexed, bool line_mode) {
         buffer_cache.BindHostStageBuffers(stage);
         PushImageDescriptors(texture_cache, guest_descriptor_queue, device, static_cast<int>(stage), stage_infos[stage], rescaling,
                              samplers_it, views_it);
-        const auto& info{stage_infos[0]};
+        const auto& info{stage_infos[stage]};
         if (info.uses_render_area) {
             render_area.uses_render_area = true;
             render_area.words = {static_cast<float>(regs.surface_clip.width),
@@ -603,6 +601,255 @@ void GraphicsPipeline::ConfigureImpl(bool is_indexed, bool line_mode) {
         }
         os << reinterpret_cast<u64>(*descriptor_update_template);
         LOG_DBGSCP(Render_Vulkan, "ConfigureEnd {}", os.str());
+    }
+
+    ConfigureDraw(rescaling, render_area, line_mode);
+}
+
+void GraphicsPipeline::ConfigureVtgPassthrough(VkBuffer vtg_ssbo, VkDeviceSize vtg_ssbo_size,
+                                                bool line_mode, bool logVTG) {
+    // This is a simplified version of ConfigureImpl for VTG-as-Compute passthrough pipelines.
+    // The passthrough pipeline has only VS (stage 0) and FS (stage 4).
+    // VS reads from a single SSBO (the VTG output buffer) which is not in Maxwell3D state,
+    // so we bind it directly. FS resources are resolved normally from Maxwell3D state.
+
+    // Diagnostic logging (sampled: first 10 calls).
+    static u32 vtg_pt_log_count = 0;
+    bool vtg_pt_log = false;
+    if (logVTG) {
+        vtg_pt_log = (vtg_pt_log_count < 10);
+        if (vtg_pt_log) {
+            ++vtg_pt_log_count;
+            LOG_DBGSCP(Render_Vulkan,
+                "VTG ConfigureVtgPassthrough #{}: vtg_ssbo={} vtg_ssbo_size={} "
+                "line_mode={} pipeline={} uses_push_desc={}",
+                vtg_pt_log_count,
+                reinterpret_cast<const void*>(vtg_ssbo), vtg_ssbo_size,
+                line_mode, static_cast<const void*>(this), uses_push_descriptor);
+        }
+    } else {
+        vtg_pt_log_count = 0;
+    }
+
+    std::array<VideoCommon::ImageViewInOut, MAX_IMAGE_ELEMENTS> views;
+    std::array<VideoCommon::SamplerId, MAX_IMAGE_ELEMENTS> samplers;
+    size_t sampler_index{};
+    size_t view_index{};
+
+    texture_cache.SynchronizeGraphicsDescriptors();
+    buffer_cache.SetUniformBuffersState(enabled_uniform_buffer_masks, &uniform_buffer_sizes);
+
+    const auto& regs{maxwell3d->regs};
+    const bool via_header_index{regs.sampler_binding == Maxwell::SamplerBinding::ViaHeaderBinding};
+
+    // --- Stage 0 (VS passthrough): skip SSBO binding via buffer_cache ---
+    // The passthrough VS has no textures/samplers/images, only one SSBO.
+    // We unbind storage buffers and texture buffers for stage 0 so buffer_cache
+    // doesn't try to resolve them.
+    buffer_cache.UnbindGraphicsStorageBuffers(0);
+    buffer_cache.UnbindGraphicsTextureBuffers(0);
+
+    // Clear intermediate stages (1-3) to avoid stale state from the original pipeline.
+    for (size_t s = 1; s <= 3; ++s) {
+        buffer_cache.UnbindGraphicsStorageBuffers(s);
+        buffer_cache.UnbindGraphicsTextureBuffers(s);
+    }
+
+    // --- Stage 4 (FS): normal resource binding ---
+    {
+        const size_t stage = 4;
+        const Shader::Info& info{stage_infos[stage]};
+        buffer_cache.UnbindGraphicsStorageBuffers(stage);
+        {
+            size_t ssbo_index{};
+            for (const auto& desc : info.storage_buffers_descriptors) {
+                ASSERT(desc.count == 1);
+                buffer_cache.BindGraphicsStorageBuffer(stage, ssbo_index, desc.cbuf_index,
+                                                       desc.cbuf_offset, desc.is_written);
+                ++ssbo_index;
+            }
+        }
+        const auto& cbufs{maxwell3d->state.shader_stages[stage].const_buffers};
+        const auto read_handle{[&](const auto& desc, u32 index) {
+            ASSERT(cbufs[desc.cbuf_index].enabled);
+            const u32 index_offset{index << desc.size_shift};
+            const u32 offset{desc.cbuf_offset + index_offset};
+            const GPUVAddr addr{cbufs[desc.cbuf_index].address + offset};
+            if constexpr (std::is_same_v<decltype(desc), const Shader::TextureDescriptor&> ||
+                          std::is_same_v<decltype(desc), const Shader::TextureBufferDescriptor&>) {
+                if (desc.has_secondary) {
+                    ASSERT(cbufs[desc.secondary_cbuf_index].enabled);
+                    const u32 second_offset{desc.secondary_cbuf_offset + index_offset};
+                    const GPUVAddr separate_addr{cbufs[desc.secondary_cbuf_index].address +
+                                                 second_offset};
+                    const u32 lhs_raw{gpu_memory->Read<u32>(addr) << desc.shift_left};
+                    const u32 rhs_raw{gpu_memory->Read<u32>(separate_addr)
+                                      << desc.secondary_shift_left};
+                    const u32 raw{lhs_raw | rhs_raw};
+                    return TexturePair(raw, via_header_index);
+                }
+            }
+            return TexturePair(gpu_memory->Read<u32>(addr), via_header_index);
+        }};
+        // Log FS cbuf and descriptor info for shader analysis.
+        if (vtg_pt_log) {
+            std::string cbuf_str;
+            for (u32 i = 0; i < cbufs.size(); ++i) {
+                if (cbufs[i].enabled) {
+                    cbuf_str += fmt::format(" c{}(sz=0x{:x})", i, cbufs[i].size);
+                }
+            }
+            LOG_DBGSCP(Render_Vulkan,
+                "VTG PT FS: cbufs=[{}] tex_buf={} tex={} img={} ssbo={}",
+                cbuf_str,
+                info.texture_buffer_descriptors.size(),
+                info.texture_descriptors.size(),
+                info.image_descriptors.size(),
+                info.storage_buffers_descriptors.size());
+            // Dump first N u32 values of each enabled cbuf.
+            for (u32 i = 0; i < cbufs.size(); ++i) {
+                if (!cbufs[i].enabled || cbufs[i].size == 0) continue;
+                const u32 max_u32s = std::min<u32>(32u, static_cast<u32>(cbufs[i].size / 4));
+                if (max_u32s == 0) continue;
+                std::string vals;
+                for (u32 j = 0; j < max_u32s; ++j) {
+                    if (j > 0) vals += ',';
+                    const u32 val = gpu_memory->Read<u32>(cbufs[i].address + j * 4);
+                    vals += fmt::format("0x{:08x}", val);
+                }
+                LOG_DBGSCP(Render_Vulkan, "VTG PT c{}[0..{}]: [{}]",
+                    i, max_u32s - 1, vals);
+            }
+        }
+        for (const auto& desc : info.texture_buffer_descriptors) {
+            for (u32 index = 0; index < desc.count; ++index) {
+                const auto handle{read_handle(desc, index)};
+                views[view_index++] = {
+                    .index = handle.first,
+                    .blacklist = false,
+                    .id = {},
+                };
+            }
+        }
+        for (const auto& desc : info.image_buffer_descriptors) {
+            for (u32 index = 0; index < desc.count; ++index) {
+                const auto handle{read_handle(desc, index)};
+                views[view_index++] = {
+                    .index = handle.first,
+                    .blacklist = false,
+                    .id = {},
+                };
+            }
+        }
+        for (const auto& desc : info.texture_descriptors) {
+            for (u32 index = 0; index < desc.count; ++index) {
+                const auto handle{read_handle(desc, index)};
+                views[view_index++] = {handle.first};
+                VideoCommon::SamplerId sampler{texture_cache.GetGraphicsSamplerId(handle.second)};
+                samplers[sampler_index++] = sampler;
+            }
+        }
+        for (const auto& desc : info.image_descriptors) {
+            for (u32 index = 0; index < desc.count; ++index) {
+                const auto handle{read_handle(desc, index)};
+                views[view_index++] = {
+                    .index = handle.first,
+                    .blacklist = desc.is_written,
+                    .id = {},
+                };
+            }
+        }
+    }
+
+    texture_cache.FillGraphicsImageViews<true>(std::span(views.data(), view_index));
+
+    // Bind texture buffers for FS (stage 4) only.
+    {
+        const size_t stage = 4;
+        const Shader::Info& info{stage_infos[stage]};
+        VideoCommon::ImageViewInOut* texture_buffer_it{views.data()};
+        size_t index{};
+        buffer_cache.UnbindGraphicsTextureBuffers(stage);
+        for (const auto& desc : info.texture_buffer_descriptors) {
+            for (u32 i = 0; i < desc.count; ++i) {
+                ImageView& image_view{texture_cache.GetImageView(texture_buffer_it->id)};
+                buffer_cache.BindGraphicsTextureBuffer(stage, index, image_view.GpuAddr(),
+                                                       image_view.BufferSize(), image_view.format,
+                                                       false, false);
+                ++index;
+                ++texture_buffer_it;
+            }
+        }
+        for (const auto& desc : info.image_buffer_descriptors) {
+            for (u32 i = 0; i < desc.count; ++i) {
+                ImageView& image_view{texture_cache.GetImageView(texture_buffer_it->id)};
+                buffer_cache.BindGraphicsTextureBuffer(stage, index, image_view.GpuAddr(),
+                                                       image_view.BufferSize(), image_view.format,
+                                                       desc.is_written, true);
+                ++index;
+                ++texture_buffer_it;
+            }
+        }
+    }
+
+    // Update and sync buffers (pass is_indexed=false since VTG handles its own index buffer).
+    buffer_cache.UpdateGraphicsBuffers(false);
+    buffer_cache.BindHostGeometryBuffers(false);
+
+    guest_descriptor_queue.Acquire();
+
+    RescalingPushConstant rescaling;
+    RenderAreaPushConstant render_area;
+
+    // --- VS stage (stage 0): push SSBO descriptor directly ---
+    // The passthrough VS has no UBOs or texture buffers, only one SSBO.
+    // Since all three are empty/unbound in buffer_cache, we skip BindHostStageBuffers(0)
+    // and directly push the VTG output SSBO into the descriptor queue.
+    guest_descriptor_queue.AddBuffer(0, 0, vtg_ssbo, 0,
+                                     static_cast<VkDeviceSize>(vtg_ssbo_size));
+
+    if (vtg_pt_log) {
+        const auto& fs_info = stage_infos[4];
+        LOG_DBGSCP(Render_Vulkan,
+            "VTG PT VS SSBO: buffer={} offset=0 size={}",
+            reinterpret_cast<const void*>(vtg_ssbo), vtg_ssbo_size);
+        LOG_DBGSCP(Render_Vulkan,
+            "VTG PT FS info: ssbos={} ubos={} tex_bufs={} img_bufs={} "
+            "textures={} images={}",
+            fs_info.storage_buffers_descriptors.size(),
+            fs_info.constant_buffer_descriptors.size(),
+            fs_info.texture_buffer_descriptors.size(),
+            fs_info.image_buffer_descriptors.size(),
+            fs_info.texture_descriptors.size(),
+            fs_info.image_descriptors.size());
+    }
+
+    // --- FS stage (stage 4): normal descriptor push ---
+    {
+        const size_t stage = 4;
+        buffer_cache.BindHostStageBuffers(stage);
+        const VideoCommon::SamplerId* samplers_it{samplers.data()};
+        const VideoCommon::ImageViewInOut* views_it{views.data()};
+        PushImageDescriptors(texture_cache, guest_descriptor_queue, device,
+                             static_cast<int>(stage), stage_infos[stage], rescaling,
+                             samplers_it, views_it);
+        const auto& info{stage_infos[stage]};
+        if (info.uses_render_area) {
+            render_area.uses_render_area = true;
+            render_area.words = {static_cast<float>(regs.surface_clip.width),
+                                 static_cast<float>(regs.surface_clip.height)};
+        }
+    }
+
+    texture_cache.UpdateRenderTargets(false);
+    texture_cache.CheckFeedbackLoop(views);
+
+    if (vtg_pt_log) {
+        const auto* fb = texture_cache.GetFramebuffer();
+        LOG_DBGSCP(Render_Vulkan,
+            "VTG PT before ConfigureDraw: framebuffer={} render_area={}",
+            static_cast<const void*>(fb),
+            render_area.uses_render_area);
     }
 
     ConfigureDraw(rescaling, render_area, line_mode);
@@ -776,20 +1023,26 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
             input_assembly_topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
         }
     }
+    bool primitive_restart_enable =
+        dynamic.primitive_restart_enable != 0 &&
+        ((input_assembly_topology != VK_PRIMITIVE_TOPOLOGY_PATCH_LIST &&
+          device.IsTopologyListPrimitiveRestartSupported()) ||
+         SupportsPrimitiveRestart(input_assembly_topology) ||
+         (input_assembly_topology == VK_PRIMITIVE_TOPOLOGY_PATCH_LIST &&
+          device.IsPatchListPrimitiveRestartSupported()));
+
+    // MoltenVK workaround: Metal does not support disabling primitive restart for strip topologies.
+    if (device.IsMoltenVK() && !primitive_restart_enable/* &&
+        SupportsPrimitiveRestart(input_assembly_topology)*/) {
+        primitive_restart_enable = true;
+    }
+
     const VkPipelineInputAssemblyStateCreateInfo input_assembly_ci{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
         .topology = input_assembly_topology,
-        .primitiveRestartEnable =
-            dynamic.primitive_restart_enable != 0 &&
-                    ((input_assembly_topology != VK_PRIMITIVE_TOPOLOGY_PATCH_LIST &&
-                      device.IsTopologyListPrimitiveRestartSupported()) ||
-                     SupportsPrimitiveRestart(input_assembly_topology) ||
-                     (input_assembly_topology == VK_PRIMITIVE_TOPOLOGY_PATCH_LIST &&
-                      device.IsPatchListPrimitiveRestartSupported()))
-                ? VK_TRUE
-                : VK_FALSE,
+        .primitiveRestartEnable = primitive_restart_enable ? VK_TRUE : VK_FALSE,
     };
     const VkPipelineTessellationStateCreateInfo tessellation_ci{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO,

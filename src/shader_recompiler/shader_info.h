@@ -177,6 +177,9 @@ struct StorageBufferDescriptor {
 };
 
 struct TextureBufferDescriptor {
+    ImageFormat format;
+    bool is_integer;
+    bool is_signed;
     bool has_secondary;
     u32 cbuf_index;
     u32 cbuf_offset;
@@ -220,7 +223,25 @@ struct TextureDescriptor {
     u32 size_shift;
     u32 sampler_index{std::numeric_limits<u32>::max()};
 
-    auto operator<=>(const TextureDescriptor&) const = default;
+    // Custom comparison excluding sampler_index (it's metadata, not part of identity)
+    auto operator<=>(const TextureDescriptor& other) const {
+        return std::tie(type, is_depth, is_multisample, has_secondary, cbuf_index, cbuf_offset,
+                        shift_left, secondary_cbuf_index, secondary_cbuf_offset,
+                        secondary_shift_left, count, size_shift) <=>
+               std::tie(other.type, other.is_depth, other.is_multisample, other.has_secondary,
+                        other.cbuf_index, other.cbuf_offset, other.shift_left,
+                        other.secondary_cbuf_index, other.secondary_cbuf_offset,
+                        other.secondary_shift_left, other.count, other.size_shift);
+    }
+    bool operator==(const TextureDescriptor& other) const {
+        return std::tie(type, is_depth, is_multisample, has_secondary, cbuf_index, cbuf_offset,
+                        shift_left, secondary_cbuf_index, secondary_cbuf_offset,
+                        secondary_shift_left, count, size_shift) ==
+               std::tie(other.type, other.is_depth, other.is_multisample, other.has_secondary,
+                        other.cbuf_index, other.cbuf_offset, other.shift_left,
+                        other.secondary_cbuf_index, other.secondary_cbuf_offset,
+                        other.secondary_shift_left, other.count, other.size_shift);
+    }
 };
 using TextureDescriptors = boost::container::small_vector<TextureDescriptor, 12>;
 

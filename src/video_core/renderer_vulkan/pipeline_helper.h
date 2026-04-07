@@ -15,6 +15,7 @@
 #include "common/settings.h"
 #include "shader_recompiler/backend/spirv/emit_spirv.h"
 #include "shader_recompiler/shader_info.h"
+#include "video_core/renderer_vulkan/vk_descriptor_pool.h"
 #include "video_core/renderer_vulkan/vk_texture_cache.h"
 #include "video_core/renderer_vulkan/vk_update_descriptor.h"
 #include "video_core/texture_cache/types.h"
@@ -23,23 +24,6 @@
 namespace Vulkan {
 
 using Shader::Backend::SPIRV::NUM_TEXTURE_AND_IMAGE_SCALING_WORDS;
-
-// Sampler key for separated sampler approach (cross-platform)
-// Used to identify unique samplers across textures for deduplication
-struct SamplerKey {
-    u32 cbuf_index;
-    u32 cbuf_offset;
-    u32 secondary_cbuf_index;
-    u32 secondary_cbuf_offset;
-    bool has_secondary;
-
-    bool operator<(const SamplerKey& other) const {
-        return std::tie(cbuf_index, cbuf_offset, secondary_cbuf_index,
-                      secondary_cbuf_offset, has_secondary) <
-               std::tie(other.cbuf_index, other.cbuf_offset, other.secondary_cbuf_index,
-                      other.secondary_cbuf_offset, other.has_secondary);
-    }
-};
 
 class DescriptorLayoutBuilder {
 public:
@@ -544,8 +528,8 @@ inline void PushImageDescriptors(TextureCache& texture_cache,
     binding += static_cast<u32>(info.texture_buffer_descriptors.size());
     binding += static_cast<u32>(info.image_buffer_descriptors.size());
 
-    const bool use_separated = (setting == Settings::TexturePoolMode::Separated) ||
-                              (setting == Settings::TexturePoolMode::Automatic);
+    // Use the centralized IsSeparated function from vk_descriptor_pool.h
+    const bool use_separated = IsSeparated(device);
 
     if (use_separated) {
         // Separated mode: Separate textures and samplers to reduce sampler count

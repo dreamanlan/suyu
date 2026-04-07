@@ -19,6 +19,9 @@
 #pragma warning(disable : 26812) // Disable prefer enum class over enum
 #endif
 
+extern void dbgscpHookCheckVkFormat(VkFormat format);
+extern void dbgscpHookSetPrimitiveRestart(bool& enable, int tag);
+
 VK_DEFINE_HANDLE(VmaAllocator)
 VK_DEFINE_HANDLE(VmaAllocation)
 
@@ -219,6 +222,7 @@ struct DeviceDispatch : InstanceDispatch {
     PFN_vkCmdEndRenderPass vkCmdEndRenderPass{};
     PFN_vkCmdEndTransformFeedbackEXT vkCmdEndTransformFeedbackEXT{};
     PFN_vkCmdFillBuffer vkCmdFillBuffer{};
+    PFN_vkCmdUpdateBuffer vkCmdUpdateBuffer{};
     PFN_vkCmdPipelineBarrier vkCmdPipelineBarrier{};
     PFN_vkCmdPushConstants vkCmdPushConstants{};
     PFN_vkCmdPushDescriptorSetWithTemplateKHR vkCmdPushDescriptorSetWithTemplateKHR{};
@@ -1320,6 +1324,11 @@ public:
         dld->vkCmdFillBuffer(handle, dst_buffer, dst_offset, size, data);
     }
 
+    void UpdateBuffer(VkBuffer dst_buffer, VkDeviceSize dst_offset, VkDeviceSize data_size,
+                      const void* data) const noexcept {
+        dld->vkCmdUpdateBuffer(handle, dst_buffer, dst_offset, data_size, data);
+    }
+
     void PushConstants(VkPipelineLayout layout, VkShaderStageFlags flags, u32 offset, u32 size,
                        const void* values) const noexcept {
         dld->vkCmdPushConstants(handle, layout, flags, offset, size, values);
@@ -1417,6 +1426,8 @@ public:
     }
 
     void SetPrimitiveRestartEnableEXT(bool enable) const noexcept {
+        dbgscpHookSetPrimitiveRestart(enable, 1);
+
         dld->vkCmdSetPrimitiveRestartEnableEXT(handle, enable ? VK_TRUE : VK_FALSE);
     }
 

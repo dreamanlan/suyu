@@ -1,0 +1,436 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// BC1~BC5 decoder compute shader (BLOCK-LINEAR / GOB input layout)
+// - One workgroup per 4x4 block (local_size = 4x4)
+// - Output: rgba8unorm image2DArray
+// - Includes robust OOB protection using input_size_bytes
+//
+// Notes:
+// - This matches the SwiftShader/Skyline integer interpolation behavior for BC2/BC3/BC4/BC5.
+// - For BC4/BC5 signed variants, it matches the CPU behavior of writing (uint8_t)value (wrap)
+//   and then treating it as UNORM when stored to rgba8.
+
+#version 450
+
+#ifdef VULKAN
+#define BEGIN_PUSH_CONSTANTS layout(push_constant) uniform PushConstants {
+#define END_PUSH_CONSTANTS };
+#define UNIFORM(n)
+#define BINDING_INPUT_BUFFER 0
+#define BINDING_OUTPUT_IMAGE 1
+#else
+#define BEGIN_PUSH_CONSTANTS
+#define END_PUSH_CONSTANTS
+#define UNIFORM(n) layout(location = n) uniform
+#define BINDING_INPUT_BUFFER 0
+#define BINDING_OUTPUT_IMAGE 0
+#endif
+
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 1) in;
+
+BEGIN_PUSH_CONSTANTS
+UNIFORM(0) uint bc_format;              // 1..5
+UNIFORM(1) uint is_signed;              // for BC4/BC5 signed variants
+UNIFORM(2) uint num_blocks_x;           // blocks in x
+UNIFORM(3) uint num_blocks_y;           // blocks in y
+UNIFORM(4) uint layer_stride;           // bytes between array layers (must match swizzle params)
+
+UNIFORM(5) uint bytes_per_block_log2;   // 3 for 8B blocks (BC1/BC4), 4 for 16B blocks (BC2/BC3/BC5)
+UNIFORM(6) uint block_size;             // swizzle param
+UNIFORM(7) uint x_shift;                // swizzle param
+UNIFORM(8) uint block_height;           // swizzle param
+UNIFORM(9) uint block_height_mask;      // swizzle param
+
+UNIFORM(10) uint input_size_bytes;      // readable input size from the bound buffer region
+END_PUSH_CONSTANTS
+
+layout(binding = BINDING_INPUT_BUFFER, std430) readonly restrict buffer InputBuffer {
+    uint input_data[];
+};
+
+layout(binding = BINDING_OUTPUT_IMAGE, rgba8) uniform writeonly restrict image2DArray dest_image;
+
+// -------------------- GOB block-linear address calculation --------------------
+// These constants match the layout used in your BC7 shader snippet.
+const uint GOB_SIZE_X_SHIFT = 6u; // 64 bytes
+const uint GOB_SIZE_Y_SHIFT = 3u; // 8 rows
+const uint GOB_SIZE_SHIFT   = GOB_SIZE_X_SHIFT + GOB_SIZE_Y_SHIFT; // 9 => 512 bytes per GOB
+const uint SWIZZLE_X_BITS = 0x12Fu; // 0b100101111
+const uint SWIZZLE_Y_BITS = 0x0D0u; // 0b011010000
+
+// Deterministic pdep32 implementation: iterate fixed 32 times.
+// This avoids a data-dependent early-exit loop which can be transformed oddly by spirv-cross.
+uint pdep32(uint value, uint mask)
+{
+    uint result = 0u;
+    uint src_bit_index = 0u;
+    for (uint dst_bit = 0u; dst_bit < 32u; ++dst_bit) {
+        uint dst_mask = (1u << dst_bit);
+        if ((mask & dst_mask) != 0u) {
+            // if the current source bit is set, set the corresponding destination bit
+            uint src_mask = (1u << src_bit_index);
+            if ((value & src_mask) != 0u) {
+                result |= dst_mask;
+            }
+            src_bit_index++;
+        }
+    }
+    return result;
+}
+
+uint SwizzleOffset(uvec2 pos_bytes_xy)
+{
+    uint x_bytes = pos_bytes_xy.x; // in bytes
+    uint y       = pos_bytes_xy.y; // in row units (block rows)
+
+    uint swizzled_x = pdep32(x_bytes, SWIZZLE_X_BITS);
+    uint swizzled_y = pdep32(y,       SWIZZLE_Y_BITS);
+
+    return swizzled_x | swizzled_y;
+}
+
+uint ComputeBlockByteAddress(uvec3 block_id) {
+    // Convert block coordinates to byte-addressed swizzle coordinates.
+    // X becomes bytes by shifting with bytes_per_block_log2.
+    uvec3 pos = block_id;
+    pos.x <<= bytes_per_block_log2;
+
+    const uint swizzle = SwizzleOffset(pos.xy);
+    const uint block_y = pos.y >> GOB_SIZE_Y_SHIFT;
+
+    uint offset = 0u;
+    offset += pos.z * layer_stride;
+    offset += (block_y >> block_height) * block_size;
+    offset += (block_y & block_height_mask) << GOB_SIZE_SHIFT;
+    offset += (pos.x >> GOB_SIZE_X_SHIFT) << x_shift;
+    offset += swizzle;
+    return offset;
+}
+
+uvec4 LoadBlock128(uint byte_address) {
+    uint w = byte_address >> 2;
+    return uvec4(input_data[w + 0u], input_data[w + 1u], input_data[w + 2u], input_data[w + 3u]);
+}
+
+// -------------------- decode helpers --------------------
+
+uvec3 Expand565ToRGB8(uint c565)
+{
+    uint r5 = (c565 >> 11) & 0x1Fu;
+    uint g6 = (c565 >>  5) & 0x3Fu;
+    uint b5 = (c565 >>  0) & 0x1Fu;
+
+    uint r8 = (r5 << 3) | (r5 >> 2);
+    uint g8 = (g6 << 2) | (g6 >> 4);
+    uint b8 = (b5 << 3) | (b5 >> 2);
+
+    return uvec3(r8, g8, b8);
+}
+
+vec3 RGB8ToUNorm(uvec3 rgb8)
+{
+    return vec3(rgb8) * (1.0 / 255.0);
+}
+
+uint PixelIndex(uvec2 local_pos) {
+    return local_pos.y * 4u + local_pos.x; // 0..15
+}
+
+uint BC12BitIndex(uint indices32, uint p) {
+    return (indices32 >> (p * 2u)) & 0x3u;
+}
+
+float U8ToUNorm(uint u8) {
+    return float(u8 & 0xFFu) * (1.0 / 255.0);
+}
+
+// Matches CPU: write (uint8_t)v (wrap), then interpret as UNORM in output.
+float IntToUNormU8Wrap(int v) {
+    return float(uint(v) & 0xFFu) * (1.0 / 255.0);
+}
+
+uvec3 DecodeBC12ColorRGB8(uint c0_raw, uint c1_raw, uint indices, uint p)
+{
+    uvec3 c0 = Expand565ToRGB8(c0_raw);
+    uvec3 c1 = Expand565ToRGB8(c1_raw);
+    uint idx = BC12BitIndex(indices, p);
+
+    if (idx == 0u) return c0;
+    if (idx == 1u) return c1;
+    if (idx == 2u) return (2u * c0 + c1) / 3u;
+    return (2u * c1 + c0) / 3u;
+}
+
+// -------------------- BC1 --------------------
+
+vec4 DecodeBC1(uvec2 local_pos, uvec4 block_words)
+{
+    uint block0   = block_words.x;
+    uint block1   = block_words.y;
+
+    uint c0_raw   =  block0        & 0xFFFFu;
+    uint c1_raw   = (block0 >> 16) & 0xFFFFu;
+    uint indices  =  block1;
+
+    uvec3 c0 = Expand565ToRGB8(c0_raw);
+    uvec3 c1 = Expand565ToRGB8(c1_raw);
+
+    uint p   = PixelIndex(local_pos);
+    uint idx = BC12BitIndex(indices, p);
+
+    uvec3 rgb8 = uvec3(0u);
+    uint  a8   = 255u;
+
+    if (c0_raw > c1_raw)
+    {
+        if (idx == 0u) rgb8 = c0;
+        else if (idx == 1u) rgb8 = c1;
+        else if (idx == 2u) rgb8 = (2u * c0 + c1) / 3u;
+        else                rgb8 = (2u * c1 + c0) / 3u;
+    }
+    else
+    {
+        if (idx == 0u)      { rgb8 = c0; a8 = 255u; }
+        else if (idx == 1u) { rgb8 = c1; a8 = 255u; }
+        else if (idx == 2u) { rgb8 = (c0 + c1) >> 1; a8 = 255u; }
+        else                { rgb8 = uvec3(0u); a8 = 0u; }  // matches CPU: c3 alpha cleared, rgb stays 0
+    }
+
+    return vec4(RGB8ToUNorm(rgb8), U8ToUNorm(a8));
+}
+
+// -------------------- BC2 --------------------
+
+float DecodeBC2Alpha(uvec2 local_pos, uvec4 block_words) {
+    uint alpha0 = block_words.x;
+    uint alpha1 = block_words.y;
+
+    uint p = PixelIndex(local_pos);
+    uint word = (p < 8u) ? alpha0 : alpha1;
+    uint nib  = (word >> ((p & 7u) * 4u)) & 0xFu;
+    uint a8   = nib | (nib << 4);
+    return U8ToUNorm(a8);
+}
+
+vec4 DecodeBC2(uvec2 local_pos, uvec4 block_words)
+{
+    float a = DecodeBC2Alpha(local_pos, block_words);
+
+    uint block0  = block_words.z;
+    uint block1  = block_words.w;
+    uint c0_raw  =  block0        & 0xFFFFu;
+    uint c1_raw  = (block0 >> 16) & 0xFFFFu;
+
+    uint p = PixelIndex(local_pos);
+    uvec3 rgb8 = DecodeBC12ColorRGB8(c0_raw, c1_raw, block1, p);
+
+    return vec4(RGB8ToUNorm(rgb8), a);
+}
+
+// -------------------- BC3 --------------------
+
+// 32-bit-only 3-bit index extractor for the 48-bit alpha index stream.
+// This avoids using 64-bit integer operations and handles cross-32-bit boundaries.
+uint BC43BitIndex_No64(uint word0, uint word1, uint p)
+{
+    // Layout of the original 48-bit value (low -> high):
+    // low 16 bits: (word0 >> 16) & 0xFFFF
+    // next 32 bits: word1 (all bits)
+    // We form: low32 = low16 | (word1 << 16)
+    //          high16 = word1 >> 16
+    uint low32  = (word0 >> 16) | (word1 << 16); // lower 32 bits of the 48-bit value
+    uint high16 =  word1 >> 16;                  // upper 16 bits of the 48-bit value
+
+    uint bitpos = p * 3u; // 0..45
+
+    // Fast path: entirely inside low32 (bitpos <= 29 -> 3 bits fit inside 32-bit)
+    if (bitpos <= 29u) {
+        return (low32 >> bitpos) & 7u;
+    }
+
+    // Crossing boundary cases:
+    if (bitpos < 32u) {
+        // Some bits come from low32, remainder from high16.
+        // bits_from_low = 32 - bitpos (1 or 2)
+        uint bits_from_low = 32u - bitpos;
+        uint low_part = low32 >> bitpos; // contains bits_from_low low bits (<=2 bits)
+
+        uint need_high = 3u - bits_from_low; // 1 or 2
+        uint high_mask = (1u << need_high) - 1u;
+        uint high_part = high16 & high_mask; // take low `need_high` bits from high16
+
+        return ((high_part << bits_from_low) | low_part) & 7u;
+    }
+
+    // Entirely inside high16 (bitpos >= 32)
+    uint high_shift = bitpos - 32u; // 0..13
+    return (high16 >> high_shift) & 7u;
+}
+
+float DecodeBC3Alpha(uvec2 local_pos, uvec4 block_words) {
+    uint a_block0 = block_words.x;
+    uint a_block1 = block_words.y;
+
+    uint a0_u = a_block0 & 0xFFu;
+    uint a1_u = (a_block0 >> 8) & 0xFFu;
+
+    uint p = PixelIndex(local_pos);
+    // use 32-bit-only index extractor instead of 64-bit operations
+    uint idx = BC43BitIndex_No64(a_block0, a_block1, p);
+
+    int c0 = int(a0_u);
+    int c1 = int(a1_u);
+    int v = 0;
+
+    if (c0 > c1) {
+        if (idx == 0u) v = c0;
+        else if (idx == 1u) v = c1;
+        else if (idx == 2u) v = (6 * c0 + 1 * c1) / 7;
+        else if (idx == 3u) v = (5 * c0 + 2 * c1) / 7;
+        else if (idx == 4u) v = (4 * c0 + 3 * c1) / 7;
+        else if (idx == 5u) v = (3 * c0 + 4 * c1) / 7;
+        else if (idx == 6u) v = (2 * c0 + 5 * c1) / 7;
+        else v = (1 * c0 + 6 * c1) / 7;
+    } else {
+        if (idx == 0u) v = c0;
+        else if (idx == 1u) v = c1;
+        else if (idx == 2u) v = (4 * c0 + 1 * c1) / 5;
+        else if (idx == 3u) v = (3 * c0 + 2 * c1) / 5;
+        else if (idx == 4u) v = (2 * c0 + 3 * c1) / 5;
+        else if (idx == 5u) v = (1 * c0 + 4 * c1) / 5;
+        else if (idx == 6u) v = 0;
+        else v = 255;
+    }
+
+    return U8ToUNorm(uint(v));
+}
+
+vec4 DecodeBC3(uvec2 local_pos, uvec4 block_words)
+{
+    float a = DecodeBC3Alpha(local_pos, block_words);
+
+    uint block0  = block_words.z;
+    uint block1  = block_words.w;
+    uint c0_raw  =  block0        & 0xFFFFu;
+    uint c1_raw  = (block0 >> 16) & 0xFFFFu;
+
+    uint p = PixelIndex(local_pos);
+    uvec3 rgb8 = DecodeBC12ColorRGB8(c0_raw, c1_raw, block1, p);
+
+    return vec4(RGB8ToUNorm(rgb8), a);
+}
+
+// -------------------- BC4/BC5 --------------------
+
+// Use the 32-bit-only index extractor for BC4/BC5 too.
+float DecodeBC4ValueFromWords(uvec2 local_pos, uint word0, uint word1, bool signed_mode) {
+    uint e0_u = word0 & 0xFFu;
+    uint e1_u = (word0 >> 8) & 0xFFu;
+    // use 32-bit-only index extraction
+    uint p = PixelIndex(local_pos);
+    uint idx = BC43BitIndex_No64(word0, word1, p);
+
+    int c0, c1;
+    if (signed_mode) {
+        c0 = int(e0_u); if (c0 > 127) c0 -= 256;
+        c1 = int(e1_u); if (c1 > 127) c1 -= 256;
+    } else {
+        c0 = int(e0_u);
+        c1 = int(e1_u);
+    }
+
+    int v = 0;
+    if (c0 > c1) {
+        if (idx == 0u) v = c0;
+        else if (idx == 1u) v = c1;
+        else if (idx == 2u) v = (6 * c0 + 1 * c1) / 7;
+        else if (idx == 3u) v = (5 * c0 + 2 * c1) / 7;
+        else if (idx == 4u) v = (4 * c0 + 3 * c1) / 7;
+        else if (idx == 5u) v = (3 * c0 + 4 * c1) / 7;
+        else if (idx == 6u) v = (2 * c0 + 5 * c1) / 7;
+        else v = (1 * c0 + 6 * c1) / 7;
+    } else {
+        if (idx == 0u) v = c0;
+        else if (idx == 1u) v = c1;
+        else if (idx == 2u) v = (4 * c0 + 1 * c1) / 5;
+        else if (idx == 3u) v = (3 * c0 + 2 * c1) / 5;
+        else if (idx == 4u) v = (2 * c0 + 3 * c1) / 5;
+        else if (idx == 5u) v = (1 * c0 + 4 * c1) / 5;
+        else if (idx == 6u) v = signed_mode ? -128 : 0;
+        else v = signed_mode ? 127 : 255;
+    }
+
+    return IntToUNormU8Wrap(v);
+}
+
+vec4 DecodeBC4(uvec2 local_pos, uvec4 block_words) {
+    bool s = (is_signed != 0u);
+    float r = DecodeBC4ValueFromWords(local_pos, block_words.x, block_words.y, s);
+    return vec4(r, 0.0, 0.0, 1.0);
+}
+
+vec4 DecodeBC5(uvec2 local_pos, uvec4 block_words) {
+    bool s = (is_signed != 0u);
+    float r = DecodeBC4ValueFromWords(local_pos, block_words.x, block_words.y, s);
+    float g = DecodeBC4ValueFromWords(local_pos, block_words.z, block_words.w, s);
+    return vec4(r, g, 0.0, 1.0);
+}
+
+// -------------------- main --------------------
+
+void main() {
+    uvec3 block_pos = uvec3(gl_WorkGroupID.xy, gl_WorkGroupID.z);
+    uvec2 local_pos = gl_LocalInvocationID.xy;
+
+    if (block_pos.x >= num_blocks_x || block_pos.y >= num_blocks_y) {
+        return;
+    }
+
+    ivec3 pixel_pos = ivec3(block_pos.xy * 4u + local_pos, block_pos.z);
+    ivec3 img_size = imageSize(dest_image);
+    if (pixel_pos.x >= img_size.x || pixel_pos.y >= img_size.y || pixel_pos.z >= img_size.z) {
+        return;
+    }
+
+    uint byte_address = ComputeBlockByteAddress(block_pos);
+
+    // OOB protection (prevents GPU crash even if address math is wrong).
+    uint bpb = 1u << bytes_per_block_log2; // 8 or 16
+    if (byte_address + bpb > input_size_bytes) {
+        if (gl_LocalInvocationIndex == 0u) {
+            ivec2 base_px = ivec2(block_pos.xy * 4u);
+            int layer_i = int(block_pos.z);
+            for (uint y = 0u; y < 4u; ++y) {
+                for (uint x = 0u; x < 4u; ++x) {
+                    ivec3 p = ivec3(base_px + ivec2(int(x), int(y)), layer_i);
+                    if (p.x < img_size.x && p.y < img_size.y && p.z < img_size.z) {
+                        imageStore(dest_image, p, vec4(0.0, 0.0, 0.0, 0.0));
+                    }
+                }
+            }
+        }
+        return;
+    }
+
+    // Conditional load: read only what is safe for 8B blocks.
+    uvec4 block_words = uvec4(0u);
+
+    if (bpb == 8u) {
+        uint w = byte_address >> 2;
+        block_words.x = input_data[w + 0u];
+        block_words.y = input_data[w + 1u];
+    } else {
+        block_words = LoadBlock128(byte_address);
+    }
+
+    vec4 out_color = vec4(1.0, 0.0, 1.0, 1.0);
+    if (bc_format == 1u) out_color = DecodeBC1(local_pos, block_words);
+    else if (bc_format == 2u) out_color = DecodeBC2(local_pos, block_words);
+    else if (bc_format == 3u) out_color = DecodeBC3(local_pos, block_words);
+    else if (bc_format == 4u) out_color = DecodeBC4(local_pos, block_words);
+    else if (bc_format == 5u) out_color = DecodeBC5(local_pos, block_words);
+
+    // Clamp to [0,1] just before store to avoid any unexpected out-of-range float values.
+    out_color = clamp(out_color, 0.0, 1.0);
+
+    imageStore(dest_image, pixel_pos, out_color);
+}

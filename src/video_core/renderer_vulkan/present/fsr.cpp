@@ -77,6 +77,11 @@ void FSR::CreateShaders() {
         m_easu_shader = BuildShader(m_device, VULKAN_FIDELITYFX_FSR_EASU_FP32_FRAG_SPV);
         m_rcas_shader = BuildShader(m_device, VULKAN_FIDELITYFX_FSR_RCAS_FP32_FRAG_SPV);
     }
+    if (m_device.HasDebuggingToolAttached()) {
+        m_vert_shader.SetObjectNameEXT("FSR Vert");
+        m_easu_shader.SetObjectNameEXT("FSR EASU Frag");
+        m_rcas_shader.SetObjectNameEXT("FSR RCAS Frag");
+    }
 }
 
 void FSR::CreateDescriptorPool() {

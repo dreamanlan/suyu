@@ -273,41 +273,63 @@ FormatInfo SurfaceFormat(const Device& device, FormatType format_type, bool with
     }
 
     // Transcode on hardware that doesn't support BCn natively
+    const auto bcn_mode = Settings::values.bcn_decode_mode.GetValue();
     if (!device.IsOptimalBcnSupported() && VideoCore::Surface::IsPixelFormatBCn(pixel_format)) {
         const bool is_srgb = with_srgb && VideoCore::Surface::IsPixelFormatSRGB(pixel_format);
         VkFormat original_format = tuple.format;
 
-        if (pixel_format == PixelFormat::BC4_SNORM) {
-            tuple.format = VK_FORMAT_R8_SNORM;
-            LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to R8_SNORM (software decode will be used)",
-                      original_format);
-        } else if (pixel_format == PixelFormat::BC4_UNORM) {
-            tuple.format = VK_FORMAT_R8_UNORM;
-            LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to R8_UNORM (software decode will be used)",
-                      original_format);
-        } else if (pixel_format == PixelFormat::BC5_SNORM) {
-            tuple.format = VK_FORMAT_R8G8_SNORM;
-            LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to R8G8_SNORM (software decode will be used)",
-                      original_format);
-        } else if (pixel_format == PixelFormat::BC5_UNORM) {
-            tuple.format = VK_FORMAT_R8G8_UNORM;
-            LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to R8G8_UNORM (software decode will be used)",
-                      original_format);
-        } else if (pixel_format == PixelFormat::BC6H_SFLOAT ||
-                   pixel_format == PixelFormat::BC6H_UFLOAT) {
-            tuple.format = VK_FORMAT_R16G16B16A16_SFLOAT;
-            LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to R16G16B16A16_SFLOAT (software decode will be used)",
-                      original_format);
-        } else if (is_srgb) {
-            tuple.format = VK_FORMAT_A8B8G8R8_SRGB_PACK32;
-            LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to A8B8G8R8_SRGB (software decode will be used)",
-                      original_format);
-        } else {
-            tuple.format = VK_FORMAT_A8B8G8R8_UNORM_PACK32;
-            LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to A8B8G8R8_UNORM (software decode will be used)",
-                      original_format);
+        if (bcn_mode == Settings::BcnDecodeMode::Gpu) {
+            // BC6H still needs 16F (keep as-is)
+            if (pixel_format == PixelFormat::BC6H_SFLOAT ||
+                pixel_format == PixelFormat::BC6H_UFLOAT) {
+                tuple.format = VK_FORMAT_R16G16B16A16_SFLOAT;
+                LOG_DEBUG(Render_Vulkan,
+                          "BCn format {} fallback to R16G16B16A16_SFLOAT (software decode will be used)",
+                          original_format);
+            } else {
+                // Force BC1..BC5 decode target to RGBA8 (via A8B8G8R8_* then ConvertStorageFormat)
+                tuple.format = is_srgb ? VK_FORMAT_A8B8G8R8_SRGB_PACK32
+                : VK_FORMAT_A8B8G8R8_UNORM_PACK32;
+                tuple.usage |= Storage; // enable storage image
+                LOG_DEBUG(Render_Vulkan,
+                          "BCn format {} fallback to {} (RGBA8 target, software decode)",
+                          original_format, tuple.format);
+            }
+        }
+        else {
+            if (pixel_format == PixelFormat::BC4_SNORM) {
+                tuple.format = VK_FORMAT_R8_SNORM;
+                LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to R8_SNORM (software decode will be used)",
+                          original_format);
+            } else if (pixel_format == PixelFormat::BC4_UNORM) {
+                tuple.format = VK_FORMAT_R8_UNORM;
+                LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to R8_UNORM (software decode will be used)",
+                          original_format);
+            } else if (pixel_format == PixelFormat::BC5_SNORM) {
+                tuple.format = VK_FORMAT_R8G8_SNORM;
+                LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to R8G8_SNORM (software decode will be used)",
+                          original_format);
+            } else if (pixel_format == PixelFormat::BC5_UNORM) {
+                tuple.format = VK_FORMAT_R8G8_UNORM;
+                LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to R8G8_UNORM (software decode will be used)",
+                          original_format);
+            } else if (pixel_format == PixelFormat::BC6H_SFLOAT ||
+                       pixel_format == PixelFormat::BC6H_UFLOAT) {
+                tuple.format = VK_FORMAT_R16G16B16A16_SFLOAT;
+                LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to R16G16B16A16_SFLOAT (software decode will be used)",
+                          original_format);
+            } else if (is_srgb) {
+                tuple.format = VK_FORMAT_A8B8G8R8_SRGB_PACK32;
+                LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to A8B8G8R8_SRGB (software decode will be used)",
+                          original_format);
+            } else {
+                tuple.format = VK_FORMAT_A8B8G8R8_UNORM_PACK32;
+                LOG_DEBUG(Render_Vulkan, "BCn format {} fallback to A8B8G8R8_UNORM (software decode will be used)",
+                          original_format);
+            }
         }
     }
+
     const bool attachable = (tuple.usage & Attachable) != 0;
     const bool storage = (tuple.usage & Storage) != 0;
 

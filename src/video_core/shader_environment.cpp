@@ -89,7 +89,7 @@ static std::string_view StageToPrefix(Shader::Stage stage) {
     }
 }
 
-static void DumpImpl(u64 pipeline_hash, u64 shader_hash, std::span<const u64> code,
+[[maybe_unused]]static void DumpImpl(u64 pipeline_hash, u64 shader_hash, std::span<const u64> code,
                      [[maybe_unused]] u32 read_highest, [[maybe_unused]] u32 read_lowest,
                      u32 initial_offset, Shader::Stage stage) {
     const auto shader_dir{Common::FS::GetYuzuPath(Common::FS::YuzuPath::DumpDir)};
@@ -131,7 +131,7 @@ void DumpTextShader(u64 pipeline_hash, u64 shader_hash, Shader::Stage stage, con
     shader_file.write(code.data(), code.length());
 }
 
-void DumpSpirvShader(u64 pipeline_hash, u64 shader_hash, Shader::Stage stage, const std::vector<u32>& code) {
+void DumpSpirvShader(u64 pipeline_hash, u64 shader_hash, Shader::Stage stage, const std::vector<u32>& code, std::string_view prefix_override) {
     if (!Settings::values.dump_shaders)
         return;
     const auto shader_dir{ Common::FS::GetYuzuPath(Common::FS::YuzuPath::DumpDir) };
@@ -140,7 +140,7 @@ void DumpSpirvShader(u64 pipeline_hash, u64 shader_hash, Shader::Stage stage, co
         LOG_ERROR(Common_Filesystem, "Failed to create spirv shader dump directories");
         return;
     }
-    const auto prefix = StageToPrefix(stage);
+    const auto prefix = prefix_override.empty() ? StageToPrefix(stage) : prefix_override;
     const auto name{ base_dir /
                     fmt::format("{:016x}_{}_{:016x}.spirv", pipeline_hash, prefix, shader_hash) };
     std::fstream shader_file(name, std::ios::out | std::ios::binary);
@@ -223,7 +223,7 @@ u64 GenericEnvironment::CalculateHash() const {
 }
 
 void GenericEnvironment::Dump(u64 pipeline_hash, u64 shader_hash) {
-    DumpImpl(pipeline_hash, shader_hash, code, read_highest, read_lowest, initial_offset, stage);
+    //DumpImpl(pipeline_hash, shader_hash, code, read_highest, read_lowest, initial_offset, stage);
 }
 
 void GenericEnvironment::Serialize(std::ofstream& file) const {
@@ -635,7 +635,7 @@ void FileEnvironment::Deserialize(std::ifstream& file) {
 }
 
 void FileEnvironment::Dump(u64 pipeline_hash, u64 shader_hash) {
-    DumpImpl(pipeline_hash, shader_hash, code, read_highest, read_lowest, initial_offset, stage);
+    //DumpImpl(pipeline_hash, shader_hash, code, read_highest, read_lowest, initial_offset, stage);
 }
 
 u64 FileEnvironment::ReadInstruction(u32 address) {

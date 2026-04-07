@@ -341,6 +341,40 @@ bool IsPixelFormatBCn(PixelFormat format) {
     }
 }
 
+bool IsPixelFormatBC1to5(PixelFormat format) {
+    switch (format) {
+    case PixelFormat::BC1_RGBA_UNORM:
+    case PixelFormat::BC2_UNORM:
+    case PixelFormat::BC3_UNORM:
+    case PixelFormat::BC4_UNORM:
+    case PixelFormat::BC4_SNORM:
+    case PixelFormat::BC5_UNORM:
+    case PixelFormat::BC5_SNORM:
+    case PixelFormat::BC1_RGBA_SRGB:
+    case PixelFormat::BC2_SRGB:
+    case PixelFormat::BC3_SRGB:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool IsPixelFormatBC6or7(PixelFormat format) {
+    switch (format) {
+    case PixelFormat::BC7_UNORM:
+    case PixelFormat::BC6H_UFLOAT:
+    case PixelFormat::BC6H_SFLOAT:
+    case PixelFormat::BC7_SRGB:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool IsPixelFormatCompressed(PixelFormat format) {
+    return IsPixelFormatBCn(format) || IsPixelFormatASTC(format);
+}
+
 bool IsPixelFormatSRGB(PixelFormat format) {
     switch (format) {
     case PixelFormat::A8B8G8R8_SRGB:

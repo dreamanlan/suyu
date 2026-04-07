@@ -248,6 +248,10 @@ public:
         return Exchange(Dirty::LogicOp, false);
     }
 
+    void InvalidatePrimitiveRestartEnable() {
+        (*flags)[Dirty::PrimitiveRestartEnable] = true;
+    }
+
     bool ChangePrimitiveTopology(Maxwell::PrimitiveTopology new_topology) {
         const bool has_changed = current_topology != new_topology;
         current_topology = new_topology;

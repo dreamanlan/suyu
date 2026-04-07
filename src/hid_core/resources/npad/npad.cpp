@@ -121,6 +121,10 @@ void NPad::FreeAppletResourceId(u64 aruid) {
 }
 
 void NPad::ControllerUpdate(Core::HID::ControllerTriggerType type, std::size_t controller_idx) {
+    if (!applet_resource_holder.applet_resource) {
+        return;
+    }
+
     if (type == Core::HID::ControllerTriggerType::All) {
         ControllerUpdate(Core::HID::ControllerTriggerType::Connected, controller_idx);
         ControllerUpdate(Core::HID::ControllerTriggerType::Battery, controller_idx);

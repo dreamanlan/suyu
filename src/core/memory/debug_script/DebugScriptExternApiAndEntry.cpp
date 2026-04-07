@@ -9,9 +9,14 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <cstdint>
+#include <cstddef>
+#include <iomanip>
+#include <cctype>
 
 #include "DbgScpHook.h"
 #include "DebugScriptVM.h"
+#include "GpuCaptureManager.h"
 
 #define DBGSCP_ON_MYUZU
 
@@ -167,6 +172,13 @@ int mylog_printf(const char* fmt, ...) {
     va_start(vl, fmt);
     int r = std::vsnprintf(buf, c_buf_size, fmt, vl);
     va_end(vl);
+    // Guard against vsnprintf returning negative (error) or exceeding buffer size
+    if (r < 0) {
+        r = 0;
+    } else if (r >= c_buf_size) {
+        r = c_buf_size - 1;
+    }
+    buf[r] = '\0';
     UE_LOG(LogTemp, Warning, TEXT("%s"), UTF8_TO_TCHAR(buf));
     return r;
 }
@@ -178,11 +190,18 @@ int mylog_printf(const char* fmt, ...) {
     va_start(vl, fmt);
     int r = std::vsnprintf(buf, c_buf_size, fmt, vl);
     va_end(vl);
+    // Guard against vsnprintf returning negative (error) or exceeding buffer size
+    if (r < 0) {
+        r = 0;
+    } else if (r >= c_buf_size) {
+        r = c_buf_size - 1;
+    }
+    buf[r] = '\0';
     std::stringstream ss;
     ss << buf;
     Core::g_MainThreadCaller.SyncLogToView(ss.str());
 
-    LOG_INFO(Log, "{}", buf);
+    LOG_DBGSCP(Log, "{}", buf);
     return r;
 }
 #else
@@ -193,6 +212,13 @@ int mylog_printf(const char* fmt, ...) {
     va_start(vl, fmt);
     int r = std::vsnprintf(buf, c_buf_size, fmt, vl);
     va_end(vl);
+    // Guard against vsnprintf returning negative (error) or exceeding buffer size
+    if (r < 0) {
+        r = 0;
+    } else if (r >= c_buf_size) {
+        r = c_buf_size - 1;
+    }
+    buf[r] = '\0';
     printf("%s", buf);
     return r;
 }
@@ -391,7 +417,7 @@ static short DbgScp_GetWatchPoint(short& flag, int& size, int64_t& addr, int64_t
 }
 
 static const int c_max_log_file_num = 16;
-static const int c_max_log_file_size = 1024 * 1024 * 1024;
+static const int c_max_log_file_size = 1536 * 1024 * 1024;
 static const std::streamsize c_log_buffer_size = 8 * 1024 * 1024;
 static int g_LogIndex = 0;
 static bool g_FirstLog = true;
@@ -461,7 +487,7 @@ static int DbgScp_FlushLog_NoLock(const char* pstr, size_t len) {
 
             if (g_LogSize >= c_max_log_file_size) {
                 g_FirstLog = true;
-                ++g_LogIndex;
+                g_LogIndex = (g_LogIndex + 1) % c_max_log_file_num;
                 g_LogSize = 0;
             }
         } else {
@@ -879,6 +905,123 @@ static inline void SetMemoryProtect(int64_t addr, size_t size, size_t pageSize, 
 #endif
 }
 
+// addr        : start address of memory
+// totalBytes  : total number of bytes to format
+// elementSize : number of bytes per element (1, 2, 4, or 8)
+// perLine     : number of elements per line
+//
+// Return: formatted memory dump as a single string, lines separated by '\n'.
+std::string DumpMemoryFormattedToString(const void* addr,
+    size_t      totalBytes,
+    size_t      elementSize,
+    size_t      perLine) {
+    std::ostringstream oss;
+    oss.setf(std::ios::hex, std::ios::basefield);
+    oss.setf(std::ios::right, std::ios::adjustfield);
+    oss.fill('0');
+
+    if (!addr || totalBytes == 0 || perLine == 0) {
+        return oss.str();
+    }
+    if (!(elementSize == 1 || elementSize == 2 || elementSize == 4 || elementSize == 8)) {
+        return oss.str(); // unsupported element size
+    }
+
+    const uint8_t* base = static_cast<const uint8_t*>(addr);
+    const size_t   bytesPerLine = elementSize * perLine;
+
+    size_t offset = 0;
+    bool firstLine = true;
+
+    while (offset < totalBytes) {
+        size_t lineBytes = totalBytes - offset;
+        if (lineBytes > bytesPerLine) {
+            lineBytes = bytesPerLine;
+        }
+
+        const uint8_t* linePtr = base + offset;
+
+        // Add newline between lines (do not start with '\n')
+        if (!firstLine) {
+            oss << '\n';
+        }
+        firstLine = false;
+
+        // 1. Print line start address (64-bit, hex, width 16)
+        {
+            std::uintptr_t addrValue = reinterpret_cast<std::uintptr_t>(linePtr);
+            oss << std::setw(16) << addrValue << ' ';
+        }
+
+        // 2. Print elements in hex, each element width = elementSize * 2
+        //    If remaining bytes are not enough for a full element, pad with spaces.
+        size_t printedBytes = 0;
+        for (size_t i = 0; i < perLine; ++i) {
+            if (printedBytes + elementSize <= lineBytes) {
+                const uint8_t* elemPtr = linePtr + printedBytes;
+
+                // Print element as elementSize bytes, high byte first
+                // i.e. elemPtr[elementSize - 1] ... elemPtr[0]
+                for (size_t b = 0; b < elementSize; ++b) {
+                    size_t idx = elementSize - 1 - b;
+                    oss << std::setw(2)
+                        << static_cast<unsigned>(elemPtr[idx]);
+                }
+                oss << ' ';
+
+                printedBytes += elementSize;
+            }
+            else {
+                // Not enough data for a full element: output spaces for this element
+                size_t hexChars = elementSize * 2;
+                for (size_t c = 0; c < hexChars; ++c) {
+                    oss << ' ';
+                }
+                oss << ' ';
+            }
+        }
+
+        // 3. ASCII section: one character per byte actually present on this line
+        oss << ' ';
+
+        // Switch to normal character output (no width, no hex formatting needed)
+        for (size_t i = 0; i < lineBytes; ++i) {
+            unsigned char c = linePtr[i];
+            if (c >= 32 && c <= 126) {
+                oss << static_cast<char>(c);
+            }
+            else {
+                oss << '.';
+            }
+        }
+
+        offset += lineBytes;
+    }
+
+    return oss.str();
+}
+
+static bool g_bFrameCapturing = false;
+
+void InitGpuCaptureManager() {
+#if __APPLE__
+    GpuCaptureManager::Instance().Init(GpuCaptureBackend::MetalXcode);
+#else
+    GpuCaptureManager::Instance().Init(GpuCaptureBackend::RenderDoc);
+#endif
+    g_bFrameCapturing = false;
+}
+void ShutdownGpuCaptureManager() {
+    GpuCaptureManager::Instance().Shutdown();
+    g_bFrameCapturing = false;
+}
+void EndFrameCaptureIfCapturing() {
+    if (g_bFrameCapturing) {
+        if (GpuCaptureManager::Instance().EndFrameCapture())
+            g_bFrameCapturing = false;
+    }
+}
+
 enum class ExternApiEnum {
     TestFFI = c_extern_api_start_id,
     LoadLib,
@@ -898,6 +1041,10 @@ enum class ExternApiEnum {
     GetMemoryFlag,
     SetWatchPoint,
     GetWatchPoint,
+    FormatMemory,
+    TriggerFrameCapture,
+    StartFrameCapture,
+    EndFrameCapture,
     Num
 };
 
@@ -1166,6 +1313,51 @@ struct ExternApi {
                                    intGlobals);
         }
     }
+    static inline void FormatMemory(int32_t stackBase, DebugScript::IntLocals& intLocals, DebugScript::FloatLocals& fltLocals, DebugScript::StringLocals& strLocals, DebugScript::IntGlobals& intGlobals, DebugScript::FloatGlobals& fltGlobals, DebugScript::StringGlobals& strGlobals, const ExternApiArgOrRetVal args[], int32_t argNum, const ExternApiArgOrRetVal& retVal)
+    {
+        int64_t addr = DebugScript::GetVarInt(args[0].IsGlobal, args[0].Index, stackBase, intLocals, intGlobals);
+        int64_t total_bytes = DebugScript::GetVarInt(args[1].IsGlobal, args[1].Index, stackBase, intLocals, intGlobals);
+        int64_t element_size = 1;
+        int64_t element_per_line = 32;
+        if (argNum > 2) {
+            element_size = DebugScript::GetVarInt(args[2].IsGlobal, args[2].Index, stackBase, intLocals, intGlobals);
+            element_per_line /= element_size;
+        }
+        if (argNum > 3) {
+            element_per_line = DebugScript::GetVarInt(args[3].IsGlobal, args[3].Index, stackBase, intLocals, intGlobals);
+        }
+        std::string str = DumpMemoryFormattedToString(reinterpret_cast<void*>(addr), total_bytes, element_size, element_per_line);
+        DebugScript::SetVarString(retVal.IsGlobal, retVal.Index, str, stackBase, strLocals, strGlobals);
+    }
+    static inline void TriggerFrameCapture(
+        int32_t stackBase, DebugScript::IntLocals& intLocals, DebugScript::FloatLocals& fltLocals,
+        DebugScript::StringLocals& strLocals, DebugScript::IntGlobals& intGlobals,
+        DebugScript::FloatGlobals& fltGlobals, DebugScript::StringGlobals& strGlobals,
+        const ExternApiArgOrRetVal args[], int32_t argNum, const ExternApiArgOrRetVal& retVal) {
+        int r = 1;
+        GpuCaptureManager::Instance().TriggerCapture();
+        DebugScript::SetVarInt(retVal.IsGlobal, retVal.Index, r, stackBase, intLocals, intGlobals);
+    }
+    static inline void StartFrameCapture(
+        int32_t stackBase, DebugScript::IntLocals& intLocals, DebugScript::FloatLocals& fltLocals,
+        DebugScript::StringLocals& strLocals, DebugScript::IntGlobals& intGlobals,
+        DebugScript::FloatGlobals& fltGlobals, DebugScript::StringGlobals& strGlobals,
+        const ExternApiArgOrRetVal args[], int32_t argNum, const ExternApiArgOrRetVal& retVal) {
+        bool r = GpuCaptureManager::Instance().StartFrameCapture();
+        if (r) {
+            g_bFrameCapturing = true;
+        }
+        DebugScript::SetVarInt(retVal.IsGlobal, retVal.Index, r ? 1 : 0, stackBase, intLocals, intGlobals);
+    }
+    static inline void EndFrameCapture(
+        int32_t stackBase, DebugScript::IntLocals& intLocals, DebugScript::FloatLocals& fltLocals,
+        DebugScript::StringLocals& strLocals, DebugScript::IntGlobals& intGlobals,
+        DebugScript::FloatGlobals& fltGlobals, DebugScript::StringGlobals& strGlobals,
+        const ExternApiArgOrRetVal args[], int32_t argNum, const ExternApiArgOrRetVal& retVal) {
+        bool r = GpuCaptureManager::Instance().EndFrameCapture();
+        DebugScript::SetVarInt(retVal.IsGlobal, retVal.Index, r ? 1 : 0, stackBase, intLocals,
+                               intGlobals);
+    }
 };
 
 void CppDbgScp_CallExternApi(int api, int32_t stackBase, DebugScript::IntLocals& intLocals,
@@ -1248,6 +1440,22 @@ void CppDbgScp_CallExternApi(int api, int32_t stackBase, DebugScript::IntLocals&
     case ExternApiEnum::GetWatchPoint:
         ExternApi::GetWatchPoint(stackBase, intLocals, fltLocals, strLocals, intGlobals, fltGlobals,
                                  strGlobals, args, argNum, retVal);
+        break;
+    case ExternApiEnum::FormatMemory:
+        ExternApi::FormatMemory(stackBase, intLocals, fltLocals, strLocals, intGlobals, fltGlobals,
+            strGlobals, args, argNum, retVal);
+        break;
+    case ExternApiEnum::TriggerFrameCapture:
+        ExternApi::TriggerFrameCapture(stackBase, intLocals, fltLocals, strLocals, intGlobals, fltGlobals,
+                            strGlobals, args, argNum, retVal);
+        break;
+    case ExternApiEnum::StartFrameCapture:
+        ExternApi::StartFrameCapture(stackBase, intLocals, fltLocals, strLocals, intGlobals,
+                                       fltGlobals, strGlobals, args, argNum, retVal);
+        break;
+    case ExternApiEnum::EndFrameCapture:
+        ExternApi::EndFrameCapture(stackBase, intLocals, fltLocals, strLocals, intGlobals,
+                                       fltGlobals, strGlobals, args, argNum, retVal);
         break;
     default:
         break;
@@ -1481,6 +1689,12 @@ void LoadDbgScp(const std::string& log_path, const std::string& load_path)
         if (GetLogFilesRef()[i].empty()) {
             char strBuf[c_path_capacity_max];
             int len = snprintf(strBuf, c_path_capacity_max, "%s/dbgscp_log_%d.txt", log_path.c_str(), i);
+            // Guard against snprintf returning negative (error) or exceeding buffer size
+            if (len < 0) {
+                len = 0;
+            } else if (len >= c_path_capacity_max - 1) {
+                len = c_path_capacity_max - 1;
+            }
             strBuf[len] = 0;
             GetLogFilesRef()[i] = strBuf;
         }

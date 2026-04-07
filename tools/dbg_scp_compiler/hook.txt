@@ -227,6 +227,22 @@ hook("RasterizerVulkan::PrepareDraw")
 		};
 	};
 };
+hook("RasterizerVulkan::Draw::VTG")
+{
+	onenter{
+		$logVTG:int = ptrget(argv(0),1);
+		$this:int = ptrget(argv(1),8);
+		$vshash:int = ptrget(argv(2),8);
+		$geohash:int = ptrget(argv(3),8);
+		$pshash:int = ptrget(argv(4),8);
+
+		if($pshash==0xb9cf1cccda4be33c){
+			printf("RasterizerVulkan::Draw::VTG enter time:%lld this:%lld vshash:%llx gshash:%llx pshash:%llx\n",time(),$this,$vshash,$geohash,$pshash);
+			//$logVTG = 1;
+			ptrset(argv(0),1,1);
+		};
+	};
+};
 hook("Vulkan::GraphicsPipeline::UpdateDescriptorSet")
 {
 	onenter{
@@ -323,7 +339,7 @@ hook("TextureCacheRuntime::CopyImageFailedOnApple")
 		$src_bytes_per_block:int = ptrget(argv(5),4);
 		$dst_bytes_per_block:int = ptrget(argv(6),4);
 
-		printf("TextureCacheRuntime::CopyImageFailedOnApple src_fmt:%d, dst_fmt:%d, src_num_samples:%d, dst_num_samples:%d, src_bytes_per_block:%d, dst_bytes_per_block:%d\n",$src_fmt,$dst_fmt,$src_num_samples,$dst_num_samples,$src_bytes_per_block,$dst_bytes_per_block);
+		//printf("TextureCacheRuntime::CopyImageFailedOnApple src_fmt:%d, dst_fmt:%d, src_num_samples:%d, dst_num_samples:%d, src_bytes_per_block:%d, dst_bytes_per_block:%d\n",$src_fmt,$dst_fmt,$src_num_samples,$dst_num_samples,$src_bytes_per_block,$dst_bytes_per_block);
 		//assert(0);
 
 		//skip
@@ -376,7 +392,340 @@ hook("dbgscpHookOnFastmemCallback")
 		};
 	};
 };
+hook("dbgscpHookEmitSpirv")
+{
+	onenter{
+		$pipeline_hash:int = ptrget(argv(0),8);
+		$shader_hash:int = ptrget(argv(1),8);
+		$stage:int = ptrget(argv(2),4);
 
+		if ($stage == 5 && $pipeline_hash == 0xb326653f83a731ac) {
+			//assert(0);
+		};
+	};
+};
+hook("dbgscpHookCheckVkFormat")
+{
+	onenter{
+		$format:int = ptrget(argv(0),4);
+
+		if ($format >= 16 && $format <= 22) {
+			//assert(0);
+		};
+	};
+};
+hook("dbgscpHookSetPrimitiveRestart")
+{
+	onenter{
+		$enable:int = ptrget(argv(0),1);
+		$tag:int = ptrget(argv(1),4);
+
+		if ($enable==0) {
+			//printf("dbgscpHookSetPrimitiveRestart enable:%d tag:%d\n", $enable, $tag);
+			//assert(0);
+		};
+		if ($tag==1) {
+			//printf("dbgscpHookSetPrimitiveRestart enable:%d tag:%d\n", $enable, $tag);
+			//assert(0);
+		};
+	};
+};
+/*
+//swizzle
+struct SwizzleParameters {
+	Extent3D num_tiles;
+	Extent3D block;
+	size_t buffer_offset;
+	s32 level;
+};
+//map
+struct StagingBufferRef {
+	VkBuffer buffer;
+	VkDeviceSize offset;
+	std::span<u8> mapped_span;
+	MemoryUsage usage;
+	u32 log2_level;
+	u64 index;
+};
+//params
+struct BlockLinearSwizzle2DParams {
+	alignas(16) std::array<u32, 3> origin;
+	alignas(16) std::array<s32, 3> destination;
+	u32 bytes_per_block_log2;
+	u32 layer_stride;
+	u32 block_size;
+	u32 x_shift;
+	u32 block_height;
+	u32 block_height_mask;
+};
+*/
+struct(SwizzleParameters){
+	num_tiles_x : int32;
+	num_tiles_y : int32;
+	num_tiles_z : int32;
+	block_width : int32;
+	block_height : int32;
+	block_depth : int32;
+	buffer_offset : int64;
+	level : int32;
+	padding : int32;
+};
+struct(SwizzlesSpan){
+	data : ptr(SwizzleParameters);
+	size : int64;
+};
+struct(BlockLinearSwizzle2DParams){
+	originx : int32;
+	originy : int32;
+	originz : int32;
+	padding0 : int32;
+	destinationx : int32;
+	destinationy : int32;
+	destinationz : int32;
+	bytes_per_block_log2 : int32;
+	layer_stride : int32;
+	block_size : int32;
+	x_shift : int32;
+	block_height : int32;
+	block_height_mask : int32;
+};
+struct(ImageInfo){
+    format : int32;
+    type : int32;
+    resources_levels : int32;
+	resources_layers : int32;
+	size_x : int32;
+	size_y : int32;
+	size_z : int32;
+	block_width_or_pitch : int32;
+	block_height : int32;
+	block_depth : int32;
+    layer_stride : int32;
+    maybe_unaligned_layer_stride : int32;
+    num_samples : int32;
+    tile_width_spacing : int32;
+    rescaleable : int8;
+    downscaleable : int8;
+    forced_flushed : int8;
+    dma_downloaded : int8;
+    is_sparse : int8;
+	padding0 : int8;
+	padding1 : int8;
+	padding2 : int8;
+};
+hook("DbgScpExportBCnTexture")
+{
+	onenter{
+		$need_export:int = ptrget(argv(0),1);
+		$image_addr:int = argv(1);
+		$map_addr:int = argv(2);
+		$swizzles_span_addr:int = argv(3);
+		$img_info_addr:int = argv(4);
+
+		//printf("DbgScpExportBCnTexture (%llx,%llx,%llx,%llx)\n", $image_addr, $map_addr, $swizzles_span_addr, $img_info_addr);
+
+		$swizzles_span_data = struct($swizzles_span_addr, SwizzlesSpan.data);
+		$swizzles_span_size = struct($swizzles_span_addr, SwizzlesSpan.size);
+
+		$i:int;
+		loop($i,0,$swizzles_span_size-1){
+			$swizzle_addr = $swizzles_span_data + size(SwizzleParameters)*$i;
+			$tiles_x = struct($swizzle_addr, SwizzleParameters.num_tiles_x);
+			$tiles_y = struct($swizzle_addr, SwizzleParameters.num_tiles_y);
+			$tiles_z = struct($swizzle_addr, SwizzleParameters.num_tiles_z);
+			$width = struct($swizzle_addr, SwizzleParameters.block_width);
+			$height = struct($swizzle_addr, SwizzleParameters.block_height);
+			$depth = struct($swizzle_addr, SwizzleParameters.block_depth);
+			//printf("DbgScpExportBCnTexture::swizzle tiles:(%d %d %d) block:(%d %d %d)\n", $tiles_x, $tiles_y, $tiles_z, $width, $height, $depth);
+		};
+
+		$format : int = struct($img_info_addr, ImageInfo.format);
+		$type : int = struct($img_info_addr, ImageInfo.type);
+		$resources_levels : int = struct($img_info_addr, ImageInfo.resources_levels);
+		$resources_layers : int = struct($img_info_addr, ImageInfo.resources_layers);
+		$size_x : int = struct($img_info_addr, ImageInfo.size_x);
+		$size_y : int = struct($img_info_addr, ImageInfo.size_y);
+		$size_z : int = struct($img_info_addr, ImageInfo.size_z);
+		$block_width_or_pitch : int = struct($img_info_addr, ImageInfo.block_width_or_pitch);
+		$block_height : int = struct($img_info_addr, ImageInfo.block_height);
+		$block_depth : int = struct($img_info_addr, ImageInfo.block_depth);
+		$layer_stride : int = struct($img_info_addr, ImageInfo.layer_stride);
+		$maybe_unaligned_layer_stride : int = struct($img_info_addr, ImageInfo.maybe_unaligned_layer_stride);
+		$num_samples : int = struct($img_info_addr, ImageInfo.num_samples);
+		$tile_width_spacing : int = struct($img_info_addr, ImageInfo.tile_width_spacing);
+		$rescaleable : int = struct($img_info_addr, ImageInfo.rescaleable);
+		$downscaleable : int = struct($img_info_addr, ImageInfo.downscaleable);
+		$forced_flushed : int = struct($img_info_addr, ImageInfo.forced_flushed);
+		$dma_downloaded : int = struct($img_info_addr, ImageInfo.dma_downloaded);
+		$is_sparse : int = struct($img_info_addr, ImageInfo.is_sparse);
+		printf("DbgScpExportBCnTexture::image (format:%d type:%d levels:%d layers:%d size:%d %d %d block:%d %d %d stride:%d samples:%d)\n", $format, $type, $resources_levels, $resources_layers, $size_x, $size_y, $size_z, $block_width_or_pitch, $block_height, $block_depth, $layer_stride, $num_samples);
+
+		ptrset(argv(0),1,1);
+	};
+};
+hook("BCnDecoderPass::Decode::SwizzleParameter")
+{
+	onenter{
+		$image_addr:int = argv(0);
+		$map_addr:int = argv(1);
+		$swizzle_addr:int = argv(2);
+		$params_addr:int = argv(3);
+		$img_info_addr:int = argv(4);
+		$swizzle_offset:int = ptrget(argv(5),8);
+		$swizzle_level:int = ptrget(argv(6),4);
+		$num_blocks_x:int = ptrget(argv(7),4);
+		$num_blocks_y:int = ptrget(argv(8),4);
+		$num_levels:int = ptrget(argv(9),4);
+		$num_layers:int = ptrget(argv(10),4);
+		$bytes_per_block:int = ptrget(argv(11),4);
+		$input_layer_stride:int = ptrget(argv(12),4);
+		$input_size_bytes:int = ptrget(argv(13),4);
+		$format:int = ptrget(argv(14),4);
+		$bc_format:int = ptrget(argv(15),4);
+		$w:int = ptrget(argv(16),4);
+		$h:int = ptrget(argv(17),4);
+		$d:int = ptrget(argv(18),4);
+		$is_signed:int = ptrget(argv(19),1);
+
+		//printf("BCnDecoderPass::Decode::Swizzle (%llx,%llx,%llx,%llx,%llx) (offset:%llx level:%d x:%d y:%d lvls:%d lys:%d bytes:%d stride:%d size:%d) format:%d bc_format:%d size:(%d %d %d) signed:%d\n", $image_addr, $map_addr, $swizzle_addr, $params_addr, $img_info_addr, $swizzle_offset, $swizzle_level, $num_blocks_x, $num_blocks_y, $num_levels, $num_layers, $bytes_per_block, $input_layer_stride, $input_size_bytes, $format, $bc_format, $w, $h, $d, $is_signed);
+
+		$tiles_x = struct($swizzle_addr, SwizzleParameters.num_tiles_x);
+		$tiles_y = struct($swizzle_addr, SwizzleParameters.num_tiles_y);
+		$tiles_z = struct($swizzle_addr, SwizzleParameters.num_tiles_z);
+		$width = struct($swizzle_addr, SwizzleParameters.block_width);
+		$height = struct($swizzle_addr, SwizzleParameters.block_height);
+		$depth = struct($swizzle_addr, SwizzleParameters.block_depth);
+		//printf("BCnDecoderPass::Decode::SwizzleParameter tiles:(%d %d %d) block:(%d %d %d)\n", $tiles_x, $tiles_y, $tiles_z, $width, $height, $depth);
+
+		$originx = struct($params_addr, BlockLinearSwizzle2DParams.originx);
+		$originy = struct($params_addr, BlockLinearSwizzle2DParams.originy);
+		$originz = struct($params_addr, BlockLinearSwizzle2DParams.originz);
+		$destinationx = struct($params_addr, BlockLinearSwizzle2DParams.destinationx);
+		$destinationy = struct($params_addr, BlockLinearSwizzle2DParams.destinationy);
+		$destinationz = struct($params_addr, BlockLinearSwizzle2DParams.destinationz);
+		$bytes_per_block_log2 = struct($params_addr, BlockLinearSwizzle2DParams.bytes_per_block_log2);
+		$layer_stride = struct($params_addr, BlockLinearSwizzle2DParams.layer_stride);
+		$block_size = struct($params_addr, BlockLinearSwizzle2DParams.block_size);
+		$x_shift = struct($params_addr, BlockLinearSwizzle2DParams.x_shift);
+		$block_height = struct($params_addr, BlockLinearSwizzle2DParams.block_height);
+		$block_height_mask = struct($params_addr, BlockLinearSwizzle2DParams.block_height_mask);
+		//printf("BCnDecoderPass::Decode::PushConstant (origin:%d %d %d destination:%d %d %d bytes_log2:%d stride:%d size:%d x_shift:%d height:%d mask:%x)\n", $originx, $originy, $originz, $destinationx, $destinationy, $destinationz, $bytes_per_block_log2, $layer_stride, $block_size, $x_shift, $block_height, $block_height_mask);
+	};
+};
+hook("BC6HDecoderPass::Decode::SwizzleParameter")
+{
+	onenter{
+		$image_addr:int = argv(0);
+		$map_addr:int = argv(1);
+		$swizzle_addr:int = argv(2);
+		$params_addr:int = argv(3);
+		$img_info_addr:int = argv(4);
+		$swizzle_offset:int = ptrget(argv(5),8);
+		$swizzle_level:int = ptrget(argv(6),4);
+		$num_blocks_x:int = ptrget(argv(7),4);
+		$num_blocks_y:int = ptrget(argv(8),4);
+		$num_levels:int = ptrget(argv(9),4);
+		$num_layers:int = ptrget(argv(10),4);
+		$input_layer_stride:int = ptrget(argv(11),4);
+		$input_size_bytes:int = ptrget(argv(12),4);
+		$format:int = ptrget(argv(13),4);
+		$w:int = ptrget(argv(14),4);
+		$h:int = ptrget(argv(15),4);
+		$d:int = ptrget(argv(16),4);
+		$is_signed:int = ptrget(argv(17),1);
+
+		//printf("BC6HDecoderPass::Decode::Swizzle (%llx,%llx,%llx,%llx,%llx) (offset:%llx level:%d x:%d y:%d lvls:%d lys:%d stride:%d size:%d) format:%d size:(%d %d %d) signed:%d\n", $image_addr, $map_addr, $swizzle_addr, $params_addr, $img_info_addr, $swizzle_offset, $swizzle_level, $num_blocks_x, $num_blocks_y, $num_levels, $num_layers, $input_layer_stride, $input_size_bytes, $format, $w, $h, $d, $is_signed);
+
+		$tiles_x = struct($swizzle_addr, SwizzleParameters.num_tiles_x);
+		$tiles_y = struct($swizzle_addr, SwizzleParameters.num_tiles_y);
+		$tiles_z = struct($swizzle_addr, SwizzleParameters.num_tiles_z);
+		$width = struct($swizzle_addr, SwizzleParameters.block_width);
+		$height = struct($swizzle_addr, SwizzleParameters.block_height);
+		$depth = struct($swizzle_addr, SwizzleParameters.block_depth);
+		//printf("BC6HDecoderPass::Decode::SwizzleParameter tiles:(%d %d %d) block:(%d %d %d)\n", $tiles_x, $tiles_y, $tiles_z, $width, $height, $depth);
+
+		$originx = struct($params_addr, BlockLinearSwizzle2DParams.originx);
+		$originy = struct($params_addr, BlockLinearSwizzle2DParams.originy);
+		$originz = struct($params_addr, BlockLinearSwizzle2DParams.originz);
+		$destinationx = struct($params_addr, BlockLinearSwizzle2DParams.destinationx);
+		$destinationy = struct($params_addr, BlockLinearSwizzle2DParams.destinationy);
+		$destinationz = struct($params_addr, BlockLinearSwizzle2DParams.destinationz);
+		$bytes_per_block_log2 = struct($params_addr, BlockLinearSwizzle2DParams.bytes_per_block_log2);
+		$layer_stride = struct($params_addr, BlockLinearSwizzle2DParams.layer_stride);
+		$block_size = struct($params_addr, BlockLinearSwizzle2DParams.block_size);
+		$x_shift = struct($params_addr, BlockLinearSwizzle2DParams.x_shift);
+		$block_height = struct($params_addr, BlockLinearSwizzle2DParams.block_height);
+		$block_height_mask = struct($params_addr, BlockLinearSwizzle2DParams.block_height_mask);
+		//printf("BC6HDecoderPass::Decode::PushConstant (origin:%d %d %d destination:%d %d %d bytes_log2:%d stride:%d size:%d x_shift:%d height:%d mask:%x)\n", $originx, $originy, $originz, $destinationx, $destinationy, $destinationz, $bytes_per_block_log2, $layer_stride, $block_size, $x_shift, $block_height, $block_height_mask);
+	};
+};
+hook("BC7DecoderPass::Decode::SwizzleParameter")
+{
+	onenter{
+		$image_addr:int = argv(0);
+		$map_addr:int = argv(1);
+		$swizzle_addr:int = argv(2);
+		$params_addr:int = argv(3);
+		$img_info_addr:int = argv(4);
+		$swizzle_offset:int = ptrget(argv(5),8);
+		$swizzle_level:int = ptrget(argv(6),4);
+		$num_blocks_x:int = ptrget(argv(7),4);
+		$num_blocks_y:int = ptrget(argv(8),4);
+		$num_levels:int = ptrget(argv(9),4);
+		$num_layers:int = ptrget(argv(10),4);
+		$input_layer_stride:int = ptrget(argv(11),4);
+		$input_size_bytes:int = ptrget(argv(12),4);
+		$format:int = ptrget(argv(13),4);
+		$w:int = ptrget(argv(14),4);
+		$h:int = ptrget(argv(15),4);
+		$d:int = ptrget(argv(16),4);
+
+		//printf("BC7DecoderPass::Decode::Swizzle (%llx,%llx,%llx,%llx,%llx) (offset:%llx level:%d x:%d y:%d lvls:%d lys:%d stride:%d size:%d) format:%d size:(%d %d %d)\n", $image_addr, $map_addr, $swizzle_addr, $params_addr, $img_info_addr, $swizzle_offset, $swizzle_level, $num_blocks_x, $num_blocks_y, $num_levels, $num_layers, $input_layer_stride, $input_size_bytes, $format, $w, $h, $d);
+
+		$tiles_x = struct($swizzle_addr, SwizzleParameters.num_tiles_x);
+		$tiles_y = struct($swizzle_addr, SwizzleParameters.num_tiles_y);
+		$tiles_z = struct($swizzle_addr, SwizzleParameters.num_tiles_z);
+		$width = struct($swizzle_addr, SwizzleParameters.block_width);
+		$height = struct($swizzle_addr, SwizzleParameters.block_height);
+		$depth = struct($swizzle_addr, SwizzleParameters.block_depth);
+		//printf("BC7DecoderPass::Decode::SwizzleParameter tiles:(%d %d %d) block:(%d %d %d)\n", $tiles_x, $tiles_y, $tiles_z, $width, $height, $depth);
+
+		$originx = struct($params_addr, BlockLinearSwizzle2DParams.originx);
+		$originy = struct($params_addr, BlockLinearSwizzle2DParams.originy);
+		$originz = struct($params_addr, BlockLinearSwizzle2DParams.originz);
+		$destinationx = struct($params_addr, BlockLinearSwizzle2DParams.destinationx);
+		$destinationy = struct($params_addr, BlockLinearSwizzle2DParams.destinationy);
+		$destinationz = struct($params_addr, BlockLinearSwizzle2DParams.destinationz);
+		$bytes_per_block_log2 = struct($params_addr, BlockLinearSwizzle2DParams.bytes_per_block_log2);
+		$layer_stride = struct($params_addr, BlockLinearSwizzle2DParams.layer_stride);
+		$block_size = struct($params_addr, BlockLinearSwizzle2DParams.block_size);
+		$x_shift = struct($params_addr, BlockLinearSwizzle2DParams.x_shift);
+		$block_height = struct($params_addr, BlockLinearSwizzle2DParams.block_height);
+		$block_height_mask = struct($params_addr, BlockLinearSwizzle2DParams.block_height_mask);
+		//printf("BC7DecoderPass::Decode::PushConstant (origin:%d %d %d destination:%d %d %d bytes_log2:%d stride:%d size:%d x_shift:%d height:%d mask:%x)\n", $originx, $originy, $originz, $destinationx, $destinationy, $destinationz, $bytes_per_block_log2, $layer_stride, $block_size, $x_shift, $block_height, $block_height_mask);
+	};
+};
+hook("Vulkan::DebugUtilCallback")
+{
+	onenter{
+		//$ret:int = ptrget(argv(0),4);
+		$severity:int = ptrget(argv(1),4);
+		$type:int = ptrget(argv(2),4);
+		$pMessage:string = ptrget(argv(3),8);
+		$pMessageIdName:string = ptrget(argv(4),8);
+		$messageIdNumber:int = ptrget(argv(5),4);
+		$data:int = ptrget(argv(6),8);
+		$user_data:int = ptrget(argv(7),8);
+
+		printf("Vulkan::DebugUtilCallback %d %d %s %s %d %llx %llx", $severity, $type, $pMessage, $pMessageIdName, $messageIdNumber, $data, $user_data);
+		if (stringcontains($pMessage, "disabling primitive restart")) {
+			//assert(0);
+		};
+
+		ptrset(argv(0),4,0);
+		return 1;
+	};
+};
 hook("ServiceContext::CreateEvent")
 {
 	onenter{

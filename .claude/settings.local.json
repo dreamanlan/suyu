@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C externals/mbedtls log --oneline -3)",
+      "Bash(sort -t: -k3)",
+      "Bash(uniq -f2)",
+      "Bash(git checkout:*)"
+    ]
+  }
+}

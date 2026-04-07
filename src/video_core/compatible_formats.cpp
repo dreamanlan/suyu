@@ -5,6 +5,7 @@
 #include <cstddef>
 
 #include "common/common_types.h"
+#include "common/settings.h"
 #include "video_core/compatible_formats.h"
 #include "video_core/surface.h"
 
@@ -19,6 +20,16 @@ constexpr std::array VIEW_CLASS_128_BITS{
     PixelFormat::R32G32B32A32_FLOAT,
     PixelFormat::R32G32B32A32_UINT,
     PixelFormat::R32G32B32A32_SINT,
+    PixelFormat::BC2_UNORM,
+    PixelFormat::BC2_SRGB,
+    PixelFormat::BC3_UNORM,
+    PixelFormat::BC3_SRGB,
+    PixelFormat::BC5_UNORM,
+    PixelFormat::BC5_SNORM,
+    PixelFormat::BC7_UNORM,
+    PixelFormat::BC7_SRGB,
+    PixelFormat::BC6H_SFLOAT,
+    PixelFormat::BC6H_UFLOAT,
 };
 
 constexpr std::array VIEW_CLASS_96_BITS{
@@ -33,6 +44,9 @@ constexpr std::array VIEW_CLASS_64_BITS{
     PixelFormat::R32G32_SINT,        PixelFormat::R16G16B16A16_FLOAT,
     PixelFormat::R16G16B16A16_UNORM, PixelFormat::R16G16B16A16_SNORM,
     PixelFormat::R16G16B16A16_UINT,  PixelFormat::R16G16B16A16_SINT,
+    PixelFormat::BC1_RGBA_SRGB,      PixelFormat::BC1_RGBA_UNORM,
+    PixelFormat::BC4_UNORM,          PixelFormat::BC4_SNORM,
+    PixelFormat::R16G16B16X16_FLOAT,
 };
 
 // TODO: How should we handle 48 bits?
@@ -44,7 +58,7 @@ constexpr std::array VIEW_CLASS_32_BITS{
     PixelFormat::R16G16_UNORM,      PixelFormat::A8B8G8R8_SNORM,  PixelFormat::R16G16_SNORM,
     PixelFormat::A8B8G8R8_SRGB,     PixelFormat::E5B9G9R9_FLOAT,  PixelFormat::B8G8R8A8_UNORM,
     PixelFormat::B8G8R8A8_SRGB,     PixelFormat::A8B8G8R8_UINT,   PixelFormat::A8B8G8R8_SINT,
-    PixelFormat::A2B10G10R10_UINT,
+    PixelFormat::A2B10G10R10_UINT,  PixelFormat::A2R10G10B10_UNORM,
 };
 
 constexpr std::array VIEW_CLASS_32_BITS_NO_BGR{
@@ -59,9 +73,11 @@ constexpr std::array VIEW_CLASS_32_BITS_NO_BGR{
 // TODO: How should we handle 24 bits?
 
 constexpr std::array VIEW_CLASS_16_BITS{
-    PixelFormat::R16_FLOAT,  PixelFormat::R8G8_UINT,  PixelFormat::R16_UINT,
-    PixelFormat::R16_SINT,   PixelFormat::R8G8_UNORM, PixelFormat::R16_UNORM,
-    PixelFormat::R8G8_SNORM, PixelFormat::R16_SNORM,  PixelFormat::R8G8_SINT,
+    PixelFormat::R16_FLOAT,      PixelFormat::R8G8_UINT,      PixelFormat::R16_UINT,
+    PixelFormat::R16_SINT,       PixelFormat::R8G8_UNORM,     PixelFormat::R16_UNORM,
+    PixelFormat::R8G8_SNORM,     PixelFormat::R16_SNORM,      PixelFormat::R8G8_SINT,
+    PixelFormat::B5G6R5_UNORM,   PixelFormat::R5G6B5_UNORM,   PixelFormat::A1R5G5B5_UNORM,
+    PixelFormat::A1B5G5R5_UNORM, PixelFormat::A5B5G5R1_UNORM, PixelFormat::A4B4G4R4_UNORM,
 };
 
 constexpr std::array VIEW_CLASS_8_BITS{
@@ -69,6 +85,7 @@ constexpr std::array VIEW_CLASS_8_BITS{
     PixelFormat::R8_UNORM,
     PixelFormat::R8_SINT,
     PixelFormat::R8_SNORM,
+    PixelFormat::G4R4_UNORM,
 };
 
 constexpr std::array VIEW_CLASS_RGTC1_RED{
@@ -176,6 +193,8 @@ constexpr std::array COPY_CLASS_64_BITS{
     PixelFormat::R16G16B16A16_SINT,  PixelFormat::R32G32_UINT,
     PixelFormat::R32G32_FLOAT,       PixelFormat::R32G32_SINT,
     PixelFormat::BC1_RGBA_UNORM,     PixelFormat::BC1_RGBA_SRGB,
+    PixelFormat::BC4_UNORM,          PixelFormat::BC4_SNORM,
+    PixelFormat::R16G16B16X16_FLOAT,
 };
 // Missing formats:
 // COMPRESSED_RGB_S3TC_DXT1_EXT
@@ -288,6 +307,15 @@ bool IsCopyCompatible(PixelFormat format_a, PixelFormat format_b, bool native_bg
     if (format_a == format_b) {
         return true;
     }
+#if __APPLE__
+    if (Settings::values.enable_broken_views &&
+        ((format_a == PixelFormat::R8G8_UNORM && format_b == PixelFormat::A8B8G8R8_UNORM) ||
+        (format_a == PixelFormat::A8B8G8R8_UNORM && format_b == PixelFormat::R8G8_UNORM) ||
+        (format_a == PixelFormat::R8G8_UNORM && format_b == PixelFormat::A8B8G8R8_SRGB) ||
+        (format_a == PixelFormat::A8B8G8R8_SRGB && format_b == PixelFormat::R8G8_UNORM))) {
+        return true;
+    }
+#endif
     static constexpr Table BGR_TABLE = MakeNativeBgrCopyTable();
     static constexpr Table NO_BGR_TABLE = MakeNonNativeBgrCopyTable();
     return IsSupported(native_bgr ? BGR_TABLE : NO_BGR_TABLE, format_a, format_b);

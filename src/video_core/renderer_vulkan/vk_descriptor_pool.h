@@ -28,7 +28,11 @@ struct DescriptorBankInfo {
     u32 textures{};        ///< Number of texture descriptors
     u32 images{};          ///< Number of image descriptors
     s32 score{};           ///< Number of descriptors in total
+    bool force_combined{}; ///< Force COMBINED_IMAGE_SAMPLER even in separated mode
 };
+
+// Check if separated texture/sampler descriptors should be used
+[[nodiscard]] bool IsSeparated(const Device& device);
 
 class DescriptorAllocator final : public ResourcePool {
     friend class DescriptorPool;

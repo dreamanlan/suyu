@@ -118,6 +118,11 @@ ENUM(AnisotropyMode, Automatic, Default, X2, X4, X8, X16);
 
 ENUM(AstcDecodeMode, Cpu, Gpu, CpuAsynchronous);
 
+// BCn texture decoding mode
+// - Cpu: Use CPU for decoding (slowest but most compatible)
+// - Gpu: Use GPU compute shaders for decoding (faster)
+ENUM(BcnDecodeMode, Cpu, Gpu);
+
 ENUM(AstcRecompression, Uncompressed, Bc1, Bc3);
 
 ENUM(VSyncMode, Immediate, Mailbox, Fifo, FifoRelaxed);

@@ -55,6 +55,10 @@ void FXAA::CreateSampler() {
 void FXAA::CreateShaders() {
     m_vertex_shader = CreateWrappedShaderModule(m_device, FXAA_VERT_SPV);
     m_fragment_shader = CreateWrappedShaderModule(m_device, FXAA_FRAG_SPV);
+    if (m_device.HasDebuggingToolAttached()) {
+        m_vertex_shader.SetObjectNameEXT("FXAA Vert");
+        m_fragment_shader.SetObjectNameEXT("FXAA Frag");
+    }
 }
 
 void FXAA::CreateDescriptorPool() {

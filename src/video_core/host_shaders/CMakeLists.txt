@@ -15,6 +15,9 @@ set(GLSL_INCLUDES
 
 set(SHADER_FILES
     astc_decoder.comp
+    bc6h_decoder.comp
+    bc7_decoder.comp
+    bcn_decoder.comp
     blit_color_float.frag
     block_linear_unswizzle_2d.comp
     block_linear_unswizzle_3d.comp

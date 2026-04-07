@@ -35,6 +35,9 @@ struct BlockLinearSwizzle3DParams {
     u32 block_depth_mask;
 };
 
+[[nodiscard]] u32 ComputeBlockLinearInputLayerStrideBytes(const SwizzleParameters& swizzle,
+                                            const ImageInfo& info);
+
 [[nodiscard]] BlockLinearSwizzle2DParams MakeBlockLinearSwizzle2DParams(
     const SwizzleParameters& swizzle, const ImageInfo& info);
 

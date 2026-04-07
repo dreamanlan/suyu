@@ -12,6 +12,16 @@
 #include "video_core/vulkan_common/vk_enum_string_helper.h"
 #include "video_core/vulkan_common/vma.h"
 #include "video_core/vulkan_common/vulkan_wrapper.h"
+#include "core/memory/debug_script/DbgScpHook.h"
+
+void dbgscpHookCheckVkFormat(VkFormat format)
+{
+    DBGSCP_HOOK_VOID("dbgscpHookCheckVkFormat", format);
+}
+void dbgscpHookSetPrimitiveRestart(bool& enable, int tag)
+{
+    DBGSCP_HOOK_VOID("dbgscpHookSetPrimitiveRestart", enable, tag);
+}
 
 namespace Vulkan::vk {
 
@@ -119,6 +129,7 @@ void Load(VkDevice device, DeviceDispatch& dld) noexcept {
     X(vkCmdEndTransformFeedbackEXT);
     X(vkCmdEndDebugUtilsLabelEXT);
     X(vkCmdFillBuffer);
+    X(vkCmdUpdateBuffer);
     X(vkCmdPipelineBarrier);
     X(vkCmdPushConstants);
     X(vkCmdPushDescriptorSetWithTemplateKHR);
@@ -666,6 +677,8 @@ BufferView Device::CreateBufferView(const VkBufferViewCreateInfo& ci) const {
 }
 
 ImageView Device::CreateImageView(const VkImageViewCreateInfo& ci) const {
+    dbgscpHookCheckVkFormat(ci.format);
+
     VkImageView object;
     Check(dld->vkCreateImageView(handle, &ci, nullptr, &object));
     return ImageView(object, handle, *dld);
@@ -725,6 +738,13 @@ PipelineLayout Device::CreatePipelineLayout(const VkPipelineLayoutCreateInfo& ci
 
 Pipeline Device::CreateGraphicsPipeline(const VkGraphicsPipelineCreateInfo& ci,
                                         VkPipelineCache cache) const {
+    if (nullptr != ci.pInputAssemblyState) {
+        bool enable = ci.pInputAssemblyState->primitiveRestartEnable;
+        dbgscpHookSetPrimitiveRestart(enable, 0);
+        if (enable != (ci.pInputAssemblyState->primitiveRestartEnable == VK_TRUE)) {
+            const_cast<VkPipelineInputAssemblyStateCreateInfo*>(ci.pInputAssemblyState)->primitiveRestartEnable = enable;
+        }
+    }
     VkPipeline object;
     Check(dld->vkCreateGraphicsPipelines(handle, cache, 1, &ci, nullptr, &object));
     return Pipeline(object, handle, *dld);

@@ -16,7 +16,7 @@ constexpr u32 BLOCK_SIZE = 4;
 
 using VideoCore::Surface::PixelFormat;
 
-constexpr bool IsSigned(PixelFormat pixel_format) {
+constexpr bool HasSignedVariant(PixelFormat pixel_format) {
     switch (pixel_format) {
     case PixelFormat::BC4_SNORM:
     case PixelFormat::BC4_UNORM:
@@ -79,7 +79,7 @@ void DecompressBlocks(std::span<const u8> input, std::span<u8> output, BufferIma
             for (u32 x = 0; x < width; x += block_width) {
                 const u8* src = input.data() + src_offset;
                 u8* const dst = output.data() + dst_offset;
-                if constexpr (IsSigned(pixel_format)) {
+                if constexpr (HasSignedVariant(pixel_format)) {
                     decompress(src, dst, x, y, width, height, is_signed);
                 } else {
                     decompress(src, dst, x, y, width, height);

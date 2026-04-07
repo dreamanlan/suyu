@@ -279,6 +279,7 @@ struct Values {
                                                   Category::Renderer};
     SwitchableSetting<bool> use_asynchronous_gpu_emulation{
         linkage, true, "use_asynchronous_gpu_emulation", Category::Renderer};
+    SwitchableSetting<bool> use_hardware_bcn{linkage, true, "use_hardware_bcn", Category::Renderer};
     SwitchableSetting<AstcDecodeMode, true> accelerate_astc{linkage,
 #ifdef ANDROID
                                                             AstcDecodeMode::Cpu,
@@ -289,6 +290,16 @@ struct Values {
                                                             AstcDecodeMode::CpuAsynchronous,
                                                             "accelerate_astc",
                                                             Category::Renderer};
+    SwitchableSetting<BcnDecodeMode, true> bcn_decode_mode{linkage,
+#ifdef ANDROID
+                                                           BcnDecodeMode::Cpu,
+#else
+                                                           BcnDecodeMode::Gpu,
+#endif
+                                                           BcnDecodeMode::Cpu,
+                                                           BcnDecodeMode::Gpu,
+                                                           "bcn_decode_mode",
+                                                           Category::Renderer};
     SwitchableSetting<VSyncMode, true> vsync_mode{
         linkage,     VSyncMode::Fifo,    VSyncMode::Immediate,        VSyncMode::FifoRelaxed,
         "use_vsync", Category::Renderer, Specialization::RuntimeList, true,
@@ -430,6 +441,8 @@ struct Values {
                                                 Category::RendererAdvanced};
     SwitchableSetting<bool> barrier_feedback_loops{linkage, true, "barrier_feedback_loops",
                                                    Category::RendererAdvanced};
+    SwitchableSetting<bool> enable_broken_views{linkage, false, "enable_broken_views",
+                                                Category::RendererAdvanced};
 
     Setting<bool> renderer_debug{linkage, false, "debug", Category::RendererDebug};
     Setting<bool> renderer_shader_feedback{linkage, false, "shader_feedback",

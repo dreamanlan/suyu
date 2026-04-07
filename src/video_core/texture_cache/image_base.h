@@ -13,6 +13,7 @@
 #include "video_core/texture_cache/image_info.h"
 #include "video_core/texture_cache/image_view_info.h"
 #include "video_core/texture_cache/types.h"
+#include "video_core/surface.h"
 
 namespace VideoCommon {
 
@@ -83,6 +84,10 @@ struct ImageBase {
     bool HasScaled() const {
         return has_scaled;
     }
+    bool CanGpuAccelerate() const {
+        return IsPixelFormatASTC(info.format) || IsPixelFormatBC1to5(info.format) ||
+               IsPixelFormatBC6or7(info.format);
+    }
 
     ImageInfo info;
 
@@ -96,7 +101,6 @@ struct ImageBase {
     size_t channel = 0;
 
     ImageFlagBits flags = ImageFlagBits::CpuModified;
-
     GPUVAddr gpu_addr = 0;
     VAddr cpu_addr = 0;
     VAddr cpu_addr_end = 0;

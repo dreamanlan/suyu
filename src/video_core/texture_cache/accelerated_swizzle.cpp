@@ -20,6 +20,24 @@ using Tegra::Texture::GOB_SIZE_X_SHIFT;
 using Tegra::Texture::GOB_SIZE_Y_SHIFT;
 using VideoCore::Surface::BytesPerBlock;
 
+u32 ComputeBlockLinearInputLayerStrideBytes(const SwizzleParameters& swizzle,
+                                            const ImageInfo& info) {
+    const Extent3D block = swizzle.block;
+    const Extent3D num_tiles = swizzle.num_tiles;
+    const u32 bytes_per_block = BytesPerBlock(info.format);
+
+    const u32 stride_alignment = CalculateLevelStrideAlignment(info, swizzle.level);
+    const u32 stride_bytes = Common::AlignUpLog2(num_tiles.width, stride_alignment) * bytes_per_block;
+
+    const u32 gobs_in_x = Common::DivCeilLog2(stride_bytes, GOB_SIZE_X_SHIFT);
+    const u32 block_size_bytes = gobs_in_x << (GOB_SIZE_SHIFT + block.height + block.depth);
+
+    const u32 block_y_count = Common::DivCeil(num_tiles.height, 1u << GOB_SIZE_Y_SHIFT);
+    const u32 block_y_groups = Common::DivCeil(block_y_count, 1u << block.height);
+
+    return block_y_groups * block_size_bytes;
+}
+
 BlockLinearSwizzle2DParams MakeBlockLinearSwizzle2DParams(const SwizzleParameters& swizzle,
                                                           const ImageInfo& info) {
     const Extent3D block = swizzle.block;

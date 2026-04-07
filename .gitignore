@@ -41,3 +41,4 @@ Thumbs.db
 
 # clangd compile_commands.json
 compile_commands.json
+/.claude

@@ -242,7 +242,7 @@ hook("RasterizerVulkan::Draw::VTG")
 		if($pshash==0xb9cf1cccda4be33c){
 			printf("RasterizerVulkan::Draw::VTG enter time:%lld this:%lld vshash:%llx gshash:%llx pshash:%llx\n",time(),$this,$vshash,$geohash,$pshash);
 			//$logVTG = 1;
-			ptrset(argv(0),1,1);
+			//ptrset(argv(0),1,1);
 		};
 	};
 };

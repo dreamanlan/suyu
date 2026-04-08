@@ -213,12 +213,15 @@ hook("Vulkan::GraphicsPipeline::AfterMake")
 hook("RasterizerVulkan::PrepareDraw")
 {
 	onenter{
-		$this:int = ptrget(argv(0),8);
-		$indirect:int = ptrget(argv(1),1);
-		$indexed:int = ptrget(argv(2),1);
-		$vshash:int = ptrget(argv(3),8);
-		$geohash:int = ptrget(argv(4),8);
-		$pshash:int = ptrget(argv(5),8);
+		$dbgFbLog:int = ptrget(argv(0),1);
+		$this:int = ptrget(argv(1),8);
+		$indirect:int = ptrget(argv(2),1);
+		$indexed:int = ptrget(argv(3),1);
+		$vshash:int = ptrget(argv(4),8);
+		$geohash:int = ptrget(argv(5),8);
+		$pshash:int = ptrget(argv(6),8);
+
+		//ptrset(argv(0),1,1);
 
 		if($vshash==0x86d7c683e2589201 && $pshash==0xf9af955d3cbfadeb){
 			//printf("RasterizerVulkan::PrepareDraw enter time:%lld this:%lld indirect:%d indexed:%d vshash:%llx gshash:%llx pshash:%llx\n",time(),$this,$indirect,$indexed,$vshash,$geohash,$pshash);

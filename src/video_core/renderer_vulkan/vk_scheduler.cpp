@@ -20,6 +20,8 @@
 
 namespace Vulkan {
 
+extern bool g_dbg_render_crash_log;
+
 MICROPROFILE_DECLARE(Vulkan_WaitForWorker);
 
 void Scheduler::CommandChunk::ExecuteAll(vk::CommandBuffer cmdbuf,
@@ -105,7 +107,9 @@ void Scheduler::RequestRenderpass(const Framebuffer* framebuffer) {
     state.renderpass = renderpass;
     state.framebuffer = framebuffer_handle;
     state.render_area = render_area;
-    fprintf(stderr, "[YUZU-DBG] RequestRenderpass: fb_handle=%p\n", (void*)framebuffer_handle);
+    if (g_dbg_render_crash_log) {
+        fprintf(stderr, "[YUZU-DBG] RequestRenderpass: fb_handle=%p\n", (void*)framebuffer_handle);
+    }
 
     Record([renderpass, framebuffer_handle, render_area](vk::CommandBuffer cmdbuf) {
         const VkRenderPassBeginInfo renderpass_bi{

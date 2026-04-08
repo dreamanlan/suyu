@@ -32,6 +32,9 @@
 #include "video_core/vulkan_common/vulkan_wrapper.h"
 
 namespace Vulkan {
+
+extern bool g_dbg_render_crash_log;
+
 namespace {
 
 constexpr VkExtent2D CaptureImageSize{
@@ -124,11 +127,17 @@ void RendererVulkan::Composite(std::span<const Tegra::FramebufferConfig> framebu
     present_manager.Present(frame);
 
     gpu.RendererFrameEndNotify();
-    fprintf(stderr, "[YUZU-DBG] Composite: WaitWorker start\n");
+    if (g_dbg_render_crash_log) {
+        fprintf(stderr, "[YUZU-DBG] Composite: WaitWorker start\n");
+    }
     scheduler.WaitWorker();
-    fprintf(stderr, "[YUZU-DBG] Composite: WaitWorker done, TickFrame start\n");
+    if (g_dbg_render_crash_log) {
+        fprintf(stderr, "[YUZU-DBG] Composite: WaitWorker done, TickFrame start\n");
+    }
     rasterizer.TickFrame();
-    fprintf(stderr, "[YUZU-DBG] Composite: TickFrame done\n");
+    if (g_dbg_render_crash_log) {
+        fprintf(stderr, "[YUZU-DBG] Composite: TickFrame done\n");
+    }
 
     if (VideoCore::g_LineModeLogFrameIndex >= VideoCore::g_LineModeLogFrameCount) {
         VideoCore::g_LineModeLogFrameIndex = -1;

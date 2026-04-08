@@ -32,6 +32,9 @@
 #endif
 
 namespace Vulkan {
+
+extern bool g_dbg_render_crash_log;
+
 namespace {
 using boost::container::small_vector;
 using boost::container::static_vector;
@@ -834,6 +837,23 @@ void GraphicsPipeline::ConfigureVtgPassthrough(VkBuffer vtg_ssbo, VkDeviceSize v
                              static_cast<int>(stage), stage_infos[stage], rescaling,
                              samplers_it, views_it);
         const auto& info{stage_infos[stage]};
+        if (g_dbg_render_crash_log) {
+            // Log FS texture VkImageView handles for crash investigation
+            const u32 num_tex_bufs = Shader::NumDescriptors(info.texture_buffer_descriptors);
+            const u32 num_img_bufs = Shader::NumDescriptors(info.image_buffer_descriptors);
+            const VideoCommon::ImageViewInOut* tex_views = views.data() + num_tex_bufs + num_img_bufs;
+            for (const auto& desc : info.texture_descriptors) {
+                for (u32 i = 0; i < desc.count; ++i) {
+                    const auto view_id = tex_views->id;
+                    ImageView& iv = texture_cache.GetImageView(view_id);
+                    const VkImageView vk_iv = iv.Handle(desc.type);
+                    fprintf(stderr, "[YUZU-DBG] VTG PT FS tex: view_id=%u vk_iv=%p type=%u\n",
+                            view_id.index, reinterpret_cast<const void*>(vk_iv),
+                            static_cast<unsigned>(desc.type));
+                    ++tex_views;
+                }
+            }
+        }
         if (info.uses_render_area) {
             render_area.uses_render_area = true;
             render_area.words = {static_cast<float>(regs.surface_clip.width),

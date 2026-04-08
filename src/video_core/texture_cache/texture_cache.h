@@ -2235,14 +2235,10 @@ void TextureCache<P>::DeleteImage(ImageId image_id, bool immediate_delete) {
                    num_removed_overlaps);
     }
     for (const ImageViewId image_view_id : image_view_ids) {
-        if (!immediate_delete) {
-            sentenced_image_view.Push(std::move(slot_image_views[image_view_id]));
-        }
+        sentenced_image_view.Push(std::move(slot_image_views[image_view_id]));
         slot_image_views.erase(image_view_id);
     }
-    if (!immediate_delete) {
-        sentenced_images.Push(std::move(slot_images[image_id]));
-    }
+    sentenced_images.Push(std::move(slot_images[image_id]));
     slot_images.erase(image_id);
 
     alloc_images.erase(alloc_image_it);

@@ -43,6 +43,8 @@
 
 namespace Vulkan {
 
+bool g_dbg_render_crash_log = false;
+
 using Maxwell = Tegra::Engines::Maxwell3D::Regs;
 using MaxwellDrawState = Tegra::Engines::DrawManager::State;
 using VideoCommon::ImageViewId;
@@ -332,8 +334,8 @@ void RasterizerVulkan::PrepareDraw(bool indirect_draw, bool is_indexed, Func&& d
     auto&& vshash = gkey.unique_hashes[static_cast<int>(Shader::Stage::VertexB) + 1];
     auto&& geohash = gkey.unique_hashes[static_cast<int>(Shader::Stage::Geometry) + 1];
     auto&& pshash = gkey.unique_hashes[static_cast<int>(Shader::Stage::Fragment) + 1];
-    DBGSCP_HOOK_VOID("RasterizerVulkan::PrepareDraw", pThis, indirect_draw, is_indexed, vshash,
-                     geohash, pshash);
+    DBGSCP_HOOK_VOID("RasterizerVulkan::PrepareDraw", g_dbg_render_crash_log, pThis, indirect_draw,
+                     is_indexed, vshash, geohash, pshash);
 
     bool line_mode = false;
     if (indirect_draw) {

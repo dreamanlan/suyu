@@ -266,3 +266,11 @@ hook("dbgscpHookOnConvertToMSL")
 		printf("dbgscpHookOnConvertToMSL debug_name:%s was_converted:%d result:%s tid:%d\n",$debug_name,$was_converted,$result_str,GetTID());
 	};
 };
+hook("dbgscpHookOnBeginRenderpass")
+{
+	onenter{
+		$dbgFbLog:int = ptrget(argv(0),1);
+
+		//ptrset(argv(0),1,1);
+	};
+};

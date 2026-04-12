@@ -157,9 +157,15 @@ void GpuCaptureManager::SetRenderDocCaptureOptionF32(int opt, float val)
     (void)val;
 }
 
-void GpuCaptureManager::SetRenderDocLogFilePathTemplate(const char* pathTemplate)
+void GpuCaptureManager::SetRenderDocCaptureFilePathTemplate(const char* pathTemplate)
 {
     (void)pathTemplate;
+}
+
+void GpuCaptureManager::SetVulkanHandles(void* device, void* queue)
+{
+    (void)device;
+    (void)queue;
 }
 
 #endif // TARGET_OS_OSX || TARGET_OS_IPHONE

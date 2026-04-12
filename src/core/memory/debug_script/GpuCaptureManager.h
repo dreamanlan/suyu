@@ -6,8 +6,9 @@
 enum class GpuCaptureBackend
 {
     None,
-    RenderDoc,   // Windows / Android
-    MetalXcode   // macOS / iOS Metal
+    RenderDoc,     // Windows / Android
+    MetalXcode,    // macOS / iOS Metal
+    HuaweiSquid    // OpenHarmony (libsquid.so RenderDoc API + Vulkan debug-utils label fallback)
 };
 
 class GpuCaptureManager
@@ -50,7 +51,12 @@ public:
     // RenderDoc-only options (no effect on Metal backend).
     void SetRenderDocCaptureOptionU32(int opt, uint32_t val);
     void SetRenderDocCaptureOptionF32(int opt, float val);
-    void SetRenderDocLogFilePathTemplate(const char* pathTemplate);
+    void SetRenderDocCaptureFilePathTemplate(const char* pathTemplate);
+
+    // HuaweiSquid-only: set Vulkan device and queue handles.
+    // Must be called after Vulkan device creation. Uses void* to avoid Vulkan header dependency.
+    // device: VkDevice, queue: VkQueue
+    void SetVulkanHandles(void* device, void* queue);
 
 private:
     GpuCaptureManager() = default;
@@ -70,4 +76,12 @@ private:
     // Implementation details for Metal backend.
     struct MetalImpl;
     MetalImpl* m_metal = nullptr;
+
+    // Implementation details for HuaweiSquid backend.
+    struct HuaweiSquidImpl;
+    HuaweiSquidImpl* m_squid = nullptr;
+
+    // Pending Vulkan handles for deferred SetVulkanHandles() call.
+    void* m_pendingVkDevice = nullptr;
+    void* m_pendingVkQueue  = nullptr;
 };

@@ -263,14 +263,20 @@ void GpuCaptureManager::SetRenderDocCaptureOptionF32(int opt, float val)
     m_rd->api->SetCaptureOptionF32((RENDERDOC_CaptureOption)opt, val);
 }
 
-void GpuCaptureManager::SetRenderDocLogFilePathTemplate(const char* pathTemplate)
+void GpuCaptureManager::SetRenderDocCaptureFilePathTemplate(const char* pathTemplate)
 {
     if (!m_available)
         return;
     if (m_backend != GpuCaptureBackend::RenderDoc || !m_rd || !m_rd->api)
         return;
 
-    m_rd->api->SetLogFilePathTemplate(pathTemplate);
+    m_rd->api->SetCaptureFilePathTemplate(pathTemplate);
+}
+
+void GpuCaptureManager::SetVulkanHandles(void* device, void* queue)
+{
+    (void)device;
+    (void)queue;
 }
 
 #endif //GPUCAP_PLATFORM_WINDOWS || GPUCAP_PLATFORM_ANDROID

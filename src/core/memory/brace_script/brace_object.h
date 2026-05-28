@@ -749,5 +749,5 @@ namespace BraceScriptInterpreter
         }
     };
 
-    extern thread_local BraceObjectInfoManager g_ObjectInfoMgr;
+    extern BraceObjectInfoManager& ObjectInfoMgr();
 }

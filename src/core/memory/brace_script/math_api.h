@@ -1831,7 +1831,7 @@ namespace BraceScriptInterpreter
                 }
                 int objTypeId = argInfo.ObjectTypeId;
                 int objTypeId2 = argInfo2.ObjectTypeId;
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
                 if (nullptr != pInfo && pInfo->ObjectCategory == BRACE_OBJECT_CATEGORY_OBJ_ARRAY && pInfo->FirstTypeParamObjTypeId() == CUSTOM_BRACE_OBJECT_TYPE_FLOAT_ARRAY && objTypeId2 == CUSTOM_BRACE_OBJECT_TYPE_FLOAT_ARRAY && arg3Check) {
                     resultInfo.Type = Brace::BRACE_DATA_TYPE_OBJECT;
                     resultInfo.ObjectTypeId = CUSTOM_BRACE_OBJECT_TYPE_FLOAT_ARRAY;

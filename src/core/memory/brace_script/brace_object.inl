@@ -229,7 +229,7 @@ namespace BraceScriptInterpreter
         {
             auto& argInfo = argInfos[0];
             int objTypeId = static_cast<int>(Brace::VarGetI64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex));
-            const std::string& v = g_ObjectInfoMgr.GetBraceObjectTypeName(objTypeId);
+            const std::string& v = ObjectInfoMgr().GetBraceObjectTypeName(objTypeId);
             Brace::VarSetString((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, v);
         }
     };
@@ -261,7 +261,7 @@ namespace BraceScriptInterpreter
         {
             auto& argInfo = argInfos[0];
             int objTypeId = static_cast<int>(Brace::VarGetI64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex));
-            int v = g_ObjectInfoMgr.GetBraceObjectCategory(objTypeId);
+            int v = ObjectInfoMgr().GetBraceObjectCategory(objTypeId);
             Brace::VarSetInt32((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, v);
         }
     };
@@ -293,7 +293,7 @@ namespace BraceScriptInterpreter
         {
             auto& argInfo = argInfos[0];
             int objTypeId = static_cast<int>(Brace::VarGetI64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex));
-            int v = g_ObjectInfoMgr.GetBraceObjectTypeParamCount(objTypeId);
+            int v = ObjectInfoMgr().GetBraceObjectTypeParamCount(objTypeId);
             Brace::VarSetInt32((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, v);
         }
     };
@@ -328,7 +328,7 @@ namespace BraceScriptInterpreter
             auto& argInfo2 = argInfos[1];
             int objTypeId = static_cast<int>(Brace::VarGetI64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex));
             int index = static_cast<int>(Brace::VarGetI64((argInfo2.IsGlobal ? gvars : lvars), argInfo2.Type, argInfo2.VarIndex));
-            int v = g_ObjectInfoMgr.GetBraceObjectTypeParamType(objTypeId, index);
+            int v = ObjectInfoMgr().GetBraceObjectTypeParamType(objTypeId, index);
             Brace::VarSetInt32((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, v);
         }
     };
@@ -363,7 +363,7 @@ namespace BraceScriptInterpreter
             auto& argInfo2 = argInfos[1];
             int objTypeId = static_cast<int>(Brace::VarGetI64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex));
             int index = static_cast<int>(Brace::VarGetI64((argInfo2.IsGlobal ? gvars : lvars), argInfo2.Type, argInfo2.VarIndex));
-            int v = g_ObjectInfoMgr.GetBraceObjectTypeParamObjTypeId(objTypeId, index);
+            int v = ObjectInfoMgr().GetBraceObjectTypeParamObjTypeId(objTypeId, index);
             Brace::VarSetInt32((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, v);
         }
     };
@@ -1489,13 +1489,13 @@ namespace BraceScriptInterpreter
                 bool ret = true;
                 auto& callData = data.GetLowerOrderFunction();
                 const std::string& name = callData.GetParamId(0);
-                int structId = g_ObjectInfoMgr.GetObjectTypeId(name);
+                int structId = ObjectInfoMgr().GetObjectTypeId(name);
                 if (structId == Brace::PREDEFINED_BRACE_OBJECT_TYPE_UNKNOWN) {
-                    structId = g_ObjectInfoMgr.AddNewObjectTypeId(name);
+                    structId = ObjectInfoMgr().AddNewObjectTypeId(name);
                 }
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(structId);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(structId);
                 if (nullptr == pInfo) {
-                    pInfo = g_ObjectInfoMgr.AddBraceObjectInfo(structId, BRACE_OBJECT_CATEGORY_STRUCT, name);
+                    pInfo = ObjectInfoMgr().AddBraceObjectInfo(structId, BRACE_OBJECT_CATEGORY_STRUCT, name);
                 }
                 auto& fieldTable = pInfo->FieldTable;
                 fieldTable.Size = 0;
@@ -1530,7 +1530,7 @@ namespace BraceScriptInterpreter
                                 fi.Type.ObjectTypeId = tinfo.ObjectTypeId;
                                 fi.Offset = fieldTable.Size;
                                 if (!tinfo.IsRef && tinfo.Type == Brace::BRACE_DATA_TYPE_OBJECT) {
-                                    auto* pFieldTypeInfo = g_ObjectInfoMgr.GetBraceObjectInfo(tinfo.ObjectTypeId);
+                                    auto* pFieldTypeInfo = ObjectInfoMgr().GetBraceObjectInfo(tinfo.ObjectTypeId);
                                     fi.BraceObjInfo = pFieldTypeInfo;
                                     if (nullptr != pFieldTypeInfo && pFieldTypeInfo->ObjectCategory == BRACE_OBJECT_CATEGORY_STRUCT) {
                                         fi.Size = pFieldTypeInfo->FieldTable.Size;
@@ -1569,8 +1569,8 @@ namespace BraceScriptInterpreter
         {
             if (funcData.GetParamNum() == 1) {
                 const std::string& id = funcData.GetParamId(0);
-                int objTypeId = g_ObjectInfoMgr.GetObjectTypeId(id);
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+                int objTypeId = ObjectInfoMgr().GetObjectTypeId(id);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
                 if (nullptr != pInfo && pInfo->ObjectCategory == BRACE_OBJECT_CATEGORY_STRUCT) {
                     m_pObjectInfo = pInfo;
                     resultInfo.Type = Brace::BRACE_DATA_TYPE_OBJECT;
@@ -1612,8 +1612,8 @@ namespace BraceScriptInterpreter
         {
             if (funcData.GetParamNum() == 2) {
                 const std::string& id = funcData.GetParamId(1);
-                int objTypeId = g_ObjectInfoMgr.GetObjectTypeId(id);
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+                int objTypeId = ObjectInfoMgr().GetObjectTypeId(id);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
                 if (nullptr != pInfo && pInfo->ObjectCategory == BRACE_OBJECT_CATEGORY_STRUCT) {
                     Brace::OperandLoadtimeInfo argInfo;
                     m_Arg = LoadHelper(*funcData.GetParam(0), argInfo);
@@ -2362,7 +2362,7 @@ namespace BraceScriptInterpreter
                 }
             }break;
             default: {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
                 if (nullptr != pInfo) {
                     if (pInfo->ObjectCategory == BRACE_OBJECT_CATEGORY_INT_OBJ_HASHTABLE) {
                         auto* ptr = p.get();
@@ -2474,7 +2474,7 @@ namespace BraceScriptInterpreter
                 }
             }break;
             default: {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
                 if (nullptr != pInfo) {
                     if (pInfo->ObjectCategory == BRACE_OBJECT_CATEGORY_INT_OBJ_HASHTABLE) {
                         auto& v = Brace::VarGetObject((val.IsGlobal ? gvars : lvars), val.VarIndex);
@@ -2577,7 +2577,7 @@ namespace BraceScriptInterpreter
                 }
             }break;
             default: {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
                 if (nullptr != pInfo) {
                     if (pInfo->ObjectCategory == BRACE_OBJECT_CATEGORY_INT_OBJ_HASHTABLE) {
                         auto* ptr = p.get();
@@ -2665,7 +2665,7 @@ namespace BraceScriptInterpreter
                 }
             }break;
             default: {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
                 if (nullptr != pInfo) {
                     if (pInfo->ObjectCategory == BRACE_OBJECT_CATEGORY_INT_OBJ_HASHTABLE) {
                         auto* ptr = p.get();
@@ -2940,7 +2940,7 @@ namespace BraceScriptInterpreter
             default: {
                 auto* ptr = p.get();
                 if (nullptr != ptr) {
-                    auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+                    auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
                     if (nullptr != pInfo) {
                         if (pInfo->ObjectCategory == BRACE_OBJECT_CATEGORY_INT_OBJ_HASHTABLE) {
                             auto* pHashtable = static_cast<IntObjHashtable*>(ptr);
@@ -3221,7 +3221,7 @@ namespace BraceScriptInterpreter
                 }
             }break;
             default: {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
                 if (nullptr != pInfo) {
                     if (pInfo->ObjectCategory == BRACE_OBJECT_CATEGORY_OBJ_ARRAY) {
                         auto& v = Brace::VarGetObject((val.IsGlobal ? gvars : lvars), val.VarIndex);
@@ -3492,7 +3492,7 @@ namespace BraceScriptInterpreter
             default: {
                 auto* ptr = p.get();
                 if (nullptr != ptr) {
-                    auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+                    auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
                     if (nullptr != pInfo) {
                         switch (pInfo->ObjectCategory) {
                         case BRACE_OBJECT_CATEGORY_OBJ_ARRAY: {
@@ -3614,7 +3614,7 @@ namespace BraceScriptInterpreter
                     return true;
                 }
                 else {
-                    auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(listInfo.ObjectTypeId);
+                    auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(listInfo.ObjectTypeId);
                     if (nullptr != pInfo) {
                         if (pInfo->ObjectCategory == BRACE_OBJECT_CATEGORY_OBJ_ARRAY) {
                             m_IteratorIndex = AllocVariable("$$", Brace::BRACE_DATA_TYPE_OBJECT, pInfo->GetTypeParamObjTypeId(0));
@@ -4506,7 +4506,7 @@ namespace BraceScriptInterpreter
         {
             if (className == "MemoryModifyInfo") {
                 auto* p = new ObjectArray();
-                auto&& system = g_pApiProvider->GetSystem();
+                auto&& system = tls_pApiProvider->GetSystem();
                 auto&& memorySniffer = system.MemorySniffer();
                 auto&& results = memorySniffer.GetResultMemoryModifyInfo();
 
@@ -4517,7 +4517,7 @@ namespace BraceScriptInterpreter
             }
             if (className == "LastMemoryModifyInfo") {
                 auto* p = new ObjectArray();
-                auto&& system = g_pApiProvider->GetSystem();
+                auto&& system = tls_pApiProvider->GetSystem();
                 auto&& memorySniffer = system.MemorySniffer();
                 auto&& results = memorySniffer.GetLastHistoryMemoryModifyInfo();
 
@@ -5355,7 +5355,7 @@ namespace BraceScriptInterpreter
                     firstArgInfo = std::move(argLoadInfo);
             }
             if (objInfo.Type == Brace::BRACE_DATA_TYPE_OBJECT) {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(loadInfo.ObjectTypeId);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(loadInfo.ObjectTypeId);
                 if (nullptr != pInfo) {
                     AbstractMemberCallApiProvider* pProvider = nullptr;
                     switch (pInfo->ObjectCategory) {
@@ -5376,7 +5376,7 @@ namespace BraceScriptInterpreter
                 }
             }
             else if (objInfo.Type == Brace::BRACE_DATA_TYPE_STRING) {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STRING);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STRING);
                 if (nullptr != pInfo) {
                     AbstractMemberCallApiProvider* pProvider = new StringMemberCallProvider(GetInterpreter());
                     if (pProvider) {
@@ -5414,7 +5414,7 @@ namespace BraceScriptInterpreter
             Brace::OperandLoadtimeInfo argLoadInfo;
             auto p = LoadHelper(*param, argLoadInfo);
             if (objInfo.Type == Brace::BRACE_DATA_TYPE_OBJECT) {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(loadInfo.ObjectTypeId);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(loadInfo.ObjectTypeId);
                 if (nullptr != pInfo) {
                     AbstractMemberSetApiProvider* pProvider = nullptr;
                     switch (pInfo->ObjectCategory) {
@@ -5435,7 +5435,7 @@ namespace BraceScriptInterpreter
                 }
             }
             else if (objInfo.Type == Brace::BRACE_DATA_TYPE_STRING) {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STRING);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STRING);
                 if (nullptr != pInfo) {
                     AbstractMemberSetApiProvider* pProvider = new StringMemberSetProvider(GetInterpreter());
                     if (pProvider) {
@@ -5467,7 +5467,7 @@ namespace BraceScriptInterpreter
             auto& m = data.GetParamId(1);
             auto member = m;
             if (objInfo.Type == Brace::BRACE_DATA_TYPE_OBJECT) {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(loadInfo.ObjectTypeId);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(loadInfo.ObjectTypeId);
                 if (nullptr != pInfo) {
                     AbstractMemberGetApiProvider* pProvider = nullptr;
                     switch (pInfo->ObjectCategory) {
@@ -5488,7 +5488,7 @@ namespace BraceScriptInterpreter
                 }
             }
             else if (objInfo.Type == Brace::BRACE_DATA_TYPE_STRING) {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STRING);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STRING);
                 if (nullptr != pInfo) {
                     AbstractMemberGetApiProvider* pProvider = new StringMemberGetProvider(GetInterpreter());
                     if (pProvider) {
@@ -5519,7 +5519,7 @@ namespace BraceScriptInterpreter
                 return false;
             auto& arr = argInfos[0];
             if (arr.Type == Brace::BRACE_DATA_TYPE_OBJECT) {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(arr.ObjectTypeId);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(arr.ObjectTypeId);
                 if (nullptr != pInfo) {
                     AbstractCollectionCallApiProvider* pProvider = nullptr;
                     switch (pInfo->ObjectCategory) {
@@ -5535,7 +5535,7 @@ namespace BraceScriptInterpreter
                 }
             }
             else if (arr.Type == Brace::BRACE_DATA_TYPE_STRING) {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STRING);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STRING);
                 if (nullptr != pInfo) {
                     AbstractCollectionCallApiProvider* pProvider = new StringCollectionCallProvider(GetInterpreter());
                     if (pProvider) {
@@ -5569,7 +5569,7 @@ namespace BraceScriptInterpreter
             auto& ix = argInfos[1];
             auto& val = argInfos[2];
             if (arr.Type == Brace::BRACE_DATA_TYPE_OBJECT) {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(arr.ObjectTypeId);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(arr.ObjectTypeId);
                 if (nullptr != pInfo) {
                     AbstractCollectionSetApiProvider* pProvider = nullptr;
                     switch (pInfo->ObjectCategory) {
@@ -5585,7 +5585,7 @@ namespace BraceScriptInterpreter
                 }
             }
             else if (arr.Type == Brace::BRACE_DATA_TYPE_STRING) {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STRING);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STRING);
                 if (nullptr != pInfo) {
                     AbstractCollectionSetApiProvider* pProvider = new StringCollectionSetProvider(GetInterpreter());
                     if (pProvider) {
@@ -5623,7 +5623,7 @@ namespace BraceScriptInterpreter
             auto& arr = argInfos[0];
             auto& ix = argInfos[1];
             if (arr.Type == Brace::BRACE_DATA_TYPE_OBJECT) {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(arr.ObjectTypeId);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(arr.ObjectTypeId);
                 if (nullptr != pInfo) {
                     AbstractCollectionGetApiProvider* pProvider = nullptr;
                     switch (pInfo->ObjectCategory) {
@@ -5639,7 +5639,7 @@ namespace BraceScriptInterpreter
                 }
             }
             else if (arr.Type == Brace::BRACE_DATA_TYPE_STRING) {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STRING);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STRING);
                 if (nullptr != pInfo) {
                     AbstractCollectionGetApiProvider* pProvider = new StringCollectionGetProvider(GetInterpreter());
                     if (pProvider) {
@@ -5702,7 +5702,7 @@ namespace BraceScriptInterpreter
                 BraceObjectInfo* pInfo = nullptr;
                 AbstractLinqApiProvider* pProvider = nullptr;
                 if (listInfo.Type == Brace::BRACE_DATA_TYPE_OBJECT) {
-                    pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(listInfo.ObjectTypeId);
+                    pInfo = ObjectInfoMgr().GetBraceObjectInfo(listInfo.ObjectTypeId);
                     if (nullptr != pInfo && pInfo->ObjectCategory == BRACE_OBJECT_CATEGORY_OBJ_ARRAY) {
                         pProvider = new ArrayHashtableLinqProvider(GetInterpreter());
                     }
@@ -5749,7 +5749,7 @@ namespace BraceScriptInterpreter
         {
             //select(fields)top(10)from(objlist)where(exp)oderby(exps)groupby(exps)having(exp){statements;};
             std::string uobjArrKey = "array<:uobject:>";
-            int uobjArrTypeId = g_ObjectInfoMgr.GetObjectTypeId(uobjArrKey);
+            int uobjArrTypeId = ObjectInfoMgr().GetObjectTypeId(uobjArrKey);
 
             int fnum = statementData.GetFunctionNum();
             BraceObjectInfo* pInfo = nullptr;
@@ -5767,7 +5767,7 @@ namespace BraceScriptInterpreter
                     if (fid == "from") {
                         DslData::ISyntaxComponent* pSyntax = pCallData->GetParam(0);
                         if (pSyntax->GetSyntaxType() == DslData::ISyntaxComponent::TYPE_VALUE) {
-                            pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(uobjArrTypeId);
+                            pInfo = ObjectInfoMgr().GetBraceObjectInfo(uobjArrTypeId);
                             pProvider->LoadFromType(func, *pFuncData, *pInfo, pSyntax->GetId());
                         }
                         else {
@@ -5775,10 +5775,10 @@ namespace BraceScriptInterpreter
                             Brace::BraceApiExecutor list;
                             list = LoadHelper(*pCallData->GetParam(0), listInfo);
                             if (listInfo.Type == Brace::BRACE_DATA_TYPE_OBJECT) {
-                                pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(listInfo.ObjectTypeId);
+                                pInfo = ObjectInfoMgr().GetBraceObjectInfo(listInfo.ObjectTypeId);
                             }
                             else {
-                                pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(uobjArrTypeId);
+                                pInfo = ObjectInfoMgr().GetBraceObjectInfo(uobjArrTypeId);
                             }
                             pProvider->LoadFromList(func, *pCallData, *pInfo, std::move(listInfo), std::move(list));
                         }
@@ -6153,14 +6153,14 @@ namespace BraceScriptInterpreter
                 }
                 if (good) {
                     std::string typeKey = std::string("array<:") + GetObjectTypeName(objTypeId) + ":>";
-                    m_ObjectTypeId = g_ObjectInfoMgr.GetObjectTypeId(typeKey);
+                    m_ObjectTypeId = ObjectInfoMgr().GetObjectTypeId(typeKey);
                     if (m_ObjectTypeId == Brace::PREDEFINED_BRACE_OBJECT_TYPE_UNKNOWN) {
-                        m_ObjectTypeId = g_ObjectInfoMgr.AddNewObjectTypeId(typeKey);
+                        m_ObjectTypeId = ObjectInfoMgr().AddNewObjectTypeId(typeKey);
                     }
-                    auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(m_ObjectTypeId);
+                    auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(m_ObjectTypeId);
                     if (nullptr == pInfo) {
-                        pInfo = g_ObjectInfoMgr.AddBraceObjectInfo(m_ObjectTypeId, BRACE_OBJECT_CATEGORY_OBJ_ARRAY, std::move(typeKey));
-                        g_ObjectInfoMgr.SetBraceObjectTypeParams(m_ObjectTypeId, dataType, objTypeId);
+                        pInfo = ObjectInfoMgr().AddBraceObjectInfo(m_ObjectTypeId, BRACE_OBJECT_CATEGORY_OBJ_ARRAY, std::move(typeKey));
+                        ObjectInfoMgr().SetBraceObjectTypeParams(m_ObjectTypeId, dataType, objTypeId);
                     }
                     if (nullptr != pInfo) {
                         std::swap(m_Args, args);
@@ -6571,21 +6571,21 @@ namespace BraceScriptInterpreter
                 if (good) {
                     std::string tname = GetObjectTypeName(valObjTypeId);
                     std::string typeKey = std::string("hashtable<:int64,") + tname + ":>";
-                    int objectTypeId = g_ObjectInfoMgr.GetObjectTypeId(typeKey);
+                    int objectTypeId = ObjectInfoMgr().GetObjectTypeId(typeKey);
                     if (objectTypeId == Brace::PREDEFINED_BRACE_OBJECT_TYPE_UNKNOWN) {
-                        objectTypeId = g_ObjectInfoMgr.AddNewObjectTypeId(typeKey);
-                        g_ObjectInfoMgr.AddBraceObjectAlias(objectTypeId, "hashtable<:int8," + tname + ":>");
-                        g_ObjectInfoMgr.AddBraceObjectAlias(objectTypeId, "hashtable<:int16," + tname + ":>");
-                        g_ObjectInfoMgr.AddBraceObjectAlias(objectTypeId, "hashtable<:int32," + tname + ":>");
-                        g_ObjectInfoMgr.AddBraceObjectAlias(objectTypeId, "hashtable<:uint8," + tname + ":>");
-                        g_ObjectInfoMgr.AddBraceObjectAlias(objectTypeId, "hashtable<:uint16," + tname + ":>");
-                        g_ObjectInfoMgr.AddBraceObjectAlias(objectTypeId, "hashtable<:uint32," + tname + ":>");
-                        g_ObjectInfoMgr.AddBraceObjectAlias(objectTypeId, "hashtable<:uint64," + tname + ":>");
+                        objectTypeId = ObjectInfoMgr().AddNewObjectTypeId(typeKey);
+                        ObjectInfoMgr().AddBraceObjectAlias(objectTypeId, "hashtable<:int8," + tname + ":>");
+                        ObjectInfoMgr().AddBraceObjectAlias(objectTypeId, "hashtable<:int16," + tname + ":>");
+                        ObjectInfoMgr().AddBraceObjectAlias(objectTypeId, "hashtable<:int32," + tname + ":>");
+                        ObjectInfoMgr().AddBraceObjectAlias(objectTypeId, "hashtable<:uint8," + tname + ":>");
+                        ObjectInfoMgr().AddBraceObjectAlias(objectTypeId, "hashtable<:uint16," + tname + ":>");
+                        ObjectInfoMgr().AddBraceObjectAlias(objectTypeId, "hashtable<:uint32," + tname + ":>");
+                        ObjectInfoMgr().AddBraceObjectAlias(objectTypeId, "hashtable<:uint64," + tname + ":>");
                     }
-                    auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objectTypeId);
+                    auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objectTypeId);
                     if (nullptr == pInfo) {
-                        pInfo = g_ObjectInfoMgr.AddBraceObjectInfo(objectTypeId, BRACE_OBJECT_CATEGORY_INT_OBJ_HASHTABLE, std::move(typeKey));
-                        g_ObjectInfoMgr.SetBraceObjectTypeParams(objectTypeId, keyDataType, keyObjTypeId, valDataType, valObjTypeId);
+                        pInfo = ObjectInfoMgr().AddBraceObjectInfo(objectTypeId, BRACE_OBJECT_CATEGORY_INT_OBJ_HASHTABLE, std::move(typeKey));
+                        ObjectInfoMgr().SetBraceObjectTypeParams(objectTypeId, keyDataType, keyObjTypeId, valDataType, valObjTypeId);
                     }
                     if (nullptr != pInfo) {
                         std::swap(m_ArgKeys, argKeys);
@@ -6750,14 +6750,14 @@ namespace BraceScriptInterpreter
                 }
                 if (good) {
                     std::string typeKey = std::string("hashtable<:string,") + GetObjectTypeName(valObjTypeId) + ":>";
-                    int objectTypeId = g_ObjectInfoMgr.GetObjectTypeId(typeKey);
+                    int objectTypeId = ObjectInfoMgr().GetObjectTypeId(typeKey);
                     if (objectTypeId == Brace::PREDEFINED_BRACE_OBJECT_TYPE_UNKNOWN) {
-                        objectTypeId = g_ObjectInfoMgr.AddNewObjectTypeId(typeKey);
+                        objectTypeId = ObjectInfoMgr().AddNewObjectTypeId(typeKey);
                     }
-                    auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objectTypeId);
+                    auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objectTypeId);
                     if (nullptr == pInfo) {
-                        pInfo = g_ObjectInfoMgr.AddBraceObjectInfo(objectTypeId, BRACE_OBJECT_CATEGORY_STR_OBJ_HASHTABLE, std::move(typeKey));
-                        g_ObjectInfoMgr.SetBraceObjectTypeParams(objectTypeId, keyDataType, keyObjTypeId, valDataType, valObjTypeId);
+                        pInfo = ObjectInfoMgr().AddBraceObjectInfo(objectTypeId, BRACE_OBJECT_CATEGORY_STR_OBJ_HASHTABLE, std::move(typeKey));
+                        ObjectInfoMgr().SetBraceObjectTypeParams(objectTypeId, keyDataType, keyObjTypeId, valDataType, valObjTypeId);
                     }
                     if (nullptr != pInfo) {
                         std::swap(m_ArgKeys, argKeys);
@@ -7038,7 +7038,7 @@ namespace BraceScriptInterpreter
                 BraceObjectInfo* pInfo = nullptr;
                 AbstractLoopListApiProvider* pProvider = nullptr;
                 if (listInfo.Type == Brace::BRACE_DATA_TYPE_OBJECT) {
-                    pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(listInfo.ObjectTypeId);
+                    pInfo = ObjectInfoMgr().GetBraceObjectInfo(listInfo.ObjectTypeId);
                     if (nullptr != pInfo) {
                         switch (pInfo->ObjectCategory) {
                         case BRACE_OBJECT_CATEGORY_SPECIAL:
@@ -7049,7 +7049,7 @@ namespace BraceScriptInterpreter
                     }
                 }
                 else if (listInfo.Type == Brace::BRACE_DATA_TYPE_STRING) {
-                    pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STRING);
+                    pInfo = ObjectInfoMgr().GetBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STRING);
                     if (nullptr != pInfo) {
                         pProvider = new StringLoopListProvider(GetInterpreter());
                     }
@@ -7098,7 +7098,7 @@ namespace BraceScriptInterpreter
                             auto& listInfo = loadInfo;
                             PushBlock();
                             if (listInfo.Type == Brace::BRACE_DATA_TYPE_OBJECT) {
-                                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(listInfo.ObjectTypeId);
+                                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(listInfo.ObjectTypeId);
                                 if (nullptr != pInfo) {
                                     AbstractLoopListApiProvider* pProvider = nullptr;
                                     switch (pInfo->ObjectCategory) {

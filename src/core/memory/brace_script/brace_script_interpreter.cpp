@@ -16,14 +16,28 @@
 #include "core/memory/debug_script/DebugScriptEntry.h"
 
 namespace BraceScriptInterpreter {
-static std::chrono::time_point<std::chrono::high_resolution_clock> g_start_time_point;
+static std::chrono::time_point<std::chrono::high_resolution_clock> s_start_time_point;
 
 class BraceScriptManager;
 using DslBufferForCommand = DslParser::DslStringAndObjectBufferT<8192, 1024, 256>;
-thread_local static DslBufferForCommand* g_pDslBufferForCommand = nullptr;
-thread_local static IBraceScriptApiProvider* g_pApiProvider = nullptr;
-thread_local static BraceScriptManager* g_pBraceScriptManager = nullptr;
-thread_local BraceObjectInfoManager g_ObjectInfoMgr;
+thread_local static DslBufferForCommand* tls_pDslBufferForCommand = nullptr;
+thread_local static IBraceScriptApiProvider* tls_pApiProvider = nullptr;
+thread_local static BraceScriptManager* tls_pBraceScriptManager = nullptr;
+
+thread_local static BraceObjectInfoManager* tls_pObjectInfoMgr = nullptr;
+
+BraceObjectInfoManager& ObjectInfoMgr() {
+    if (nullptr == tls_pObjectInfoMgr) {
+        tls_pObjectInfoMgr = new BraceObjectInfoManager();
+    }
+    return *tls_pObjectInfoMgr;
+}
+static void ReleaseObjectInfoManager() {
+    if (nullptr != tls_pObjectInfoMgr) {
+        delete tls_pObjectInfoMgr;
+        tls_pObjectInfoMgr = nullptr;
+    }
+}
 
 struct DmntData {
     std::stringstream ss;
@@ -311,7 +325,7 @@ private:
         parsedFile.Parse(scp.c_str());
         if (parsedFile.HasError()) {
             for (int i = 0; i < parsedFile.GetErrorNum(); ++i) {
-                g_pApiProvider->LogToView(std::string("[Syntax]: ") + parsedFile.GetErrorInfo(i));
+                tls_pApiProvider->LogToView(std::string("[Syntax]: ") + parsedFile.GetErrorInfo(i));
             }
             return nullptr;
         } else {
@@ -638,76 +652,76 @@ private:
 
 public:
     static void PushScript(const std::string& scp) {
-        if (nullptr != g_pBraceScriptManager) {
-            g_pBraceScriptManager->GetScriptQueue().push(scp);
+        if (nullptr != tls_pBraceScriptManager) {
+            tls_pBraceScriptManager->GetScriptQueue().push(scp);
         }
     }
     static void PushScript(std::string&& scp) {
-        if (nullptr != g_pBraceScriptManager) {
-            g_pBraceScriptManager->GetScriptQueue().push(std::move(scp));
+        if (nullptr != tls_pBraceScriptManager) {
+            tls_pBraceScriptManager->GetScriptQueue().push(std::move(scp));
         }
     }
     static void AddImportScript(const std::string& scp) {
-        if (nullptr != g_pBraceScriptManager) {
+        if (nullptr != tls_pBraceScriptManager) {
             std::string scpTxt = scp;
-            g_pBraceScriptManager->AddImport(std::move(scpTxt));
+            tls_pBraceScriptManager->AddImport(std::move(scpTxt));
         }
     }
     static void AddImportScript(std::string&& scp) {
-        if (nullptr != g_pBraceScriptManager) {
-            g_pBraceScriptManager->AddImport(std::move(scp));
+        if (nullptr != tls_pBraceScriptManager) {
+            tls_pBraceScriptManager->AddImport(std::move(scp));
         }
     }
     static void ClearImportScripts() {
-        if (nullptr != g_pBraceScriptManager) {
-            g_pBraceScriptManager->ClearImports();
+        if (nullptr != tls_pBraceScriptManager) {
+            tls_pBraceScriptManager->ClearImports();
         }
     }
     static void ResetScript() {
         SetQuitting(true);
         WaitQuitting();
-        if (nullptr != g_pBraceScriptManager) {
-            g_pBraceScriptManager->ResetScriptImpl();
+        if (nullptr != tls_pBraceScriptManager) {
+            tls_pBraceScriptManager->ResetScriptImpl();
         }
     }
     static void SetScript(std::string&& scp) {
-        if (nullptr != g_pBraceScriptManager) {
-            g_pBraceScriptManager->SetScriptImpl(std::move(scp));
+        if (nullptr != tls_pBraceScriptManager) {
+            tls_pBraceScriptManager->SetScriptImpl(std::move(scp));
         }
     }
     static void AddMessageHandler(const std::string& id, int pool_num) {
-        if (nullptr != g_pBraceScriptManager) {
-            g_pBraceScriptManager->AddMessageHandlerImpl(id, pool_num);
+        if (nullptr != tls_pBraceScriptManager) {
+            tls_pBraceScriptManager->AddMessageHandlerImpl(id, pool_num);
         }
     }
 
 public:
     static void ResetCallback() {
-        if (nullptr != g_pBraceScriptManager) {
-            g_pBraceScriptManager->ResetCallbackImpl();
+        if (nullptr != tls_pBraceScriptManager) {
+            tls_pBraceScriptManager->ResetCallbackImpl();
         }
     }
     static void LoadCallback(std::string&& scp) {
-        if (nullptr != g_pBraceScriptManager) {
-            g_pBraceScriptManager->LoadCallbackImpl(std::move(scp));
+        if (nullptr != tls_pBraceScriptManager) {
+            tls_pBraceScriptManager->LoadCallbackImpl(std::move(scp));
         }
     }
     static void AddCallbackHandler(const std::string& id) {
-        if (nullptr != g_pBraceScriptManager) {
-            g_pBraceScriptManager->AddCallbackHandlerImpl(id);
+        if (nullptr != tls_pBraceScriptManager) {
+            tls_pBraceScriptManager->AddCallbackHandlerImpl(id);
         }
     }
     static bool RunCallback(std::string&& msg, MessageArgs&& args) {
         bool ret = false;
-        if (nullptr != g_pBraceScriptManager) {
-            ret = g_pBraceScriptManager->RunCallbackImpl(std::move(msg), std::move(args));
+        if (nullptr != tls_pBraceScriptManager) {
+            ret = tls_pBraceScriptManager->RunCallbackImpl(std::move(msg), std::move(args));
         }
         return ret;
     }
     static bool RunCallback(std::string&& msg) {
         bool ret = false;
-        if (nullptr != g_pBraceScriptManager) {
-            ret = g_pBraceScriptManager->RunCallbackImpl(std::move(msg));
+        if (nullptr != tls_pBraceScriptManager) {
+            ret = tls_pBraceScriptManager->RunCallbackImpl(std::move(msg));
         }
         return ret;
     }
@@ -715,43 +729,43 @@ public:
 public:
     static bool SendMessage(std::string&& msg) {
         bool ret = false;
-        if (nullptr != g_pBraceScriptManager) {
-            ret = g_pBraceScriptManager->SendMessageImpl(std::move(msg));
+        if (nullptr != tls_pBraceScriptManager) {
+            ret = tls_pBraceScriptManager->SendMessageImpl(std::move(msg));
         }
         return ret;
     }
     static bool SendMessage(std::string&& msgId, MessageArgs&& args) {
         bool ret = false;
-        if (nullptr != g_pBraceScriptManager) {
-            ret = g_pBraceScriptManager->SendMessageImpl(std::move(msgId), std::move(args));
+        if (nullptr != tls_pBraceScriptManager) {
+            ret = tls_pBraceScriptManager->SendMessageImpl(std::move(msgId), std::move(args));
         }
         return ret;
     }
     static void ClearMessages() {
-        if (nullptr != g_pBraceScriptManager) {
-            g_pBraceScriptManager->ClearMessages();
+        if (nullptr != tls_pBraceScriptManager) {
+            tls_pBraceScriptManager->ClearMessages();
         }
     }
 
 public:
     static void Schedule() {
-        if (nullptr != g_pBraceScriptManager) {
-            g_pBraceScriptManager->ScheduleMessageHandler();
+        if (nullptr != tls_pBraceScriptManager) {
+            tls_pBraceScriptManager->ScheduleMessageHandler();
         }
     }
     static void PushCommand(const std::string& cmd) {
-        if (nullptr != g_pBraceScriptManager) {
-            g_pBraceScriptManager->GetCommandQueue().push(cmd);
+        if (nullptr != tls_pBraceScriptManager) {
+            tls_pBraceScriptManager->GetCommandQueue().push(cmd);
         }
     }
     static void PushCommand(std::string&& cmd) {
-        if (nullptr != g_pBraceScriptManager) {
-            g_pBraceScriptManager->GetCommandQueue().push(std::move(cmd));
+        if (nullptr != tls_pBraceScriptManager) {
+            tls_pBraceScriptManager->GetCommandQueue().push(std::move(cmd));
         }
     }
     static bool ExistsCommands() {
-        if (nullptr != g_pBraceScriptManager) {
-            auto& q = g_pBraceScriptManager->GetCommandQueue();
+        if (nullptr != tls_pBraceScriptManager) {
+            auto& q = tls_pBraceScriptManager->GetCommandQueue();
             if (!q.empty()) {
                 return true;
             }
@@ -759,8 +773,8 @@ public:
         return false;
     }
     static bool TryPopCommand(std::string& cmd) {
-        if (nullptr != g_pBraceScriptManager) {
-            auto& q = g_pBraceScriptManager->GetCommandQueue();
+        if (nullptr != tls_pBraceScriptManager) {
+            auto& q = tls_pBraceScriptManager->GetCommandQueue();
             if (!q.empty()) {
                 std::swap(cmd, q.front());
                 q.pop();
@@ -772,23 +786,23 @@ public:
 
 public:
     static void InitScript() {
-        if (nullptr == g_pBraceScriptManager) {
+        if (nullptr == tls_pBraceScriptManager) {
             CoroutineWithBoostContext::TryInit();
-            g_pBraceScriptManager = new BraceScriptManager();
+            tls_pBraceScriptManager = new BraceScriptManager();
         }
     }
     static const std::map<std::string, std::string>& GetApiDocs() {
-        assert(g_pBraceScriptManager);
-        return g_pBraceScriptManager->GetApiDocsImpl();
+        assert(tls_pBraceScriptManager);
+        return tls_pBraceScriptManager->GetApiDocsImpl();
     }
     static void Go() {
-        if (nullptr != g_pBraceScriptManager && g_pBraceScriptManager->NeedRun()) {
-            g_pBraceScriptManager->WaitScriptRun();
+        if (nullptr != tls_pBraceScriptManager && tls_pBraceScriptManager->NeedRun()) {
+            tls_pBraceScriptManager->WaitScriptRun();
         }
     }
     static void FreeScript() {
-        if (nullptr != g_pBraceScriptManager) {
-            delete g_pBraceScriptManager;
+        if (nullptr != tls_pBraceScriptManager) {
+            delete tls_pBraceScriptManager;
             CoroutineWithBoostContext::TryRelease();
             // std::size_t count = 0;
             // std::size_t alloced_size = 0;
@@ -796,26 +810,26 @@ public:
             // printf("[Brace Memory]: count:%llu pooled size:%llu, alloced size:%llu", count,
             // pooled_size, alloced_size);
             CoroutineWithBoostContext::CleanupPool();
-            g_pBraceScriptManager = nullptr;
+            tls_pBraceScriptManager = nullptr;
         }
     }
     static bool IsQuitting() {
-        if (nullptr != g_pBraceScriptManager) {
-            g_pBraceScriptManager->IsQuittingImpl();
+        if (nullptr != tls_pBraceScriptManager) {
+            tls_pBraceScriptManager->IsQuittingImpl();
         }
         return false;
     }
     static void SetQuitting(bool val) {
-        if (nullptr != g_pBraceScriptManager) {
-            g_pBraceScriptManager->SetQuittingImpl(val);
+        if (nullptr != tls_pBraceScriptManager) {
+            tls_pBraceScriptManager->SetQuittingImpl(val);
         }
     }
     static void WaitQuitting() {
-        while (nullptr != g_pBraceScriptManager && g_pBraceScriptManager->IsQuittingImpl()) {
-            if (g_pBraceScriptManager->NeedRun()) {
-                g_pBraceScriptManager->WaitScriptRun();
+        while (nullptr != tls_pBraceScriptManager && tls_pBraceScriptManager->IsQuittingImpl()) {
+            if (tls_pBraceScriptManager->NeedRun()) {
+                tls_pBraceScriptManager->WaitScriptRun();
             } else {
-                g_pBraceScriptManager->SetQuittingImpl(false);
+                tls_pBraceScriptManager->SetQuittingImpl(false);
             }
         }
     }
@@ -3011,7 +3025,7 @@ protected:
                 objTypeId <= CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE) {
                 isHash = true;
             } else {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
                 if (nullptr != pInfo &&
                     (pInfo->ObjectCategory == BRACE_OBJECT_CATEGORY_INT_OBJ_HASHTABLE ||
                      pInfo->ObjectCategory == BRACE_OBJECT_CATEGORY_STR_OBJ_HASHTABLE)) {
@@ -3141,7 +3155,7 @@ protected:
                 objTypeId <= CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE) {
                 isHash = true;
             } else {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
                 if (nullptr != pInfo &&
                     (pInfo->ObjectCategory == BRACE_OBJECT_CATEGORY_INT_OBJ_HASHTABLE ||
                      pInfo->ObjectCategory == BRACE_OBJECT_CATEGORY_STR_OBJ_HASHTABLE)) {
@@ -3271,7 +3285,7 @@ protected:
                 objTypeId <= CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE) {
                 isHash = true;
             } else {
-                auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+                auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
                 if (nullptr != pInfo &&
                     (pInfo->ObjectCategory == BRACE_OBJECT_CATEGORY_INT_OBJ_HASHTABLE ||
                      pInfo->ObjectCategory == BRACE_OBJECT_CATEGORY_STR_OBJ_HASHTABLE)) {
@@ -4323,7 +4337,7 @@ protected:
             bool success = true;
             PushBlock();
             int objTypeId = objInfo.ObjectTypeId;
-            auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+            auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
             int elemType = Brace::BRACE_DATA_TYPE_UNKNOWN;
             int elemObjTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
             if (objTypeId >= CUSTOM_BRACE_OBJECT_TYPE_STR_ARRAY &&
@@ -4500,7 +4514,7 @@ protected:
             bool success = true;
             PushBlock();
             int objTypeId = objInfo.ObjectTypeId;
-            auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+            auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
             int elemType = Brace::BRACE_DATA_TYPE_UNKNOWN;
             int elemObjTypeId = Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ;
             if (objTypeId >= CUSTOM_BRACE_OBJECT_TYPE_STR_STR_HASHTABLE &&
@@ -4857,7 +4871,7 @@ protected:
                                                       argInfo1.Type, argInfo1.VarIndex));
         int flags = static_cast<int>(Brace::VarGetI64((argInfo2.IsGlobal ? gvars : lvars),
                                                       argInfo2.Type, argInfo2.VarIndex));
-        g_pApiProvider->ShowUI(index, flags);
+        tls_pApiProvider->ShowUI(index, flags);
     }
 };
 class GetScriptInputExp final : public Brace::SimpleBraceApiBase {
@@ -4878,7 +4892,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        std::string str = g_pApiProvider->GetScriptInput();
+        std::string str = tls_pApiProvider->GetScriptInput();
         Brace::VarSetString((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex,
                             std::move(str));
     }
@@ -4908,7 +4922,7 @@ protected:
         auto&& argInfo = argInfos[0];
         const std::string& label =
             Brace::VarGetString((resultInfo.IsGlobal ? gvars : lvars), argInfo.VarIndex);
-        g_pApiProvider->SetScriptInputLabel(label);
+        tls_pApiProvider->SetScriptInputLabel(label);
     }
 };
 class SetScriptBtnCaptionExp final : public Brace::SimpleBraceApiBase {
@@ -4941,7 +4955,7 @@ protected:
                                                       argInfo1.Type, argInfo1.VarIndex));
         const std::string& label =
             Brace::VarGetString((argInfo2.IsGlobal ? gvars : lvars), argInfo2.VarIndex);
-        g_pApiProvider->SetScriptBtnCaption(index, label);
+        tls_pApiProvider->SetScriptBtnCaption(index, label);
     }
 };
 class GetPixelExp final : public Brace::SimpleBraceApiBase {
@@ -4978,7 +4992,7 @@ protected:
                                                   argInfo1.Type, argInfo1.VarIndex));
         int y = static_cast<int>(Brace::VarGetI64((argInfo2.IsGlobal ? gvars : lvars),
                                                   argInfo2.Type, argInfo2.VarIndex));
-        uint32_t pixel = g_pApiProvider->GetPixel(x, y);
+        uint32_t pixel = tls_pApiProvider->GetPixel(x, y);
         Brace::VarSetUInt32(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, pixel);
     }
 };
@@ -5001,7 +5015,7 @@ protected:
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
         int x, y;
-        g_pApiProvider->GetCursorPos(x, y);
+        tls_pApiProvider->GetCursorPos(x, y);
         Brace::VarSetInt32(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, x);
     }
 };
@@ -5024,7 +5038,7 @@ protected:
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
         int x, y;
-        g_pApiProvider->GetCursorPos(x, y);
+        tls_pApiProvider->GetCursorPos(x, y);
         Brace::VarSetInt32(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, y);
     }
 };
@@ -5047,7 +5061,7 @@ protected:
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
         int x, y;
-        g_pApiProvider->GetScreenSize(x, y);
+        tls_pApiProvider->GetScreenSize(x, y);
         Brace::VarSetInt32(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, x);
     }
 };
@@ -5070,7 +5084,7 @@ protected:
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
         int x, y;
-        g_pApiProvider->GetScreenSize(x, y);
+        tls_pApiProvider->GetScreenSize(x, y);
         Brace::VarSetInt32(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, y);
     }
 };
@@ -5103,7 +5117,7 @@ protected:
         auto&& argInfo = argInfos[0];
         int index = static_cast<int>(
             Brace::VarGetI64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex));
-        std::string v = g_pApiProvider->ReadButtonParam(index);
+        std::string v = tls_pApiProvider->ReadButtonParam(index);
         Brace::VarSetString(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, std::move(v));
     }
 };
@@ -5136,7 +5150,7 @@ protected:
         auto&& argInfo = argInfos[0];
         int index = static_cast<int>(
             Brace::VarGetI64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex));
-        std::string v = g_pApiProvider->ReadStickParam(index);
+        std::string v = tls_pApiProvider->ReadStickParam(index);
         Brace::VarSetString(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, std::move(v));
     }
 };
@@ -5169,7 +5183,7 @@ protected:
         auto&& argInfo = argInfos[0];
         int index = static_cast<int>(
             Brace::VarGetI64((argInfo.IsGlobal ? gvars : lvars), argInfo.Type, argInfo.VarIndex));
-        std::string v = g_pApiProvider->ReadMotionParam(index);
+        std::string v = tls_pApiProvider->ReadMotionParam(index);
         Brace::VarSetString(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, std::move(v));
     }
 };
@@ -5196,7 +5210,7 @@ protected:
         auto&& argInfo = argInfos[0];
         const std::string& str =
             Brace::VarGetString((argInfo.IsGlobal ? gvars : lvars), argInfo.VarIndex);
-        g_pApiProvider->ReadParamPackage(str);
+        tls_pApiProvider->ReadParamPackage(str);
     }
 };
 class HasParamExp final : public Brace::SimpleBraceApiBase {
@@ -5227,7 +5241,7 @@ protected:
         auto&& argInfo = argInfos[0];
         const std::string& key =
             Brace::VarGetString((argInfo.IsGlobal ? gvars : lvars), argInfo.VarIndex);
-        bool v = g_pApiProvider->HasParam(key);
+        bool v = tls_pApiProvider->HasParam(key);
         Brace::VarSetBool(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, v);
     }
 };
@@ -5264,7 +5278,7 @@ protected:
             Brace::VarGetString((argInfo1.IsGlobal ? gvars : lvars), argInfo1.VarIndex);
         int def = static_cast<int>(Brace::VarGetI64((argInfo2.IsGlobal ? gvars : lvars),
                                                     argInfo2.Type, argInfo2.VarIndex));
-        int v = g_pApiProvider->GetIntParam(key, def);
+        int v = tls_pApiProvider->GetIntParam(key, def);
         Brace::VarSetInt32(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, v);
     }
 };
@@ -5301,7 +5315,7 @@ protected:
             Brace::VarGetString((argInfo1.IsGlobal ? gvars : lvars), argInfo1.VarIndex);
         float def = static_cast<float>(Brace::VarGetF64((argInfo2.IsGlobal ? gvars : lvars),
                                                         argInfo2.Type, argInfo2.VarIndex));
-        float v = g_pApiProvider->GetFloatParam(key, def);
+        float v = tls_pApiProvider->GetFloatParam(key, def);
         Brace::VarSetFloat(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, v);
     }
 };
@@ -5337,7 +5351,7 @@ protected:
             Brace::VarGetString((argInfo1.IsGlobal ? gvars : lvars), argInfo1.VarIndex);
         const std::string& def =
             Brace::VarGetString((argInfo2.IsGlobal ? gvars : lvars), argInfo2.VarIndex);
-        std::string v = g_pApiProvider->GetStrParam(key, def);
+        std::string v = tls_pApiProvider->GetStrParam(key, def);
         Brace::VarSetString(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, std::move(v));
     }
 };
@@ -5370,7 +5384,7 @@ protected:
                                                   argInfo1.Type, argInfo1.VarIndex));
         int k = static_cast<int>(Brace::VarGetI64((argInfo2.IsGlobal ? gvars : lvars),
                                                   argInfo2.Type, argInfo2.VarIndex));
-        g_pApiProvider->KeyPress(m, k);
+        tls_pApiProvider->KeyPress(m, k);
     }
 };
 class KeyReleaseExp final : public Brace::SimpleBraceApiBase {
@@ -5403,7 +5417,7 @@ protected:
                                                   argInfo1.Type, argInfo1.VarIndex));
         int k = static_cast<int>(Brace::VarGetI64((argInfo2.IsGlobal ? gvars : lvars),
                                                   argInfo2.Type, argInfo2.VarIndex));
-        g_pApiProvider->KeyRelease(m, k);
+        tls_pApiProvider->KeyRelease(m, k);
     }
 };
 class MousePressExp final : public Brace::SimpleBraceApiBase {
@@ -5441,7 +5455,7 @@ protected:
                                                   argInfo2.Type, argInfo2.VarIndex));
         int btn = static_cast<int>(Brace::VarGetI64((argInfo3.IsGlobal ? gvars : lvars),
                                                     argInfo3.Type, argInfo3.VarIndex));
-        g_pApiProvider->MousePress(x, y, btn);
+        tls_pApiProvider->MousePress(x, y, btn);
     }
 };
 class MouseReleaseExp final : public Brace::SimpleBraceApiBase {
@@ -5468,7 +5482,7 @@ protected:
         auto&& argInfo1 = argInfos[0];
         int btn = static_cast<int>(Brace::VarGetI64((argInfo1.IsGlobal ? gvars : lvars),
                                                     argInfo1.Type, argInfo1.VarIndex));
-        g_pApiProvider->MouseRelease(btn);
+        tls_pApiProvider->MouseRelease(btn);
     }
 };
 class MouseMoveExp final : public Brace::SimpleBraceApiBase {
@@ -5500,7 +5514,7 @@ protected:
                                                   argInfo1.Type, argInfo1.VarIndex));
         int y = static_cast<int>(Brace::VarGetI64((argInfo2.IsGlobal ? gvars : lvars),
                                                   argInfo2.Type, argInfo2.VarIndex));
-        g_pApiProvider->MouseMove(x, y);
+        tls_pApiProvider->MouseMove(x, y);
     }
 };
 class MouseWheelChangeExp final : public Brace::SimpleBraceApiBase {
@@ -5532,7 +5546,7 @@ protected:
                                                   argInfo1.Type, argInfo1.VarIndex));
         int y = static_cast<int>(Brace::VarGetI64((argInfo2.IsGlobal ? gvars : lvars),
                                                   argInfo2.Type, argInfo2.VarIndex));
-        g_pApiProvider->MouseWheelChange(x, y);
+        tls_pApiProvider->MouseWheelChange(x, y);
     }
 };
 class TouchPressExp final : public Brace::SimpleBraceApiBase {
@@ -5569,7 +5583,7 @@ protected:
                                                   argInfo2.Type, argInfo2.VarIndex));
         int id = static_cast<int>(Brace::VarGetI64((argInfo3.IsGlobal ? gvars : lvars),
                                                    argInfo3.Type, argInfo3.VarIndex));
-        g_pApiProvider->TouchPress(x, y, id);
+        tls_pApiProvider->TouchPress(x, y, id);
     }
 };
 class TouchUpdateBeginExp final : public Brace::SimpleBraceApiBase {
@@ -5585,7 +5599,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        g_pApiProvider->TouchUpdateBegin();
+        tls_pApiProvider->TouchUpdateBegin();
     }
 };
 class TouchMoveExp final : public Brace::SimpleBraceApiBase {
@@ -5622,7 +5636,7 @@ protected:
                                                   argInfo2.Type, argInfo2.VarIndex));
         int id = static_cast<int>(Brace::VarGetI64((argInfo3.IsGlobal ? gvars : lvars),
                                                    argInfo3.Type, argInfo3.VarIndex));
-        g_pApiProvider->TouchMove(x, y, id);
+        tls_pApiProvider->TouchMove(x, y, id);
     }
 };
 class TouchUpdateEndExp final : public Brace::SimpleBraceApiBase {
@@ -5638,7 +5652,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        g_pApiProvider->TouchUpdateEnd();
+        tls_pApiProvider->TouchUpdateEnd();
     }
 };
 class TouchEndExp final : public Brace::SimpleBraceApiBase {
@@ -5654,7 +5668,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        g_pApiProvider->TouchEnd();
+        tls_pApiProvider->TouchEnd();
     }
 };
 
@@ -5687,7 +5701,7 @@ protected:
         auto&& argInfo1 = argInfos[0];
         int id = static_cast<int>(Brace::VarGetI64((argInfo1.IsGlobal ? gvars : lvars),
                                                    argInfo1.Type, argInfo1.VarIndex));
-        bool v = g_pApiProvider->GetButtonState(id);
+        bool v = tls_pApiProvider->GetButtonState(id);
         Brace::VarSetBool((resultInfo.IsGlobal ? gvars : lvars), resultInfo.VarIndex, v);
     }
 };
@@ -5726,7 +5740,7 @@ protected:
                                                           argInfo2.Type, argInfo2.VarIndex));
         bool v = Brace::VarGetBoolean((argInfo3.IsGlobal ? gvars : lvars), argInfo3.Type,
                                       argInfo3.VarIndex);
-        g_pApiProvider->SetButtonState(player_index, button_id, v);
+        tls_pApiProvider->SetButtonState(player_index, button_id, v);
     }
 };
 class SetStickPositionExp final : public Brace::SimpleBraceApiBase {
@@ -5769,7 +5783,7 @@ protected:
                                                       argInfo3.Type, argInfo3.VarIndex));
         float y = static_cast<float>(Brace::VarGetF64((argInfo4.IsGlobal ? gvars : lvars),
                                                       argInfo4.Type, argInfo4.VarIndex));
-        g_pApiProvider->SetStickPosition(player_index, axis_id, x, y);
+        tls_pApiProvider->SetStickPosition(player_index, axis_id, x, y);
     }
 };
 class SetMotionStateExp final : public Brace::SimpleBraceApiBase {
@@ -5833,7 +5847,7 @@ protected:
                                                        argInfo7.Type, argInfo7.VarIndex));
         float az = static_cast<float>(Brace::VarGetF64((argInfo8.IsGlobal ? gvars : lvars),
                                                        argInfo8.Type, argInfo8.VarIndex));
-        g_pApiProvider->SetMotionState(player_index, delta_time, gx, gy, gz, ax, ay, az);
+        tls_pApiProvider->SetMotionState(player_index, delta_time, gx, gy, gz, ax, ay, az);
     }
 };
 
@@ -5845,8 +5859,8 @@ static uint64_t ReadMemory(Kernel::KProcess& process, uint64_t addr, uint64_t va
     static const size_t s_u64 = sizeof(uint64_t);
 
     uint64_t val = 0;
-    if (nullptr != g_pApiProvider) {
-        auto&& system = g_pApiProvider->GetSystem();
+    if (nullptr != tls_pApiProvider) {
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& sniffer = system.MemorySniffer();
         result = true;
         bool succ = true;
@@ -5907,8 +5921,8 @@ static bool WriteMemory(Kernel::KProcess& process, uint64_t addr, uint64_t val_s
     static const size_t s_u64 = sizeof(uint64_t);
 
     bool result = false;
-    if (nullptr != g_pApiProvider) {
-        auto&& system = g_pApiProvider->GetSystem();
+    if (nullptr != tls_pApiProvider) {
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& sniffer = system.MemorySniffer();
         result = true;
         bool succ = true;
@@ -5971,7 +5985,7 @@ protected:
         resultInfo.Type = Brace::BRACE_DATA_TYPE_OBJECT;
         resultInfo.Name = GenTempVarName();
         resultInfo.ObjectTypeId =
-            g_ObjectInfoMgr.GetObjectTypeId("hashtable<:int64,MemoryModifyInfo:>");
+            ObjectInfoMgr().GetObjectTypeId("hashtable<:int64,MemoryModifyInfo:>");
         resultInfo.VarIndex =
             AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
         return true;
@@ -5979,7 +5993,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& memorySniffer = system.MemorySniffer();
         auto&& results = memorySniffer.GetResultMemoryModifyInfo();
 
@@ -6003,7 +6017,7 @@ protected:
         resultInfo.Type = Brace::BRACE_DATA_TYPE_OBJECT;
         resultInfo.Name = GenTempVarName();
         resultInfo.ObjectTypeId =
-            g_ObjectInfoMgr.GetObjectTypeId("hashtable<:int64,MemoryModifyInfo:>");
+            ObjectInfoMgr().GetObjectTypeId("hashtable<:int64,MemoryModifyInfo:>");
         resultInfo.VarIndex =
             AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
         return true;
@@ -6011,7 +6025,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& memorySniffer = system.MemorySniffer();
         auto&& results = memorySniffer.GetLastHistoryMemoryModifyInfo();
 
@@ -6043,7 +6057,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& memorySniffer = system.MemorySniffer();
         int ct = memorySniffer.GetHistoryMemoryModifyInfoCount();
 
@@ -6069,7 +6083,7 @@ protected:
         resultInfo.Type = Brace::BRACE_DATA_TYPE_OBJECT;
         resultInfo.Name = GenTempVarName();
         resultInfo.ObjectTypeId =
-            g_ObjectInfoMgr.GetObjectTypeId("hashtable<:int64,MemoryModifyInfo:>");
+            ObjectInfoMgr().GetObjectTypeId("hashtable<:int64,MemoryModifyInfo:>");
         resultInfo.VarIndex =
             AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
         return true;
@@ -6084,7 +6098,7 @@ protected:
                 Brace::VarGetI64(argInfo.IsGlobal ? gvars : lvars, argInfo.Type, argInfo.VarIndex));
         }
 
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& memorySniffer = system.MemorySniffer();
         int ct = memorySniffer.GetHistoryMemoryModifyInfoCount();
         if (ix >= 0 && ix < ct) {
@@ -6121,7 +6135,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& memorySniffer = system.MemorySniffer();
         int ct = memorySniffer.GetRollbackMemoryModifyInfoCount();
 
@@ -6147,7 +6161,7 @@ protected:
         resultInfo.Type = Brace::BRACE_DATA_TYPE_OBJECT;
         resultInfo.Name = GenTempVarName();
         resultInfo.ObjectTypeId =
-            g_ObjectInfoMgr.GetObjectTypeId("hashtable<:int64,MemoryModifyInfo:>");
+            ObjectInfoMgr().GetObjectTypeId("hashtable<:int64,MemoryModifyInfo:>");
         resultInfo.VarIndex =
             AllocVariable(resultInfo.Name, resultInfo.Type, resultInfo.ObjectTypeId);
         return true;
@@ -6162,7 +6176,7 @@ protected:
                 Brace::VarGetI64(argInfo.IsGlobal ? gvars : lvars, argInfo.Type, argInfo.VarIndex));
         }
 
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& memorySniffer = system.MemorySniffer();
         int ct = memorySniffer.GetRollbackMemoryModifyInfoCount();
         if (ix >= 0 && ix < ct) {
@@ -6188,7 +6202,7 @@ protected:
     virtual bool TypeInference(const Brace::FuncInfo& func, const DslData::FunctionData& data,
                                const std::vector<Brace::OperandLoadtimeInfo>& argInfos,
                                Brace::OperandLoadtimeInfo& resultInfo) override {
-        int objTypeId = g_ObjectInfoMgr.GetObjectTypeId("hashtable<:int64,MemoryModifyInfo:>");
+        int objTypeId = ObjectInfoMgr().GetObjectTypeId("hashtable<:int64,MemoryModifyInfo:>");
         if (argInfos.size() != 1 || argInfos[0].Type != Brace::BRACE_DATA_TYPE_OBJECT ||
             argInfos[0].ObjectTypeId != objTypeId) {
             // error
@@ -6222,7 +6236,7 @@ protected:
                 newResult.insert(std::make_pair(addr, std::move(p)));
             }
 
-            auto&& system = g_pApiProvider->GetSystem();
+            auto&& system = tls_pApiProvider->GetSystem();
             auto&& memorySniffer = system.MemorySniffer();
             memorySniffer.SetResultMemoryModifyInfo(std::move(newResult));
         }
@@ -6310,8 +6324,8 @@ protected:
 
         bool ret = false;
         bool result = false;
-        if (nullptr != g_pApiProvider) {
-            auto&& system = g_pApiProvider->GetSystem();
+        if (nullptr != tls_pApiProvider) {
+            auto&& system = tls_pApiProvider->GetSystem();
             auto&& memorySniffer = system.MemorySniffer();
             auto* pProcess = memorySniffer.GetProcess(pid);
             if (nullptr != pProcess) {
@@ -6352,7 +6366,7 @@ protected:
                     std::stringstream ss;
                     ss << "read addr:" << std::hex << addr << " size:" << std::dec << val_size
                        << " pid:" << std::hex << pid << " failed.";
-                    g_pApiProvider->LogToView(ss.str());
+                    tls_pApiProvider->LogToView(ss.str());
                 }
             }
         }
@@ -6416,8 +6430,8 @@ protected:
 
         bool ret = false;
         bool result = false;
-        if (nullptr != g_pApiProvider) {
-            auto&& system = g_pApiProvider->GetSystem();
+        if (nullptr != tls_pApiProvider) {
+            auto&& system = tls_pApiProvider->GetSystem();
             auto&& memorySniffer = system.MemorySniffer();
             auto* pProcess = memorySniffer.GetProcess(pid);
             if (nullptr != pProcess) {
@@ -6458,7 +6472,7 @@ protected:
                     std::stringstream ss;
                     ss << "read addr:" << std::hex << addr << " size:" << std::dec << val_size
                        << " pid:" << std::hex << pid << " failed.";
-                    g_pApiProvider->LogToView(ss.str());
+                    tls_pApiProvider->LogToView(ss.str());
                 }
             }
         }
@@ -6485,9 +6499,9 @@ protected:
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
 
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         if (nullptr != system.ApplicationProcess()) {
-            const auto path = g_pApiProvider->GetYuzuPath();
+            const auto path = tls_pApiProvider->GetYuzuPath();
 
             Brace::VarSetString(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, path.string());
         }
@@ -6512,9 +6526,9 @@ protected:
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
 
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         if (nullptr != system.ApplicationProcess()) {
-            const auto path = g_pApiProvider->GetLogPath();
+            const auto path = tls_pApiProvider->GetLogPath();
 
             Brace::VarSetString(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex,
                                 path.string());
@@ -6540,9 +6554,9 @@ protected:
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
 
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         if (nullptr != system.ApplicationProcess()) {
-            const auto path = g_pApiProvider->GetModLoadPath();
+            const auto path = tls_pApiProvider->GetModLoadPath();
 
             Brace::VarSetString(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, path.string());
         }
@@ -6579,9 +6593,9 @@ protected:
             auto&& argInfo = argInfos[0];
             ix = static_cast<int>(Brace::VarGetI64(argInfo.IsGlobal ? gvars : lvars, argInfo.Type, argInfo.VarIndex));
         }
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         if (nullptr != system.ApplicationProcess()) {
-            const auto path = g_pApiProvider->GetGameSavePath(ix);
+            const auto path = tls_pApiProvider->GetGameSavePath(ix);
 
             Brace::VarSetString(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, path.string());
         }
@@ -6605,7 +6619,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         if (nullptr != system.ApplicationProcess()) {
             uint64_t title_id = system.GetApplicationProcessProgramID();
 
@@ -6634,7 +6648,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         if (nullptr != system.ApplicationProcess()) {
             uint64_t procId = system.ApplicationProcess()->GetProcessId();
             Brace::VarSetUInt64(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, procId);
@@ -6659,7 +6673,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& memorySniffer = system.MemorySniffer();
         int ct = memorySniffer.GetModuleCount();
 
@@ -6696,7 +6710,7 @@ protected:
         int ix = static_cast<int>(
             Brace::VarGetI64(argInfo.IsGlobal ? gvars : lvars, argInfo.Type, argInfo.VarIndex));
 
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& memorySniffer = system.MemorySniffer();
         uint64_t addr;
         uint64_t size;
@@ -6739,7 +6753,7 @@ protected:
         int ix = static_cast<int>(
             Brace::VarGetI64(argInfo.IsGlobal ? gvars : lvars, argInfo.Type, argInfo.VarIndex));
 
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& memorySniffer = system.MemorySniffer();
         uint64_t addr;
         uint64_t size;
@@ -6783,7 +6797,7 @@ protected:
         int ix = static_cast<int>(
             Brace::VarGetI64(argInfo.IsGlobal ? gvars : lvars, argInfo.Type, argInfo.VarIndex));
 
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& memorySniffer = system.MemorySniffer();
         uint64_t addr;
         uint64_t size;
@@ -6827,7 +6841,7 @@ protected:
         int ix = static_cast<int>(
             Brace::VarGetI64(argInfo.IsGlobal ? gvars : lvars, argInfo.Type, argInfo.VarIndex));
 
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& memorySniffer = system.MemorySniffer();
         uint64_t addr;
         uint64_t size;
@@ -6871,7 +6885,7 @@ protected:
         int ix = static_cast<int>(
             Brace::VarGetI64(argInfo.IsGlobal ? gvars : lvars, argInfo.Type, argInfo.VarIndex));
 
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& memorySniffer = system.MemorySniffer();
         uint64_t addr;
         uint64_t size;
@@ -6916,7 +6930,7 @@ protected:
         int ix = static_cast<int>(
             Brace::VarGetI64(argInfo.IsGlobal ? gvars : lvars, argInfo.Type, argInfo.VarIndex));
 
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& memorySniffer = system.MemorySniffer();
         uint64_t addr;
         uint64_t size;
@@ -6961,7 +6975,7 @@ protected:
         int ix = static_cast<int>(
             Brace::VarGetI64(argInfo.IsGlobal ? gvars : lvars, argInfo.Type, argInfo.VarIndex));
 
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& memorySniffer = system.MemorySniffer();
         uint64_t addr;
         uint64_t size;
@@ -6993,7 +7007,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& memorySniffer = system.MemorySniffer();
         uint64_t size;
         uint64_t base = memorySniffer.GetHeapBase(size);
@@ -7019,7 +7033,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& memorySniffer = system.MemorySniffer();
         uint64_t size;
         [[maybe_unused]] uint64_t base = memorySniffer.GetHeapBase(size);
@@ -7045,7 +7059,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& memorySniffer = system.MemorySniffer();
         uint64_t size;
         uint64_t base = memorySniffer.GetStackBase(size);
@@ -7071,7 +7085,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& memorySniffer = system.MemorySniffer();
         uint64_t size;
         [[maybe_unused]] uint64_t base = memorySniffer.GetStackBase(size);
@@ -7109,7 +7123,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        if (nullptr == g_pApiProvider)
+        if (nullptr == tls_pApiProvider)
             return;
         auto&& argInfo1 = argInfos[0];
         auto&& argInfo2 = argInfos[1];
@@ -7130,7 +7144,7 @@ protected:
                                        argInfo4.VarIndex);
         }
 
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& sniffer = system.MemorySniffer();
         sniffer.MarkMemoryDebug(pid, addr, size, debug);
     }
@@ -7168,7 +7182,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        if (nullptr == g_pApiProvider)
+        if (nullptr == tls_pApiProvider)
             return;
         auto&& argInfo1 = argInfos[0];
         auto&& argInfo2 = argInfos[1];
@@ -7195,7 +7209,7 @@ protected:
                                    argInfo5.VarIndex);
         }
 
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& sniffer = system.MemorySniffer();
         sniffer.AddSniffing(pid, addr, size, step, val);
     }
@@ -7225,7 +7239,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        if (nullptr == g_pApiProvider)
+        if (nullptr == tls_pApiProvider)
             return;
         auto&& argInfo1 = argInfos[0];
         auto&& objPtr = Brace::VarGetObject(argInfo1.IsGlobal ? gvars : lvars, argInfo1.VarIndex);
@@ -7238,7 +7252,7 @@ protected:
         uint64_t val_size = sizeof(uint32_t);
         uint64_t max_count;
         uint64_t pid;
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& sniffer = system.MemorySniffer();
         sniffer.GetMemorySearchInfo(start, end, step, val_size, range, max_count, pid);
         auto* pProcess = sniffer.GetProcess(pid);
@@ -7345,7 +7359,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        if (nullptr == g_pApiProvider)
+        if (nullptr == tls_pApiProvider)
             return;
         auto&& argInfo1 = argInfos[0];
         auto&& argInfo2 = argInfos[1];
@@ -7366,18 +7380,18 @@ protected:
                                    argInfo4.VarIndex);
         }
 
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& sniffer = system.MemorySniffer();
         auto* pProcess = sniffer.GetProcess(pid);
         if (nullptr != pProcess) {
-            g_pApiProvider->LogToView(std::string("===show memory==="));
+            tls_pApiProvider->LogToView(std::string("===show memory==="));
             for (uint64_t maddr = addr; maddr <= addr + size - step; maddr += step) {
                 bool mresult = false;
                 uint64_t mval = ReadMemory(*pProcess, maddr, step, mresult);
                 std::stringstream ss;
                 ss << "addr: " << std::hex << maddr << " hex_val: " << mval
                    << " dec_val: " << std::dec << mval;
-                g_pApiProvider->LogToView(ss.str());
+                tls_pApiProvider->LogToView(ss.str());
             }
         }
     }
@@ -7404,7 +7418,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        if (nullptr == g_pApiProvider)
+        if (nullptr == tls_pApiProvider)
             return;
         auto&& argInfo1 = argInfos[0];
         auto&& objPtr = Brace::VarGetObject(argInfo1.IsGlobal ? gvars : lvars, argInfo1.VarIndex);
@@ -7417,7 +7431,7 @@ protected:
         uint64_t val_size = sizeof(uint32_t);
         uint64_t max_count;
         uint64_t pid;
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& sniffer = system.MemorySniffer();
         sniffer.GetMemorySearchInfo(start, end, step, val_size, range, max_count, pid);
         if (val_size < sizeof(uint8_t) || val_size > sizeof(uint64_t))
@@ -7477,22 +7491,22 @@ protected:
                     if (pqueue.size() == findVals.size()) {
                         uint64_t stAddr = pqueue.top();
                         if (addr - stAddr <= range) {
-                            g_pApiProvider->LogToView(std::string("===find result==="));
+                            tls_pApiProvider->LogToView(std::string("===find result==="));
                             for (auto&& pair : hash64) {
                                 std::stringstream ss;
                                 ss << "addr: " << std::hex << pair.second
                                    << " hex_val: " << pair.first << " dec_val: " << std::dec
                                    << pair.first;
-                                g_pApiProvider->LogToView(ss.str());
+                                tls_pApiProvider->LogToView(ss.str());
                             }
-                            g_pApiProvider->LogToView(std::string("===area memory==="));
+                            tls_pApiProvider->LogToView(std::string("===area memory==="));
                             for (uint64_t maddr = stAddr; maddr <= addr; maddr += step) {
                                 bool mresult = false;
                                 uint64_t mval = ReadMemory(*pProcess, maddr, val_size, mresult);
                                 std::stringstream ss;
                                 ss << "addr: " << std::hex << maddr << " hex_val: " << mval
                                    << " dec_val: " << std::dec << mval;
-                                g_pApiProvider->LogToView(ss.str());
+                                tls_pApiProvider->LogToView(ss.str());
                             }
                             break;
                         }
@@ -7524,7 +7538,7 @@ protected:
     virtual void Execute(Brace::VariableInfo& gvars, Brace::VariableInfo& lvars,
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
-        if (nullptr == g_pApiProvider)
+        if (nullptr == tls_pApiProvider)
             return;
         auto&& argInfo1 = argInfos[0];
         auto&& objPtr = Brace::VarGetObject(argInfo1.IsGlobal ? gvars : lvars, argInfo1.VarIndex);
@@ -7537,7 +7551,7 @@ protected:
         uint64_t val_size = sizeof(uint32_t);
         uint64_t max_count;
         uint64_t pid;
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& sniffer = system.MemorySniffer();
         sniffer.GetMemorySearchInfo(start, end, step, val_size, range, max_count, pid);
         if (val_size < sizeof(uint8_t) || val_size > sizeof(uint64_t))
@@ -7598,22 +7612,22 @@ protected:
                     if (pqueue.size() == findVals.size()) {
                         uint64_t stAddr = pqueue.top();
                         if (addr - stAddr <= range) {
-                            g_pApiProvider->LogToView(std::string("===search result==="));
+                            tls_pApiProvider->LogToView(std::string("===search result==="));
                             for (auto&& pair : hash64) {
                                 std::stringstream ss;
                                 ss << "addr: " << std::hex << pair.second
                                    << " hex_val: " << pair.first << " dec_val: " << std::dec
                                    << pair.first;
-                                g_pApiProvider->LogToView(ss.str());
+                                tls_pApiProvider->LogToView(ss.str());
                             }
-                            g_pApiProvider->LogToView(std::string("===area memory==="));
+                            tls_pApiProvider->LogToView(std::string("===area memory==="));
                             for (uint64_t maddr = stAddr; maddr <= addr; maddr += step) {
                                 bool mresult = false;
                                 uint64_t mval = ReadMemory(*pProcess, maddr, val_size, mresult);
                                 std::stringstream ss;
                                 ss << "addr: " << std::hex << maddr << " hex_val: " << mval
                                    << " dec_val: " << std::dec << mval;
-                                g_pApiProvider->LogToView(ss.str());
+                                tls_pApiProvider->LogToView(ss.str());
                             }
 
                             hash64.clear();
@@ -7703,8 +7717,8 @@ protected:
             val_size = sizeof(uint32_t);
 
         Brace::VarSetObject(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, nullptr);
-        if (nullptr != g_pApiProvider) {
-            auto&& system = g_pApiProvider->GetSystem();
+        if (nullptr != tls_pApiProvider) {
+            auto&& system = tls_pApiProvider->GetSystem();
             auto&& sniffer = system.MemorySniffer();
             auto* pProcess = sniffer.GetProcess(pid);
             if (nullptr != pProcess) {
@@ -7853,8 +7867,8 @@ protected:
             val_size = sizeof(uint32_t);
 
         Brace::VarSetObject(resultInfo.IsGlobal ? gvars : lvars, resultInfo.VarIndex, nullptr);
-        if (nullptr != g_pApiProvider) {
-            auto&& system = g_pApiProvider->GetSystem();
+        if (nullptr != tls_pApiProvider) {
+            auto&& system = tls_pApiProvider->GetSystem();
             auto&& sniffer = system.MemorySniffer();
             auto* pProcess = sniffer.GetProcess(pid);
             if (nullptr != pProcess) {
@@ -7984,8 +7998,8 @@ protected:
             val_size = sizeof(uint32_t);
 
         uint64_t val = 0;
-        if (nullptr != g_pApiProvider) {
-            auto&& system = g_pApiProvider->GetSystem();
+        if (nullptr != tls_pApiProvider) {
+            auto&& system = tls_pApiProvider->GetSystem();
             auto&& sniffer = system.MemorySniffer();
             auto* pProcess = sniffer.GetProcess(pid);
             if (nullptr != pProcess) {
@@ -7995,7 +8009,7 @@ protected:
                     std::stringstream ss;
                     ss << "read addr:" << std::hex << addr << " size:" << std::dec << val_size
                        << " failed.";
-                    g_pApiProvider->LogToView(ss.str());
+                    tls_pApiProvider->LogToView(ss.str());
                 }
             }
         }
@@ -8058,8 +8072,8 @@ protected:
             val_size = sizeof(uint32_t);
 
         bool result = false;
-        if (nullptr != g_pApiProvider) {
-            auto&& system = g_pApiProvider->GetSystem();
+        if (nullptr != tls_pApiProvider) {
+            auto&& system = tls_pApiProvider->GetSystem();
             auto&& sniffer = system.MemorySniffer();
             auto* pProcess = sniffer.GetProcess(pid);
             if (nullptr != pProcess) {
@@ -8068,7 +8082,7 @@ protected:
                     std::stringstream ss;
                     ss << "write addr:" << std::hex << addr << " size:" << std::dec << val_size
                        << " failed.";
-                    g_pApiProvider->LogToView(ss.str());
+                    tls_pApiProvider->LogToView(ss.str());
                 }
             }
         }
@@ -8125,8 +8139,8 @@ protected:
         }
 
         bool result = false;
-        if (nullptr != g_pApiProvider) {
-            auto&& system = g_pApiProvider->GetSystem();
+        if (nullptr != tls_pApiProvider) {
+            auto&& system = tls_pApiProvider->GetSystem();
             auto&& sniffer = system.MemorySniffer();
             auto* pProcess = sniffer.GetProcess(pid);
             if (nullptr != pProcess) {
@@ -8190,8 +8204,8 @@ protected:
         }
 
         bool result = false;
-        if (nullptr != g_pApiProvider) {
-            auto&& system = g_pApiProvider->GetSystem();
+        if (nullptr != tls_pApiProvider) {
+            auto&& system = tls_pApiProvider->GetSystem();
             auto&& sniffer = system.MemorySniffer();
             auto* pProcess = sniffer.GetProcess(pid);
             if (nullptr != pProcess) {
@@ -8256,8 +8270,8 @@ protected:
         }
 
         bool result = false;
-        if (nullptr != g_pApiProvider) {
-            auto&& system = g_pApiProvider->GetSystem();
+        if (nullptr != tls_pApiProvider) {
+            auto&& system = tls_pApiProvider->GetSystem();
             auto&& sniffer = system.MemorySniffer();
             auto* pProcess = sniffer.GetProcess(pid);
             if (nullptr != pProcess) {
@@ -8313,8 +8327,8 @@ protected:
         }
 
         bool result = false;
-        if (nullptr != g_pApiProvider) {
-            auto&& system = g_pApiProvider->GetSystem();
+        if (nullptr != tls_pApiProvider) {
+            auto&& system = tls_pApiProvider->GetSystem();
             auto&& sniffer = system.MemorySniffer();
             auto* pProcess = sniffer.GetProcess(pid);
             if (nullptr != pProcess) {
@@ -8370,8 +8384,8 @@ protected:
         }
 
         bool result = false;
-        if (nullptr != g_pApiProvider) {
-            auto&& system = g_pApiProvider->GetSystem();
+        if (nullptr != tls_pApiProvider) {
+            auto&& system = tls_pApiProvider->GetSystem();
             auto&& sniffer = system.MemorySniffer();
             auto* pProcess = sniffer.GetProcess(pid);
             if (nullptr != pProcess) {
@@ -8432,8 +8446,8 @@ protected:
         }
 
         uint64_t result = 0;
-        if (nullptr != g_pApiProvider) {
-            auto&& system = g_pApiProvider->GetSystem();
+        if (nullptr != tls_pApiProvider) {
+            auto&& system = tls_pApiProvider->GetSystem();
             auto&& sniffer = system.MemorySniffer();
             auto* pProcess = sniffer.GetProcess(pid);
             if (nullptr != pProcess) {
@@ -8463,8 +8477,8 @@ protected:
                          const std::vector<Brace::OperandRuntimeInfo>& argInfos,
                          const Brace::OperandRuntimeInfo& resultInfo) const override {
         bool result = false;
-        if (nullptr != g_pApiProvider) {
-            auto&& system = g_pApiProvider->GetSystem();
+        if (nullptr != tls_pApiProvider) {
+            auto&& system = tls_pApiProvider->GetSystem();
             auto* pAppProc = system.ApplicationProcess();
             auto* pCurThread = Kernel::GetCurrentThreadPointer(system.Kernel());
             result = nullptr != pAppProc && nullptr != pCurThread;
@@ -8504,7 +8518,7 @@ protected:
         uint32_t value = static_cast<uint32_t>(
             Brace::VarGetI64(argInfo2.IsGlobal ? gvars : lvars, argInfo2.Type, argInfo2.VarIndex));
 
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& sniffer = system.MemorySniffer();
 
         sniffer.AddLogInstruction(mask, value);
@@ -8678,10 +8692,10 @@ protected:
             Brace::VarGetString(argInfo3.IsGlobal ? gvars : lvars, argInfo3.VarIndex);
 
         bool result = false;
-        if (nullptr != g_pApiProvider) {
+        if (nullptr != tls_pApiProvider) {
             std::string txt = read_file(filePath);
             if (txt.length() > 0) {
-                g_pApiProvider->ReplaceSourceShader(hash, stage, std::move(txt));
+                tls_pApiProvider->ReplaceSourceShader(hash, stage, std::move(txt));
                 result = true;
             }
         }
@@ -8732,7 +8746,7 @@ protected:
             Brace::VarGetString(argInfo3.IsGlobal ? gvars : lvars, argInfo3.VarIndex);
 
         bool result = false;
-        if (nullptr != g_pApiProvider) {
+        if (nullptr != tls_pApiProvider) {
             std::ifstream file(get_absolutely_path(filePath), std::ios::in | std::ios::binary);
             if (file.is_open()) {
                 file.seekg(0, std::ios::end);
@@ -8748,7 +8762,7 @@ protected:
                 }
                 file.read(reinterpret_cast<char*>(code.data()), file_size);
                 if (code.size() > 0) {
-                    g_pApiProvider->ReplaceSpirvShader(hash, stage, std::move(code));
+                    tls_pApiProvider->ReplaceSpirvShader(hash, stage, std::move(code));
                     result = true;
                 }
             }
@@ -8887,7 +8901,7 @@ private:
             bid = Brace::VarGetString((argInfo4.IsGlobal ? gvars : lvars), argInfo4.VarIndex);
         }
 
-        auto&& system = g_pApiProvider->GetSystem();
+        auto&& system = tls_pApiProvider->GetSystem();
         auto&& sniffer = system.MemorySniffer();
 
         std::string file_name = bid + ".txt";
@@ -9580,7 +9594,7 @@ protected:
             Brace::VarGetU64(argInfo3.IsGlobal ? gvars : lvars, argInfo3.Type, argInfo3.VarIndex);
 
         if (offset == 0) {
-            auto&& system = g_pApiProvider->GetSystem();
+            auto&& system = tls_pApiProvider->GetSystem();
             auto&& sniffer = system.MemorySniffer();
 
             uint64_t base = 0;
@@ -9661,8 +9675,8 @@ protected:
             val_size = sizeof(uint32_t);
 
         if (val == 0) {
-            if (nullptr != g_pApiProvider) {
-                auto&& system = g_pApiProvider->GetSystem();
+            if (nullptr != tls_pApiProvider) {
+                auto&& system = tls_pApiProvider->GetSystem();
                 auto&& sniffer = system.MemorySniffer();
                 auto* pProcess = sniffer.GetProcess(pid);
                 if (nullptr != pProcess) {
@@ -9672,7 +9686,7 @@ protected:
                         std::stringstream ss;
                         ss << "read addr:" << std::hex << addr << " size:" << std::dec << val_size
                            << " failed.";
-                        g_pApiProvider->LogToView(ss.str());
+                        tls_pApiProvider->LogToView(ss.str());
                     }
                 }
             }
@@ -10965,103 +10979,103 @@ protected:
 
 inline void BraceScriptManager::InitGlobalBraceObjectInfo() {
     // add predefined map, obj table id <-> obj category
-    g_ObjectInfoMgr.AddBraceObjectInfo(Brace::PREDEFINED_BRACE_OBJECT_TYPE_ANY,
+    ObjectInfoMgr().AddBraceObjectInfo(Brace::PREDEFINED_BRACE_OBJECT_TYPE_ANY,
                                        BRACE_OBJECT_CATEGORY_INTERNAL_FIXED_OBJECT,
                                        "any"); // fake obj info for any
-    g_ObjectInfoMgr.AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STRING,
+    ObjectInfoMgr().AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STRING,
                                        BRACE_OBJECT_CATEGORY_INTERNAL_FIXED_OBJECT,
                                        "string"); // fake obj info for string
-    g_ObjectInfoMgr.AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_CPP_MEM_MODIFY_INFO,
+    ObjectInfoMgr().AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_CPP_MEM_MODIFY_INFO,
                                        BRACE_OBJECT_CATEGORY_SPECIAL, "MemoryModifyInfo");
 
-    g_ObjectInfoMgr.AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_BOOL_ARRAY,
+    ObjectInfoMgr().AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_BOOL_ARRAY,
                                        BRACE_OBJECT_CATEGORY_INTERNAL_FIXED_OBJECT,
                                        "array<:bool:>");
-    g_ObjectInfoMgr.SetBraceObjectTypeParams(CUSTOM_BRACE_OBJECT_TYPE_BOOL_ARRAY,
+    ObjectInfoMgr().SetBraceObjectTypeParams(CUSTOM_BRACE_OBJECT_TYPE_BOOL_ARRAY,
                                              Brace::BRACE_DATA_TYPE_BOOL,
                                              Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ);
 
-    g_ObjectInfoMgr.AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY,
+    ObjectInfoMgr().AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY,
                                        BRACE_OBJECT_CATEGORY_INTERNAL_FIXED_OBJECT,
                                        "array<:int64:>");
-    g_ObjectInfoMgr.SetBraceObjectTypeParams(CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY,
+    ObjectInfoMgr().SetBraceObjectTypeParams(CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY,
                                              Brace::BRACE_DATA_TYPE_INT64,
                                              Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ);
 
-    g_ObjectInfoMgr.AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_FLOAT_ARRAY,
+    ObjectInfoMgr().AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_FLOAT_ARRAY,
                                        BRACE_OBJECT_CATEGORY_INTERNAL_FIXED_OBJECT,
                                        "array<:double:>");
-    g_ObjectInfoMgr.SetBraceObjectTypeParams(CUSTOM_BRACE_OBJECT_TYPE_FLOAT_ARRAY,
+    ObjectInfoMgr().SetBraceObjectTypeParams(CUSTOM_BRACE_OBJECT_TYPE_FLOAT_ARRAY,
                                              Brace::BRACE_DATA_TYPE_DOUBLE,
                                              Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ);
 
-    g_ObjectInfoMgr.AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STR_ARRAY,
+    ObjectInfoMgr().AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STR_ARRAY,
                                        BRACE_OBJECT_CATEGORY_INTERNAL_FIXED_OBJECT,
                                        "array<:string:>");
-    g_ObjectInfoMgr.SetBraceObjectTypeParams(CUSTOM_BRACE_OBJECT_TYPE_STR_ARRAY,
+    ObjectInfoMgr().SetBraceObjectTypeParams(CUSTOM_BRACE_OBJECT_TYPE_STR_ARRAY,
                                              Brace::BRACE_DATA_TYPE_STRING,
                                              Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ);
 
-    g_ObjectInfoMgr.AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE,
                                        BRACE_OBJECT_CATEGORY_INTERNAL_FIXED_OBJECT,
                                        "hashtable<:int64,bool:>");
-    g_ObjectInfoMgr.SetBraceObjectTypeParams(
+    ObjectInfoMgr().SetBraceObjectTypeParams(
         CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE, Brace::BRACE_DATA_TYPE_INT64,
         Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ, Brace::BRACE_DATA_TYPE_BOOL,
         Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ);
 
-    g_ObjectInfoMgr.AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                        BRACE_OBJECT_CATEGORY_INTERNAL_FIXED_OBJECT,
                                        "hashtable<:int64,int64:>");
-    g_ObjectInfoMgr.SetBraceObjectTypeParams(
+    ObjectInfoMgr().SetBraceObjectTypeParams(
         CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE, Brace::BRACE_DATA_TYPE_INT64,
         Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ, Brace::BRACE_DATA_TYPE_INT64,
         Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ);
 
-    g_ObjectInfoMgr.AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
                                        BRACE_OBJECT_CATEGORY_INTERNAL_FIXED_OBJECT,
                                        "hashtable<:int64,double:>");
-    g_ObjectInfoMgr.SetBraceObjectTypeParams(
+    ObjectInfoMgr().SetBraceObjectTypeParams(
         CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE, Brace::BRACE_DATA_TYPE_INT64,
         Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ, Brace::BRACE_DATA_TYPE_DOUBLE,
         Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ);
 
-    g_ObjectInfoMgr.AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_INT_STR_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_INT_STR_HASHTABLE,
                                        BRACE_OBJECT_CATEGORY_INTERNAL_FIXED_OBJECT,
                                        "hashtable<:int64,string:>");
-    g_ObjectInfoMgr.SetBraceObjectTypeParams(
+    ObjectInfoMgr().SetBraceObjectTypeParams(
         CUSTOM_BRACE_OBJECT_TYPE_INT_STR_HASHTABLE, Brace::BRACE_DATA_TYPE_INT64,
         Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ, Brace::BRACE_DATA_TYPE_STRING,
         Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ);
 
-    g_ObjectInfoMgr.AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STR_BOOL_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STR_BOOL_HASHTABLE,
                                        BRACE_OBJECT_CATEGORY_INTERNAL_FIXED_OBJECT,
                                        "hashtable<:string,bool:>");
-    g_ObjectInfoMgr.SetBraceObjectTypeParams(
+    ObjectInfoMgr().SetBraceObjectTypeParams(
         CUSTOM_BRACE_OBJECT_TYPE_STR_BOOL_HASHTABLE, Brace::BRACE_DATA_TYPE_STRING,
         Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ, Brace::BRACE_DATA_TYPE_BOOL,
         Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ);
 
-    g_ObjectInfoMgr.AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STR_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STR_INT_HASHTABLE,
                                        BRACE_OBJECT_CATEGORY_INTERNAL_FIXED_OBJECT,
                                        "hashtable<:string,int64:>");
-    g_ObjectInfoMgr.SetBraceObjectTypeParams(
+    ObjectInfoMgr().SetBraceObjectTypeParams(
         CUSTOM_BRACE_OBJECT_TYPE_STR_INT_HASHTABLE, Brace::BRACE_DATA_TYPE_STRING,
         Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ, Brace::BRACE_DATA_TYPE_INT64,
         Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ);
 
-    g_ObjectInfoMgr.AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STR_FLOAT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STR_FLOAT_HASHTABLE,
                                        BRACE_OBJECT_CATEGORY_INTERNAL_FIXED_OBJECT,
                                        "hashtable<:string,double:>");
-    g_ObjectInfoMgr.SetBraceObjectTypeParams(
+    ObjectInfoMgr().SetBraceObjectTypeParams(
         CUSTOM_BRACE_OBJECT_TYPE_STR_FLOAT_HASHTABLE, Brace::BRACE_DATA_TYPE_STRING,
         Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ, Brace::BRACE_DATA_TYPE_DOUBLE,
         Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ);
 
-    g_ObjectInfoMgr.AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STR_STR_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectInfo(CUSTOM_BRACE_OBJECT_TYPE_STR_STR_HASHTABLE,
                                        BRACE_OBJECT_CATEGORY_INTERNAL_FIXED_OBJECT,
                                        "hashtable<:string,string:>");
-    g_ObjectInfoMgr.SetBraceObjectTypeParams(
+    ObjectInfoMgr().SetBraceObjectTypeParams(
         CUSTOM_BRACE_OBJECT_TYPE_STR_STR_HASHTABLE, Brace::BRACE_DATA_TYPE_STRING,
         Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ, Brace::BRACE_DATA_TYPE_STRING,
         Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ);
@@ -11069,45 +11083,45 @@ inline void BraceScriptManager::InitGlobalBraceObjectInfo() {
     //----------------
     {
         std::string objArrayKey = "array<:MemoryModifyInfo:>";
-        int objTypeId = g_ObjectInfoMgr.GetObjectTypeId(objArrayKey);
+        int objTypeId = ObjectInfoMgr().GetObjectTypeId(objArrayKey);
         if (Brace::PREDEFINED_BRACE_OBJECT_TYPE_UNKNOWN == objTypeId) {
-            objTypeId = g_ObjectInfoMgr.AddNewObjectTypeId(objArrayKey);
+            objTypeId = ObjectInfoMgr().AddNewObjectTypeId(objArrayKey);
         }
-        auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+        auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
         if (nullptr == pInfo) {
-            pInfo = g_ObjectInfoMgr.AddBraceObjectInfo(objTypeId, BRACE_OBJECT_CATEGORY_OBJ_ARRAY,
+            pInfo = ObjectInfoMgr().AddBraceObjectInfo(objTypeId, BRACE_OBJECT_CATEGORY_OBJ_ARRAY,
                                                        std::move(objArrayKey));
-            g_ObjectInfoMgr.SetBraceObjectTypeParams(objTypeId, Brace::BRACE_DATA_TYPE_OBJECT,
+            ObjectInfoMgr().SetBraceObjectTypeParams(objTypeId, Brace::BRACE_DATA_TYPE_OBJECT,
                                                      CUSTOM_BRACE_OBJECT_TYPE_CPP_MEM_MODIFY_INFO);
         }
     }
     //----------------
     {
         std::string anyArrayKey = "array<:any:>";
-        int objTypeId = g_ObjectInfoMgr.GetObjectTypeId(anyArrayKey);
+        int objTypeId = ObjectInfoMgr().GetObjectTypeId(anyArrayKey);
         if (Brace::PREDEFINED_BRACE_OBJECT_TYPE_UNKNOWN == objTypeId) {
-            objTypeId = g_ObjectInfoMgr.AddNewObjectTypeId(anyArrayKey);
+            objTypeId = ObjectInfoMgr().AddNewObjectTypeId(anyArrayKey);
         }
-        auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+        auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
         if (nullptr == pInfo) {
-            pInfo = g_ObjectInfoMgr.AddBraceObjectInfo(objTypeId, BRACE_OBJECT_CATEGORY_OBJ_ARRAY,
+            pInfo = ObjectInfoMgr().AddBraceObjectInfo(objTypeId, BRACE_OBJECT_CATEGORY_OBJ_ARRAY,
                                                        std::move(anyArrayKey));
-            g_ObjectInfoMgr.SetBraceObjectTypeParams(objTypeId, Brace::BRACE_DATA_TYPE_OBJECT,
+            ObjectInfoMgr().SetBraceObjectTypeParams(objTypeId, Brace::BRACE_DATA_TYPE_OBJECT,
                                                      Brace::PREDEFINED_BRACE_OBJECT_TYPE_ANY);
         }
     }
     //----------------
     {
         std::string strObjHashKey = "hashtable<:string,MemoryModifyInfo:>";
-        int objTypeId = g_ObjectInfoMgr.GetObjectTypeId(strObjHashKey);
+        int objTypeId = ObjectInfoMgr().GetObjectTypeId(strObjHashKey);
         if (Brace::PREDEFINED_BRACE_OBJECT_TYPE_UNKNOWN == objTypeId) {
-            objTypeId = g_ObjectInfoMgr.AddNewObjectTypeId(strObjHashKey);
+            objTypeId = ObjectInfoMgr().AddNewObjectTypeId(strObjHashKey);
         }
-        auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+        auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
         if (nullptr == pInfo) {
-            pInfo = g_ObjectInfoMgr.AddBraceObjectInfo(
+            pInfo = ObjectInfoMgr().AddBraceObjectInfo(
                 objTypeId, BRACE_OBJECT_CATEGORY_STR_OBJ_HASHTABLE, std::move(strObjHashKey));
-            g_ObjectInfoMgr.SetBraceObjectTypeParams(objTypeId, Brace::BRACE_DATA_TYPE_STRING,
+            ObjectInfoMgr().SetBraceObjectTypeParams(objTypeId, Brace::BRACE_DATA_TYPE_STRING,
                                                      Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ,
                                                      Brace::BRACE_DATA_TYPE_OBJECT,
                                                      CUSTOM_BRACE_OBJECT_TYPE_CPP_MEM_MODIFY_INFO);
@@ -11116,22 +11130,22 @@ inline void BraceScriptManager::InitGlobalBraceObjectInfo() {
     //----------------
     {
         std::string intObjHashKey = "hashtable<:int64,MemoryModifyInfo:>";
-        int objTypeId = g_ObjectInfoMgr.GetObjectTypeId(intObjHashKey);
+        int objTypeId = ObjectInfoMgr().GetObjectTypeId(intObjHashKey);
         if (Brace::PREDEFINED_BRACE_OBJECT_TYPE_UNKNOWN == objTypeId) {
-            objTypeId = g_ObjectInfoMgr.AddNewObjectTypeId(intObjHashKey);
-            g_ObjectInfoMgr.AddBraceObjectAlias(objTypeId, "hashtable<:int8,MemoryModifyInfo:>");
-            g_ObjectInfoMgr.AddBraceObjectAlias(objTypeId, "hashtable<:int16,MemoryModifyInfo:>");
-            g_ObjectInfoMgr.AddBraceObjectAlias(objTypeId, "hashtable<:int32,MemoryModifyInfo:>");
-            g_ObjectInfoMgr.AddBraceObjectAlias(objTypeId, "hashtable<:uint8,MemoryModifyInfo:>");
-            g_ObjectInfoMgr.AddBraceObjectAlias(objTypeId, "hashtable<:uint16,MemoryModifyInfo:>");
-            g_ObjectInfoMgr.AddBraceObjectAlias(objTypeId, "hashtable<:uint32,MemoryModifyInfo:>");
-            g_ObjectInfoMgr.AddBraceObjectAlias(objTypeId, "hashtable<:uint64,MemoryModifyInfo:>");
+            objTypeId = ObjectInfoMgr().AddNewObjectTypeId(intObjHashKey);
+            ObjectInfoMgr().AddBraceObjectAlias(objTypeId, "hashtable<:int8,MemoryModifyInfo:>");
+            ObjectInfoMgr().AddBraceObjectAlias(objTypeId, "hashtable<:int16,MemoryModifyInfo:>");
+            ObjectInfoMgr().AddBraceObjectAlias(objTypeId, "hashtable<:int32,MemoryModifyInfo:>");
+            ObjectInfoMgr().AddBraceObjectAlias(objTypeId, "hashtable<:uint8,MemoryModifyInfo:>");
+            ObjectInfoMgr().AddBraceObjectAlias(objTypeId, "hashtable<:uint16,MemoryModifyInfo:>");
+            ObjectInfoMgr().AddBraceObjectAlias(objTypeId, "hashtable<:uint32,MemoryModifyInfo:>");
+            ObjectInfoMgr().AddBraceObjectAlias(objTypeId, "hashtable<:uint64,MemoryModifyInfo:>");
         }
-        auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+        auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
         if (nullptr == pInfo) {
-            pInfo = g_ObjectInfoMgr.AddBraceObjectInfo(
+            pInfo = ObjectInfoMgr().AddBraceObjectInfo(
                 objTypeId, BRACE_OBJECT_CATEGORY_INT_OBJ_HASHTABLE, std::move(intObjHashKey));
-            g_ObjectInfoMgr.SetBraceObjectTypeParams(
+            ObjectInfoMgr().SetBraceObjectTypeParams(
                 objTypeId, Brace::BRACE_DATA_TYPE_INT64, Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ,
                 Brace::BRACE_DATA_TYPE_OBJECT, CUSTOM_BRACE_OBJECT_TYPE_CPP_MEM_MODIFY_INFO);
         }
@@ -11139,15 +11153,15 @@ inline void BraceScriptManager::InitGlobalBraceObjectInfo() {
     //----------------
     {
         std::string strAnyHashKey = "hashtable<:string,any:>";
-        int objTypeId = g_ObjectInfoMgr.GetObjectTypeId(strAnyHashKey);
+        int objTypeId = ObjectInfoMgr().GetObjectTypeId(strAnyHashKey);
         if (Brace::PREDEFINED_BRACE_OBJECT_TYPE_UNKNOWN == objTypeId) {
-            objTypeId = g_ObjectInfoMgr.AddNewObjectTypeId(strAnyHashKey);
+            objTypeId = ObjectInfoMgr().AddNewObjectTypeId(strAnyHashKey);
         }
-        auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+        auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
         if (nullptr == pInfo) {
-            pInfo = g_ObjectInfoMgr.AddBraceObjectInfo(
+            pInfo = ObjectInfoMgr().AddBraceObjectInfo(
                 objTypeId, BRACE_OBJECT_CATEGORY_STR_OBJ_HASHTABLE, std::move(strAnyHashKey));
-            g_ObjectInfoMgr.SetBraceObjectTypeParams(objTypeId, Brace::BRACE_DATA_TYPE_STRING,
+            ObjectInfoMgr().SetBraceObjectTypeParams(objTypeId, Brace::BRACE_DATA_TYPE_STRING,
                                                      Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ,
                                                      Brace::BRACE_DATA_TYPE_OBJECT,
                                                      Brace::PREDEFINED_BRACE_OBJECT_TYPE_ANY);
@@ -11156,234 +11170,234 @@ inline void BraceScriptManager::InitGlobalBraceObjectInfo() {
     //----------------
     {
         std::string intAnyHashKey = "hashtable<:int64,any:>";
-        int objTypeId = g_ObjectInfoMgr.GetObjectTypeId(intAnyHashKey);
+        int objTypeId = ObjectInfoMgr().GetObjectTypeId(intAnyHashKey);
         if (Brace::PREDEFINED_BRACE_OBJECT_TYPE_UNKNOWN == objTypeId) {
-            objTypeId = g_ObjectInfoMgr.AddNewObjectTypeId(intAnyHashKey);
-            g_ObjectInfoMgr.AddBraceObjectAlias(objTypeId, "hashtable<:int8,any:>");
-            g_ObjectInfoMgr.AddBraceObjectAlias(objTypeId, "hashtable<:int16,any:>");
-            g_ObjectInfoMgr.AddBraceObjectAlias(objTypeId, "hashtable<:int32,any:>");
-            g_ObjectInfoMgr.AddBraceObjectAlias(objTypeId, "hashtable<:uint8,any:>");
-            g_ObjectInfoMgr.AddBraceObjectAlias(objTypeId, "hashtable<:uint16,any:>");
-            g_ObjectInfoMgr.AddBraceObjectAlias(objTypeId, "hashtable<:uint32,any:>");
-            g_ObjectInfoMgr.AddBraceObjectAlias(objTypeId, "hashtable<:uint64,any:>");
+            objTypeId = ObjectInfoMgr().AddNewObjectTypeId(intAnyHashKey);
+            ObjectInfoMgr().AddBraceObjectAlias(objTypeId, "hashtable<:int8,any:>");
+            ObjectInfoMgr().AddBraceObjectAlias(objTypeId, "hashtable<:int16,any:>");
+            ObjectInfoMgr().AddBraceObjectAlias(objTypeId, "hashtable<:int32,any:>");
+            ObjectInfoMgr().AddBraceObjectAlias(objTypeId, "hashtable<:uint8,any:>");
+            ObjectInfoMgr().AddBraceObjectAlias(objTypeId, "hashtable<:uint16,any:>");
+            ObjectInfoMgr().AddBraceObjectAlias(objTypeId, "hashtable<:uint32,any:>");
+            ObjectInfoMgr().AddBraceObjectAlias(objTypeId, "hashtable<:uint64,any:>");
         }
-        auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+        auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
         if (nullptr == pInfo) {
-            pInfo = g_ObjectInfoMgr.AddBraceObjectInfo(
+            pInfo = ObjectInfoMgr().AddBraceObjectInfo(
                 objTypeId, BRACE_OBJECT_CATEGORY_INT_OBJ_HASHTABLE, std::move(intAnyHashKey));
-            g_ObjectInfoMgr.SetBraceObjectTypeParams(
+            ObjectInfoMgr().SetBraceObjectTypeParams(
                 objTypeId, Brace::BRACE_DATA_TYPE_INT64, Brace::PREDEFINED_BRACE_OBJECT_TYPE_NOTOBJ,
                 Brace::BRACE_DATA_TYPE_OBJECT, Brace::PREDEFINED_BRACE_OBJECT_TYPE_ANY);
         }
     }
     //----------------
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY, "array<:int8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY, "array<:int16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY, "array<:int32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY, "array<:uint8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY, "array<:uint16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY, "array<:uint32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY, "array<:uint64:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_FLOAT_ARRAY, "array<:float:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY, "array<:int8:>");
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY, "array<:int16:>");
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY, "array<:int32:>");
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY, "array<:uint8:>");
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY, "array<:uint16:>");
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY, "array<:uint32:>");
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_ARRAY, "array<:uint64:>");
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_FLOAT_ARRAY, "array<:float:>");
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE,
                                         "hashtable<:int8,bool:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int8,int64:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
                                         "hashtable<:int8,double:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_STR_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_STR_HASHTABLE,
                                         "hashtable<:int8,string:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE,
                                         "hashtable<:int16,bool:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int16,int64:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
                                         "hashtable<:int16,double:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_STR_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_STR_HASHTABLE,
                                         "hashtable<:int16,string:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE,
                                         "hashtable<:int32,bool:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int32,int64:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
                                         "hashtable<:int32,double:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_STR_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_STR_HASHTABLE,
                                         "hashtable<:int32,string:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE,
                                         "hashtable<:uint8,bool:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint8,int64:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
                                         "hashtable<:uint8,double:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_STR_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_STR_HASHTABLE,
                                         "hashtable<:uint8,string:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE,
                                         "hashtable<:uint16,bool:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint16,int64:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
                                         "hashtable<:uint16,double:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_STR_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_STR_HASHTABLE,
                                         "hashtable<:uint16,string:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE,
                                         "hashtable<:uint32,bool:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint32,int64:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
                                         "hashtable<:uint32,double:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_STR_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_STR_HASHTABLE,
                                         "hashtable<:uint32,string:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_BOOL_HASHTABLE,
                                         "hashtable<:uint64,bool:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint64,int64:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
                                         "hashtable<:uint64,double:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_STR_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_STR_HASHTABLE,
                                         "hashtable<:uint64,string:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_STR_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_STR_INT_HASHTABLE,
                                         "hashtable<:string,int8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_STR_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_STR_INT_HASHTABLE,
                                         "hashtable<:string,int16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_STR_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_STR_INT_HASHTABLE,
                                         "hashtable<:string,int32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_STR_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_STR_INT_HASHTABLE,
                                         "hashtable<:string,uint8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_STR_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_STR_INT_HASHTABLE,
                                         "hashtable<:string,uint16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_STR_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_STR_INT_HASHTABLE,
                                         "hashtable<:string,uint32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_STR_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_STR_INT_HASHTABLE,
                                         "hashtable<:string,uint64:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_STR_FLOAT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_STR_FLOAT_HASHTABLE,
                                         "hashtable<:string,float:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
                                         "hashtable<:int8,float:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
                                         "hashtable<:int16,float:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
                                         "hashtable<:int32,float:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
                                         "hashtable<:int64,float:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
                                         "hashtable<:uint8,float:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
                                         "hashtable<:uint16,float:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
                                         "hashtable<:uint32,float:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_FLOAT_HASHTABLE,
                                         "hashtable<:uint64,float:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int8,int8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int16,int8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int32,int8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int64,int8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint8,int8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint16,int8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint32,int8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint64,int8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int8,int16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int16,int16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int32,int16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int64,int16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint8,int16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint16,int16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint32,int16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint64,int16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int8,int32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int16,int32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int32,int32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int64,int32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint8,int32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint16,int32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint32,int32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint64,int32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int8,uint8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int16,uint8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int32,uint8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int64,uint8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint8,uint8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint16,uint8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint32,uint8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint64,uint8:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int8,uint16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int16,uint16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int32,uint16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int64,uint16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint8,uint16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint16,uint16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint32,uint16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint64,uint16:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int8,uint32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int16,uint32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int32,uint32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int64,uint32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint8,uint32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint16,uint32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint32,uint32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint64,uint32:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int8,uint64:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int16,uint64:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int32,uint64:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:int64,uint64:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint8,uint64:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint16,uint64:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint32,uint64:>");
-    g_ObjectInfoMgr.AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
+    ObjectInfoMgr().AddBraceObjectAlias(CUSTOM_BRACE_OBJECT_TYPE_INT_INT_HASHTABLE,
                                         "hashtable<:uint64,uint64:>");
 }
 inline void BraceScriptManager::InitBraceScript(Brace::BraceScript*& pBraceScript,
@@ -11393,23 +11407,23 @@ inline void BraceScriptManager::InitBraceScript(Brace::BraceScript*& pBraceScrip
         pBraceScript->OnGetRuntimeStack = std::bind(&BraceScriptManager::GetRuntimeStack, this);
     }
     pBraceScript->OnInfo = [](auto& str) {
-        g_pApiProvider->LogToView(std::string("[Output]: ") + str);
+        tls_pApiProvider->LogToView(std::string("[Output]: ") + str);
     };
     pBraceScript->OnWarn = [](auto& str) {
-        g_pApiProvider->LogToView(std::string("[Warn]: ") + str);
+        tls_pApiProvider->LogToView(std::string("[Warn]: ") + str);
     };
     pBraceScript->OnError = [](auto& str) {
-        g_pApiProvider->LogToView(std::string("[Error]: ") + str);
+        tls_pApiProvider->LogToView(std::string("[Error]: ") + str);
     };
 
     pBraceScript->OnGetObjectTypeId = [](const DslData::ISyntaxComponent& syntax,
                                          const Brace::LoadTypeInfoDelegation& doLoadTypeInfo) {
         int objTypeId;
-        g_ObjectInfoMgr.TryGetOrAddBraceObjectInfo(syntax, doLoadTypeInfo, objTypeId);
+        ObjectInfoMgr().TryGetOrAddBraceObjectInfo(syntax, doLoadTypeInfo, objTypeId);
         return objTypeId;
     };
     pBraceScript->OnGetObjectTypeName = [](int objTypeId) {
-        auto* pInfo = g_ObjectInfoMgr.GetBraceObjectInfo(objTypeId);
+        auto* pInfo = ObjectInfoMgr().GetBraceObjectInfo(objTypeId);
         if (nullptr != pInfo)
             return pInfo->TypeName.c_str();
         return "unknown";
@@ -12124,13 +12138,13 @@ int SplitCmd(const std::string& cmdLine, std::string& first, std::string& second
     size_t pos1 = cmdStr.find('(');
     size_t pos2 = cmdStr.rfind(')');
     if (pos1 != std::string::npos && pos2 != std::string::npos) {
-        if (nullptr == g_pDslBufferForCommand) {
-            g_pDslBufferForCommand = new DslBufferForCommand();
+        if (nullptr == tls_pDslBufferForCommand) {
+            tls_pDslBufferForCommand = new DslBufferForCommand();
         } else {
-            g_pDslBufferForCommand->Reset();
+            tls_pDslBufferForCommand->Reset();
         }
 
-        DslParser::DslFile parsedFile(*g_pDslBufferForCommand);
+        DslParser::DslFile parsedFile(*tls_pDslBufferForCommand);
         ScriptableDslHelper::ForBraceScript().SetCallbacks(parsedFile);
         parsedFile.Parse(cmdStr.c_str());
         if (!parsedFile.HasError()) {
@@ -12182,18 +12196,18 @@ int SplitCmd(const std::string& cmdLine, std::string& first, std::string& second
 }
 uint64_t GetTimeUs() {
     auto cv = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> diff = cv - g_start_time_point;
+    std::chrono::duration<double> diff = cv - s_start_time_point;
     auto tv = static_cast<uint64_t>(diff.count() * 1000'000);
     return tv;
 }
 void Init(IBraceScriptApiProvider* pApiProvider) {
-    if (nullptr != g_pApiProvider) {
-        delete g_pApiProvider;
-        g_pApiProvider = nullptr;
+    if (nullptr != tls_pApiProvider) {
+        delete tls_pApiProvider;
+        tls_pApiProvider = nullptr;
     }
-    g_pApiProvider = pApiProvider;
+    tls_pApiProvider = pApiProvider;
 
-    g_start_time_point = std::chrono::high_resolution_clock::now();
+    s_start_time_point = std::chrono::high_resolution_clock::now();
 }
 const std::map<std::string, std::string>& GetApiDocs() {
     Prepare();
@@ -12269,8 +12283,8 @@ bool Exec(std::string&& cmdStr) {
         BraceScriptManager::RunCallback(std::move(arg));
     } else {
         bool handled = false;
-        if (nullptr != g_pApiProvider) {
-            handled = g_pApiProvider->ExecCommand(std::move(cmd), std::move(arg));
+        if (nullptr != tls_pApiProvider) {
+            handled = tls_pApiProvider->ExecCommand(std::move(cmd), std::move(arg));
         }
         if (!handled) {
             Prepare();
@@ -12285,7 +12299,7 @@ bool RunCallback(std::string&& msgId, MessageArgs&& args) {
     return BraceScriptManager::RunCallback(std::move(msgId), std::move(args));
 }
 void Tick() {
-    if (nullptr == g_pApiProvider) {
+    if (nullptr == tls_pApiProvider) {
         return;
     }
     if (BraceScriptManager::ExistsCommands()) {
@@ -12303,14 +12317,16 @@ void Release() {
     BraceScriptManager::SetQuitting(true);
     BraceScriptManager::WaitQuitting();
     BraceScriptManager::FreeScript();
-    if (nullptr != g_pDslBufferForCommand) {
-        delete g_pDslBufferForCommand;
-        g_pDslBufferForCommand = nullptr;
+    if (nullptr != tls_pDslBufferForCommand) {
+        delete tls_pDslBufferForCommand;
+        tls_pDslBufferForCommand = nullptr;
     }
-    if (nullptr != g_pApiProvider) {
-        delete g_pApiProvider;
-        g_pApiProvider = nullptr;
+    if (nullptr != tls_pApiProvider) {
+        delete tls_pApiProvider;
+        tls_pApiProvider = nullptr;
     }
+    ReleaseObjectInfoManager();
+    CoroutineWithBoostContext::TLSRelease();
 }
 } // namespace BraceScriptInterpreter
 

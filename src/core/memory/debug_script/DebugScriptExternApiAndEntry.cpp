@@ -13,6 +13,42 @@
 #include <cstddef>
 #include <iomanip>
 #include <cctype>
+#include <memory>
+
+// Custom allocator that uses system malloc/free to avoid Unity MemoryManager reentrancy
+template<typename T>
+struct SystemAllocator {
+    using value_type = T;
+
+    SystemAllocator() noexcept = default;
+    template<typename U>
+    SystemAllocator(const SystemAllocator<U>&) noexcept {}
+
+    T* allocate(std::size_t n) {
+        if (n > std::size_t(-1) / sizeof(T)) {
+            throw std::bad_alloc();
+        }
+        T* ptr = static_cast<T*>(std::malloc(n * sizeof(T)));
+        if (!ptr) {
+            throw std::bad_alloc();
+        }
+        return ptr;
+    }
+
+    void deallocate(T* ptr, std::size_t) noexcept {
+        std::free(ptr);
+    }
+};
+
+template<typename T, typename U>
+bool operator==(const SystemAllocator<T>&, const SystemAllocator<U>&) {
+    return true;
+}
+
+template<typename T, typename U>
+bool operator!=(const SystemAllocator<T>&, const SystemAllocator<U>&) {
+    return false;
+}
 
 #include "DbgScpHook.h"
 #include "DebugScriptVM.h"
@@ -559,8 +595,8 @@ static void DbgScp_LogCallstack(const char* prefix, const char* file, int line) 
 #endif
 }
 
-static inline std::unordered_map<int64_t, int64_t>& GetMemoryFlagsRef() {
-    static std::unordered_map<int64_t, int64_t> s_MemoryFlags;
+static inline std::unordered_map<int64_t, int64_t, std::hash<int64_t>, std::equal_to<int64_t>, SystemAllocator<std::pair<const int64_t, int64_t>>>& GetMemoryFlagsRef() {
+    static std::unordered_map<int64_t, int64_t, std::hash<int64_t>, std::equal_to<int64_t>, SystemAllocator<std::pair<const int64_t, int64_t>>> s_MemoryFlags;
     return s_MemoryFlags;
 }
 static inline std::recursive_mutex& GetMemoryFlagMutexRef() {
@@ -569,18 +605,40 @@ static inline std::recursive_mutex& GetMemoryFlagMutexRef() {
 }
 
 static inline bool DbgScp_AddMemoryFlag(int64_t addr, int64_t flag) {
+    static thread_local bool s_ReentrancyGuard = false;
+    if (s_ReentrancyGuard) {
+        return false; // Prevent reentrancy
+    }
+    s_ReentrancyGuard = true;
+
     std::lock_guard<std::recursive_mutex> lock(GetMemoryFlagMutexRef());
 
     auto&& r = GetMemoryFlagsRef().insert(std::make_pair(addr, flag));
+
+    s_ReentrancyGuard = false;
     return r.second;
 }
 static inline bool DbgScp_RemoveMemoryFlag(int64_t addr) {
+    static thread_local bool s_ReentrancyGuard = false;
+    if (s_ReentrancyGuard) {
+        return false; // Prevent reentrancy
+    }
+    s_ReentrancyGuard = true;
+
     std::lock_guard<std::recursive_mutex> lock(GetMemoryFlagMutexRef());
 
     auto&& r = GetMemoryFlagsRef().erase(addr);
+
+    s_ReentrancyGuard = false;
     return r > 0;
 }
 static inline bool DbgScp_GetMemoryFlag(int64_t addr, int64_t& flag) {
+    static thread_local bool s_ReentrancyGuard = false;
+    if (s_ReentrancyGuard) {
+        return false; // Prevent reentrancy
+    }
+    s_ReentrancyGuard = true;
+
     std::lock_guard<std::recursive_mutex> lock(GetMemoryFlagMutexRef());
 
     bool r = false;
@@ -589,6 +647,8 @@ static inline bool DbgScp_GetMemoryFlag(int64_t addr, int64_t& flag) {
         flag = it->second;
         r = true;
     }
+
+    s_ReentrancyGuard = false;
     return r;
 }
 
@@ -596,6 +656,10 @@ extern "C" void FlushDbgScpLog() {
     DbgScp_FlushLog();
 }
 
+[[maybe_unused]]
+static inline void DbgScp_Init() {
+    DBGSCP_HOOK_VOID("DbgScp_Init")
+}
 [[maybe_unused]]
 static inline void DbgScp_Set(int cmd, int a, double b, const char* c) {
     BEGIN_DBGSCP_HOOK_VOID()
@@ -1025,6 +1089,9 @@ void InitGpuCaptureManager() {
 void ShutdownGpuCaptureManager() {
     GpuCaptureManager::Instance().Shutdown();
     g_bFrameCapturing = false;
+}
+void StartFrameCaptureOnDemand(uint64_t frameNo) {
+    DBGSCP_HOOK_VOID("StartFrameCaptureOnDemand", frameNo);
 }
 void EndFrameCaptureIfCapturing() {
     if (g_bFrameCapturing) {
@@ -1519,6 +1586,7 @@ extern "C" {
         DebugScriptGlobal::Reset();
         DebugScriptGlobal::Load(file);
         DebugScriptGlobal::Start();
+        DbgScp_Init();
     }
 
     __declspec(dllexport) void DbgScp_Set_Export(int cmd, int a, double b, const char* c) {
@@ -1630,6 +1698,7 @@ void LoadDbgScp(const core::string& log_path, const core::string& load_path)
     bool r = DebugScriptGlobal::Load(c_data_file);
     DebugScriptGlobal::Start();
     printf_console("LoadDbgScp: %s %d\n", c_data_file, r ? 1 : 0);
+    DbgScp_Init();
 }
 void PauseDbgScp()
 {
@@ -1659,7 +1728,7 @@ void LoadDbgScp(const FString& log_path, const FString& load_path)
         if (GetLogFilesRef()[i].empty()) {
             auto&& path = FPaths::Combine(log_path, FString::Printf(TEXT("dbgscp_log_%d.txt"), i));
             GetLogFilesRef()[i] = TCHAR_TO_UTF8(*path);
-            UE_LOG(LogTemp, Log, TEXT("LoadDbgScp, LogFile: %d %s\n"), i, TCHAR_TO_UTF8(*path));
+            UE_LOG(LogTemp, Log, TEXT("LoadDbgScp, LogFile: %d %hs\n"), i, TCHAR_TO_UTF8(*path));
         }
     }
 #if PLATFORM_ANDROID
@@ -1672,7 +1741,8 @@ void LoadDbgScp(const FString& log_path, const FString& load_path)
     DebugScriptGlobal::Reset();
     bool r = DebugScriptGlobal::Load(c_data_file);
     DebugScriptGlobal::Start();
-    UE_LOG(LogTemp, Log, TEXT("LoadDbgScp: %s %d\n"), c_data_file, r ? 1 : 0);
+    UE_LOG(LogTemp, Log, TEXT("LoadDbgScp: %hs %d\n"), c_data_file, r ? 1 : 0);
+    DbgScp_Init();
 }
 void PauseDbgScp()
 {
@@ -1718,6 +1788,7 @@ void LoadDbgScp(const std::string& log_path, const std::string& load_path)
     bool r = DebugScriptGlobal::Load(data_file.c_str());
     DebugScriptGlobal::Start();
     mylog_printf("LoadDbgScp: %s %d\n", data_file.c_str(), r ? 1 : 0);
+    DbgScp_Init();
 }
 void PauseDbgScp()
 {

@@ -79,6 +79,15 @@ public:
     void SetCurrentPageTable(Kernel::KProcess& process);
 
     /**
+     * Invalidates the cached current page table pointer if it matches the given page table.
+     * Must be called before the page table is destroyed (e.g. in KPageTableBase::Finalize)
+     * to avoid use-after-free reads through the cached raw pointer.
+     *
+     * @param page_table The page table that is about to be destroyed.
+     */
+    void InvalidateCurrentPageTable(const Common::PageTable* page_table);
+
+    /**
      * Maps an allocated buffer onto a region of the emulated process address space.
      *
      * @param page_table The page table of the emulated process.

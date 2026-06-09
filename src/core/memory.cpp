@@ -908,6 +908,12 @@ void Memory::SetCurrentPageTable(Kernel::KProcess& process) {
     impl->SetCurrentPageTable(process);
 }
 
+void Memory::InvalidateCurrentPageTable(const Common::PageTable* page_table) {
+    if (impl->current_page_table == page_table) {
+        impl->current_page_table = nullptr;
+    }
+}
+
 void Memory::MapMemoryRegion(Common::PageTable& page_table, Common::ProcessAddress base, u64 size,
                              Common::PhysicalAddress target, Common::MemoryPermission perms,
                              bool separate_heap) {
@@ -925,6 +931,9 @@ void Memory::ProtectRegion(Common::PageTable& page_table, Common::ProcessAddress
 }
 
 bool Memory::IsValidVirtualAddress(const Common::ProcessAddress vaddr) const {
+    if (impl->current_page_table == nullptr) {
+        return false;
+    }
     const auto& page_table = *impl->current_page_table;
     const size_t page = vaddr >> YUZU_PAGEBITS;
     if (page >= page_table.pointers.size()) {

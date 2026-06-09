@@ -503,6 +503,9 @@ void KPageTableBase::Finalize() {
     }
 
     // Close the backing page table, as the destructor is not called for guest objects.
+    if (m_memory != nullptr) {
+        m_memory->InvalidateCurrentPageTable(m_impl.get());
+    }
     m_impl.reset();
 }
 

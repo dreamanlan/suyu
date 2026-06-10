@@ -69,6 +69,7 @@ Mouse::Mouse(std::string input_engine_) : InputEngine(std::move(input_engine_)) 
     wheel_position = {};
     last_mouse_change = {};
     last_motion_change = {};
+    button_pressed = {};
 
     update_thread = std::jthread([this](std::stop_token stop_token) { UpdateThread(stop_token); });
 }

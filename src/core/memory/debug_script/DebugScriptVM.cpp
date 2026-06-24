@@ -5,6 +5,7 @@
 #include <string>
 #include <atomic>
 #include <mutex>
+#include <algorithm>
 #include <type_traits>
 #include <chrono>
 #include <ctime>
@@ -78,9 +79,9 @@ namespace
     struct DebugScriptGlobalImpl;
     struct DebugScriptVMImpl;
     static DebugScriptGlobalImpl* g_pDebugScriptGlobal = nullptr;
-    static thread_local DebugScriptVMImpl* g_pDebugScriptVM = nullptr;
-    static thread_local volatile bool g_IsInNewDebugScriptVM = false;
-    static thread_local volatile bool g_IsInFindHook = false;
+    static thread_local DebugScriptVMImpl* tls_pDebugScriptVM = nullptr;
+    static thread_local volatile bool tls_IsInNewDebugScriptVM = false;
+    static thread_local volatile bool tls_IsInFindHook = false;
     static std::chrono::time_point<std::chrono::high_resolution_clock> g_start_time{};
 
     static inline void MyAssert(bool v)
@@ -641,8 +642,10 @@ namespace
             return 1; //android
 #elif defined(__APPLE__)
             return 2; //apple
+#elif defined(__OHOS__)
+            return 3; //ohos
 #else
-            return 3; //other
+            return 9999; //other
 #endif
         }
         static inline int64_t ScriptAssert(int argNum, const std::vector<int32_t>& codes, int32_t& pos, int32_t stackBase, IntLocals& intLocals, FloatLocals& fltLocals, StringLocals& strLocals, IntGlobals& intGlobals, FloatGlobals& fltGlobals, StringGlobals& strGlobals)
@@ -3025,7 +3028,7 @@ PRAGMA_DIAG_POP_IGNORE_RETURN_LOCAL_ADDR()
         int64_t addr = 0;
         int64_t args[c_max_count - 1];
 
-        int num = std::min(argNum, c_max_count);
+        int num = (std::min)(argNum, c_max_count);
 
         for (int i = 0; i < argNum; i += 2) {
             int32_t operand = codes[++pos];
@@ -3160,8 +3163,8 @@ PRAGMA_DIAG_POP_IGNORE_RETURN_LOCAL_ADDR()
         float fargs[c_max_count];
         int64_t stacks[c_max_count * 4];
 
-        int inum = std::min(intNum + 1, c_max_count + 1);
-        int fnum = std::min(fltNum, c_max_count);
+        int inum = (std::min)(intNum + 1, c_max_count + 1);
+        int fnum = (std::min)(fltNum, c_max_count);
 
         for (int i = 0; i < argNum; i += 2) {
             int32_t operand = codes[++pos];
@@ -3297,8 +3300,8 @@ PRAGMA_DIAG_POP_IGNORE_RETURN_LOCAL_ADDR()
         float fargs[c_max_count];
         int64_t stacks[c_max_count * 4];
 
-        int inum = std::min(intNum + 1, c_max_count + 1);
-        int fnum = std::min(fltNum, c_max_count);
+        int inum = (std::min)(intNum + 1, c_max_count + 1);
+        int fnum = (std::min)(fltNum, c_max_count);
 
         for (int i = 0; i < argNum; i += 2) {
             int32_t operand = codes[++pos];
@@ -3434,8 +3437,8 @@ PRAGMA_DIAG_POP_IGNORE_RETURN_LOCAL_ADDR()
         double fargs[c_max_count];
         int64_t stacks[c_max_count * 4];
 
-        int inum = std::min(intNum + 1, c_max_count + 1);
-        int fnum = std::min(fltNum, c_max_count);
+        int inum = (std::min)(intNum + 1, c_max_count + 1);
+        int fnum = (std::min)(fltNum, c_max_count);
 
         for (int i = 0; i < argNum; i += 2) {
             int32_t operand = codes[++pos];
@@ -3571,8 +3574,8 @@ PRAGMA_DIAG_POP_IGNORE_RETURN_LOCAL_ADDR()
         double fargs[c_max_count];
         int64_t stacks[c_max_count * 4];
 
-        int inum = std::min(intNum + 1, c_max_count + 1);
-        int fnum = std::min(fltNum, c_max_count);
+        int inum = (std::min)(intNum + 1, c_max_count + 1);
+        int fnum = (std::min)(fltNum, c_max_count);
 
         for (int i = 0; i < argNum; i += 2) {
             int32_t operand = codes[++pos];
@@ -4967,22 +4970,22 @@ PRAGMA_DIAG_POP_IGNORE_RETURN_LOCAL_ADDR()
 
     DebugScriptVMImpl* GetDebugScriptVM()
     {
-        if (g_IsInNewDebugScriptVM) {
+        if (tls_IsInNewDebugScriptVM) {
             return nullptr;
         }
-        if (nullptr == g_pDebugScriptVM) {
-            AutoMark mark(g_IsInNewDebugScriptVM);
-            g_pDebugScriptVM = new DebugScriptVMImpl();
+        if (nullptr == tls_pDebugScriptVM) {
+            AutoMark mark(tls_IsInNewDebugScriptVM);
+            tls_pDebugScriptVM = new DebugScriptVMImpl();
         }
-        return g_pDebugScriptVM;
+        return tls_pDebugScriptVM;
     }
 
     int32_t FindHookImpl(DebugScriptVMImpl* vm, const char* name)
     {
-        if (g_IsInFindHook) {
+        if (tls_IsInFindHook) {
             return -1;
         }
-        AutoMark mark(g_IsInFindHook);
+        AutoMark mark(tls_IsInFindHook);
         return vm->FindHook(name);
     }
 }
@@ -5068,6 +5071,9 @@ bool DebugScriptVM::CanRun()
 }
 bool DebugScriptVM::RunHookOnEnter(int32_t id, int32_t argc, int64_t argv[])
 {
+    UNLIKELY_ATTR
+    if (OPTIMIZER_UNLIKELY(id < 0 || !g_DebugScriptStarted))
+        return false;
     auto&& vm = GetDebugScriptVM();
     UNLIKELY_ATTR
     if (OPTIMIZER_UNLIKELY(!vm))
@@ -5076,6 +5082,9 @@ bool DebugScriptVM::RunHookOnEnter(int32_t id, int32_t argc, int64_t argv[])
 }
 bool DebugScriptVM::RunHookOnExit(int32_t id, int32_t argc, int64_t argv[])
 {
+    UNLIKELY_ATTR
+    if (OPTIMIZER_UNLIKELY(id < 0 || !g_DebugScriptStarted))
+        return false;
     auto&& vm = GetDebugScriptVM();
     UNLIKELY_ATTR
     if (OPTIMIZER_UNLIKELY(!vm))

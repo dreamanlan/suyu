@@ -23,11 +23,13 @@ struct HookWrap
 {
     HookWrap(int hookId, bool& retry, ArgsT&... args) :m_Break(false), m_HookId(hookId), m_Retry(retry), m_Args{reinterpret_cast<int64_t>(&args)...}
     {
-        m_Break = DebugScriptVM::RunHookOnEnter(m_HookId, static_cast<int32_t>(m_Args.size()), m_Args.data());
+        if (m_HookId >= 0) {
+            m_Break = DebugScriptVM::RunHookOnEnter(m_HookId, static_cast<int32_t>(m_Args.size()), m_Args.data());
+        }
     }
     ~HookWrap()
     {
-        if (!m_Break) {
+        if (m_HookId >= 0 && !m_Break) {
             m_Retry = DebugScriptVM::RunHookOnExit(m_HookId, static_cast<int32_t>(m_Args.size()), m_Args.data());
         }
     }

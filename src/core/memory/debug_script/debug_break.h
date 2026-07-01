@@ -23,12 +23,13 @@ static inline bool IsDebuggerAttached_Native()
 
 #define DEBUG_BREAK() __debugbreak()
 
-#elif defined(__ANDROID__)
+#elif defined(__ANDROID__) || defined(__linux__) || defined(__OHOS__)
 
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <cassert>
 
 static inline bool IsDebuggerAttached_Native()
 {

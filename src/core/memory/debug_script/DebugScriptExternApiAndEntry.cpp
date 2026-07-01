@@ -69,10 +69,13 @@ bool operator!=(const SystemAllocator<T>&, const SystemAllocator<U>&) {
 
 #if defined(_MSC_VER)
 #include "windows.h"
-#elif defined(__ANDROID__)
+#elif defined(__ANDROID__) || defined(__OHOS__)
 #include <sys/mman.h>
 #include <sys/types.h>
+#include <sys/syscall.h>
 #include <unistd.h>
+#include <time.h>
+#include <fcntl.h>
 #include <dlfcn.h>
 #elif defined(__APPLE__)
 #include <mach/mach.h>
@@ -328,7 +331,7 @@ void mylog_assert(bool v) {
 static inline int64_t GetProcessId() {
 #if defined(_MSC_VER)
     return static_cast<int64_t>(GetCurrentProcessId());
-#elif defined(__APPLE__) || defined(__ANDROID__)
+#elif defined(__APPLE__) || defined(__ANDROID__) || defined(__OHOS__)
     return static_cast<int64_t>(getpid());
 #else
     return 0;
@@ -339,6 +342,8 @@ static inline int64_t GetThreadId() {
     return static_cast<int64_t>(GetCurrentThreadId());
 #elif defined(__ANDROID__)
     return static_cast<int64_t>(gettid());
+#elif defined(__OHOS__)
+    return static_cast<int64_t>(syscall(SYS_gettid));
 #elif defined(__APPLE__)
     //thread_t mach_tid = mach_thread_self(); // returns a send right (thread_t)
     //int64_t tid = static_cast<int64_t>(mach_tid);
@@ -380,7 +385,7 @@ static void get_errno_message(int err, char* buf, size_t buflen) {
         snprintf(buf, buflen, "Unknown error %d", err);
     }
 #else
-#if defined(GLIBC) && defined(_GNU_SOURCE)
+#if defined(__GLIBC__) && defined(_GNU_SOURCE)
     char* msg = strerror_r(err, buf, buflen);
     if (msg) {
         strncpy(buf, msg, buflen);
@@ -895,7 +900,7 @@ static inline size_t GetPagetSize() {
     SYSTEM_INFO sysInfo;
     GetSystemInfo(&sysInfo);
     return static_cast<size_t>(sysInfo.dwPageSize);
-#elif defined(__APPLE__) || defined(__ANDROID__)
+#elif defined(__APPLE__) || defined(__ANDROID__) || defined(__OHOS__)
     return static_cast<size_t>(getpagesize());
 #else
     return 4096;
@@ -953,7 +958,7 @@ static inline void SetMemoryProtect(int64_t addr, size_t size, size_t pageSize, 
     }
     DWORD oldProtect;
     VirtualProtect(reinterpret_cast<void*>(addr), size, flag, &oldProtect);
-#elif defined(__ANDROID__) || defined(__APPLE__)
+#elif defined(__ANDROID__) || defined(__APPLE__) || defined(__OHOS__)
     int flag = rawflag;
     if (quickflag >= 0) {
         switch (quickflag) {
@@ -1079,7 +1084,7 @@ bool IsDbgScpLoaded() {
     return s_DbgScpLoaded;
 }
 void InitGpuCaptureManager() {
-#if __APPLE__
+#if defined(__APPLE__) && __APPLE__
     GpuCaptureManager::Instance().Init(GpuCaptureBackend::MetalXcode);
 #elif defined(__OHOS__)
     GpuCaptureManager::Instance().Init(GpuCaptureBackend::HuaweiSquid);

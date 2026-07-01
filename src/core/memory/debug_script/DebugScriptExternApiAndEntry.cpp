@@ -26,11 +26,13 @@ struct SystemAllocator {
 
     T* allocate(std::size_t n) {
         if (n > std::size_t(-1) / sizeof(T)) {
-            throw std::bad_alloc();
+            //throw std::bad_alloc();
+            return nullptr;
         }
         T* ptr = static_cast<T*>(std::malloc(n * sizeof(T)));
         if (!ptr) {
-            throw std::bad_alloc();
+            //throw std::bad_alloc();
+            return nullptr;
         }
         return ptr;
     }
@@ -59,7 +61,7 @@ bool operator!=(const SystemAllocator<T>&, const SystemAllocator<U>&) {
 #if defined(DBGSCP_ON_UNREAL)
 
 #include "CoreMinimal.h"
-#include "HAL/PlatformFilemanager.h"
+#include "HAL/PlatformFileManager.h"
 #include "Misc/Paths.h"
 #include "Misc/FileHelper.h"
 

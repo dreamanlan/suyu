@@ -109,7 +109,10 @@ bool GpuCaptureManager::Init(GpuCaptureBackend backend, const std::string& modul
             const char* candidates[] = {
                 "libVkLayer_GLES_RenderDoc.so",
                 "libVkLayer_RenderDoc.so",
-                "librenderdoc.so"
+                "librenderdoc.so",
+                "/data/local/tmp/libVkLayer_GLES_RenderDoc.so",
+                "/data/local/tmp/libVkLayer_RenderDoc.so",
+                "/data/local/tmp/librenderdoc.so"
             };
 
             for (const char* name : candidates)

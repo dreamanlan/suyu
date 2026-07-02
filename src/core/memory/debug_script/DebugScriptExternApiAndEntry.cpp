@@ -1084,12 +1084,16 @@ bool IsDbgScpLoaded() {
     return s_DbgScpLoaded;
 }
 void InitGpuCaptureManager() {
+    char path[1025] = { 0 };
+    memset(path, 0, sizeof(path));
+    const char* libPath = path;
+    DBGSCP_HOOK_VOID("InitGpuCaptureManager", libPath);
 #if defined(__APPLE__) && __APPLE__
-    GpuCaptureManager::Instance().Init(GpuCaptureBackend::MetalXcode);
+    GpuCaptureManager::Instance().Init(GpuCaptureBackend::MetalXcode, libPath);
 #elif defined(__OHOS__)
-    GpuCaptureManager::Instance().Init(GpuCaptureBackend::HuaweiSquid);
+    GpuCaptureManager::Instance().Init(GpuCaptureBackend::HuaweiSquid, libPath);
 #else
-    GpuCaptureManager::Instance().Init(GpuCaptureBackend::RenderDoc);
+    GpuCaptureManager::Instance().Init(GpuCaptureBackend::RenderDoc, libPath);
 #endif
     g_bFrameCapturing = false;
 }
